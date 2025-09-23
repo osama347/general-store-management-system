@@ -1,34 +1,53 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
+import type React from "react"
 import { createClient } from "@/lib/supabase/client"
-import { Product, Category, ProductAttribute } from "@/types/product"
+// @ts-ignore
+import type { Product, Category } from "@/types/product"
+import { useLocation } from "@/contexts/LocationContext"
+import { toast } from "sonner"
+import {useAuth} from '@/hooks/use-auth'
+import type { Profile } from "@/hooks/use-auth"
+
 // UI Components
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogTrigger, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { toast } from "sonner"
+import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+
 // Icons
-import { Plus, Search, Filter, ArrowUpDown, Package, X, Edit, FolderOpen } from "lucide-react"
+import { 
+  Plus, Search, Edit, Trash2, Package, ChevronLeft, ChevronRight
+} from "lucide-react"
+
+
 export default function ProductsPage() {
+  
+const { profile } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState("products")
+  const [searchTerm, setSearchTerm] = useState("")
   const supabase = createClient()
+  const { currentLocation } = useLocation()
   
-  // Fetch data when the component mounts
+  
   useEffect(() => {
     async function fetchData() {
+      if (!currentLocation) {
+        setIsLoading(false)
+        return
+      }
+      
       setIsLoading(true)
       try {
         // Fetch categories
@@ -45,16 +64,16 @@ export default function ProductsPage() {
             )
           `)
           .order("name")
-        
-        const categories = categoriesData?.map((c) => ({
-          category_id: c.category_id,
-          name: c.name,
-          description: c.description,
-          attributes: c.attributes || []
-        })) || []
+        const categories =
+          categoriesData?.map((c) => ({
+            category_id: c.category_id,
+            name: c.name,
+            description: c.description,
+            attributes: c.attributes || [],
+          })) || []
         setCategories(categories)
         
-        // Fetch products
+        // Fetch products with inventory for the current location
         const { data: productsData, error: productsError } = await supabase
           .from("products")
           .select(`
@@ -73,19 +92,285 @@ export default function ProductsPage() {
                 attribute_name,
                 data_type
               )
+            ),
+            inventory (
+              quantity,
+              location_id
             )
           `)
           .order("product_id", { ascending: false })
-        
+          
         if (productsError) {
           throw new Error(productsError.message)
         }
         
-        const products = productsData?.map((product: any) => ({
+        const products =
+          productsData?.map((product: any) => ({
+            id: product.product_id.toString(),
+            name: product.name,
+            price: product.base_price,
+            stock_qty: Array.isArray(product.inventory)
+              ? product.inventory
+                  .filter((inv: any) => inv.location_id === currentLocation.location_id)
+                  .reduce((total: number, inv: any) => total + (inv.quantity || 0), 0)
+              : 0,
+            category: product.categories?.name || "Uncategorized",
+            category_id: product.category_id,
+            attributes: Array.isArray(product.product_attributes)
+              ? product.product_attributes.map((pa: any) => ({
+                  name: pa.attributes?.attribute_name || "Unknown",
+                  value:
+                    pa.value_text ??
+                    pa.value_number?.toString() ??
+                    pa.value_decimal?.toString() ??
+                    pa.value_date?.toString() ??
+                    "",
+                  type: pa.attributes?.data_type || "text",
+                }))
+              : [],
+          })) || []
+        setProducts(products)
+      } catch (error) {
+        console.error("Error fetching data:", error)
+        toast.error("Failed to load data")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchData()
+  }, [currentLocation])
+  
+  // Filter products based on search term
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm) return products
+    
+    return products.filter(product => 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.attributes.some((attr: any) => 
+        attr.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        attr.value.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    )
+  }, [products, searchTerm])
+  
+  // Function to add a product
+  const addProduct = async (product: Omit<Product, "id">) => {
+    try {
+      const { data: newProduct, error: productError } = await supabase
+        .from("products")
+        .insert({
+          name: product.name,
+          base_price: product.price,
+          category_id: product.category_id,
+        })
+        .select()
+        .single()
+      if (productError) {
+        throw new Error(productError.message)
+      }
+      
+      // Add inventory entry for the current location
+      if (currentLocation) {
+        const { error: inventoryError } = await supabase
+          .from("inventory")
+          .insert({
+            product_id: newProduct.product_id,
+            location_id: currentLocation.location_id,
+            quantity: product.stock_qty,
+          })
+          
+        if (inventoryError) {
+          console.error("Error adding inventory:", inventoryError)
+          throw new Error(inventoryError.message)
+        }
+      }
+      
+      if (product.attributes.length > 0) {
+        const { data: attributesData, error: attributesError } = await supabase
+          .from("attributes")
+          .select("attribute_id, attribute_name")
+          .eq("category_id", product.category_id)
+        if (attributesError) {
+          console.error("Error fetching attributes:", attributesError)
+          throw new Error(attributesError.message)
+        }
+        const attributeMap: Record<string, number> = {}
+        attributesData?.forEach((attr) => {
+          attributeMap[attr.attribute_name] = attr.attribute_id
+        })
+        const productAttributesToInsert = product.attributes
+          .map((attr:any) => {
+            const attributeId = attributeMap[attr.name]
+            if (!attributeId) {
+              console.error(`Attribute ${attr.name} not found for category ${product.category_id}`)
+              return null
+            }
+            const baseInsert = {
+              product_id: newProduct.product_id,
+              attribute_id: attributeId,
+            }
+            switch (attr.type) {
+              case "number":
+                return { ...baseInsert, value_number: Number(attr.value) || null }
+              case "decimal":
+                return { ...baseInsert, value_decimal: Number(attr.value) || null }
+              case "date":
+                return { ...baseInsert, value_date: attr.value || null }
+              default:
+                return { ...baseInsert, value_text: attr.value || null }
+            }
+          })
+          .filter(Boolean)
+        if (productAttributesToInsert.length > 0) {
+          const { error: insertError } = await supabase.from("product_attributes").insert(productAttributesToInsert)
+          if (insertError) {
+            console.error("Error adding product attributes:", insertError)
+            throw new Error(insertError.message)
+          }
+        }
+      }
+      
+      // Refresh products list
+      fetchData()
+      toast.success("Product added successfully")
+    } catch (error) {
+      console.error("Error adding product:", error)
+      toast.error("Failed to add product")
+      throw error
+    }
+  }
+  
+  // Function to update a product
+  const updateProduct = async (productId: string, product: Omit<Product, "id">) => {
+    try {
+      const { error: productError } = await supabase
+        .from("products")
+        .update({
+          name: product.name,
+          base_price: product.price,
+          category_id: product.category_id,
+        })
+        .eq("product_id", Number.parseInt(productId))
+      if (productError) {
+        throw new Error(productError.message)
+      }
+      
+      // Update inventory for the current location
+      if (currentLocation) {
+        const { error: inventoryError } = await supabase
+          .from("inventory")
+          .upsert({
+            product_id: Number.parseInt(productId),
+            location_id: currentLocation.location_id,
+            quantity: product.stock_qty,
+          })
+          
+        if (inventoryError) {
+          console.error("Error updating inventory:", inventoryError)
+          throw new Error(inventoryError.message)
+        }
+      }
+      
+      await supabase.from("product_attributes").delete().eq("product_id", Number.parseInt(productId))
+      if (product.attributes.length > 0) {
+        const { data: attributesData, error: attributesError } = await supabase
+          .from("attributes")
+          .select("attribute_id, attribute_name")
+          .eq("category_id", product.category_id)
+        if (attributesError) {
+          console.error("Error fetching attributes:", attributesError)
+          throw new Error(attributesError.message)
+        }
+        const attributeMap: Record<string, number> = {}
+        attributesData?.forEach((attr) => {
+          attributeMap[attr.attribute_name] = attr.attribute_id
+        })
+        const productAttributesToInsert = product.attributes
+          .map((attr :any ) => {
+            const attributeId = attributeMap[attr.name]
+            if (!attributeId) {
+              console.error(`Attribute ${attr.name} not found for category ${product.category_id}`)
+              return null
+            }
+            const baseInsert = {
+              product_id: Number.parseInt(productId),
+              attribute_id: attributeId,
+            }
+            switch (attr.type) {
+              case "number":
+                return { ...baseInsert, value_number: Number(attr.value) || null }
+              case "decimal":
+                return { ...baseInsert, value_decimal: Number(attr.value) || null }
+              case "date":
+                return { ...baseInsert, value_date: attr.value || null }
+              default:
+                return { ...baseInsert, value_text: attr.value || null }
+            }
+          })
+          .filter(Boolean)
+        if (productAttributesToInsert.length > 0) {
+          const { error: insertError } = await supabase.from("product_attributes").insert(productAttributesToInsert)
+          if (insertError) {
+            console.error("Error updating product attributes:", insertError)
+            throw new Error(insertError.message)
+          }
+        }
+      }
+      
+      // Refresh products list
+      fetchData()
+      toast.success("Product updated successfully")
+    } catch (error) {
+      console.error("Error updating product:", error)
+      toast.error("Failed to update product")
+      throw error
+    }
+  }
+  
+  const fetchData = async () => {
+    if (!currentLocation) return
+    
+    setIsLoading(true)
+    try {
+      const { data: productsData, error: productsError } = await supabase
+        .from("products")
+        .select(`
+          product_id,
+          name,
+          base_price,
+          category_id,
+          categories!inner ( name ),
+          product_attributes (
+            attribute_id,
+            value_text,
+            value_number,
+            value_decimal,
+            value_date,
+            attributes!inner (
+              attribute_name,
+              data_type
+            )
+          ),
+          inventory (
+            quantity,
+            location_id
+          )
+        `)
+        .order("product_id", { ascending: false })
+        
+      if (productsError) throw new Error(productsError.message)
+      
+      const products =
+        productsData?.map((product: any) => ({
           id: product.product_id.toString(),
           name: product.name,
           price: product.base_price,
-          stock_qty: 0, // TODO: join inventory later
+          stock_qty: Array.isArray(product.inventory)
+            ? product.inventory
+                .filter((inv: any) => inv.location_id === currentLocation.location_id)
+                .reduce((total: number, inv: any) => total + (inv.quantity || 0), 0)
+            : 0,
           category: product.categories?.name || "Uncategorized",
           category_id: product.category_id,
           attributes: Array.isArray(product.product_attributes)
@@ -101,747 +386,192 @@ export default function ProductsPage() {
               }))
             : [],
         })) || []
-        
-        setProducts(products)
-      } catch (error) {
-        console.error("Error fetching data:", error)
-        toast("Failed to load data",{
-          description: "Please try again later.",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    fetchData()
-  }, [])
-  
-  // Function to add a product
-  const addProduct = async (product: Omit<Product, 'id'>) => {
-    try {
-      // Insert the product
-      const { data: newProduct, error: productError } = await supabase
-        .from("products")
-        .insert({
-          name: product.name,
-          base_price: product.price,
-          category_id: product.category_id
-        })
-        .select()
-        .single()
-      if (productError) {
-        throw new Error(productError.message)
-      }
-      // Insert product attributes
-      if (product.attributes.length > 0) {
-        // First, we need to get the attribute IDs for the category
-        const { data: attributesData, error: attributesError } = await supabase
-          .from("attributes")
-          .select("attribute_id, attribute_name")
-          .eq("category_id", product.category_id)
-        
-        if (attributesError) {
-          console.error("Error fetching attributes:", attributesError)
-          throw new Error(attributesError.message)
-        }
-        
-        // Create a mapping from attribute name to ID
-        const attributeMap: Record<string, number> = {}
-        attributesData?.forEach(attr => {
-          attributeMap[attr.attribute_name] = attr.attribute_id
-        })
-        
-        // Prepare the product attributes for insertion
-        const productAttributesToInsert = product.attributes.map(attr => {
-          const attributeId = attributeMap[attr.name]
-          if (!attributeId) {
-            console.error(`Attribute ${attr.name} not found for category ${product.category_id}`)
-            return null
-          }
-          
-          const baseInsert = {
-            product_id: newProduct.product_id,
-            attribute_id: attributeId
-          }
-          // Add the appropriate value field based on the data type
-          switch (attr.type) {
-            case "number":
-              return { ...baseInsert, value_number: Number(attr.value) || null }
-            case "decimal":
-              return { ...baseInsert, value_decimal: Number(attr.value) || null }
-            case "date":
-              return { ...baseInsert, value_date: attr.value || null }
-            default: // text
-              return { ...baseInsert, value_text: attr.value || null }
-          }
-        }).filter(Boolean) // Remove any null entries
-        
-        if (productAttributesToInsert.length > 0) {
-          const { error: insertError } = await supabase
-            .from("product_attributes")
-            .insert(productAttributesToInsert)
-          
-          if (insertError) {
-            console.error("Error adding product attributes:", insertError)
-            throw new Error(insertError.message)
-          }
-        }
-      }
-      // Refresh the products list
-      const { data: updatedProductsData, error: updatedProductsError } = await supabase
-        .from("products")
-        .select(`
-          product_id,
-          name,
-          base_price,
-          category_id,
-          categories!inner ( name ),
-          product_attributes (
-            attribute_id,
-            value_text,
-            value_number,
-            value_decimal,
-            value_date,
-            attributes!inner (
-              attribute_name,
-              data_type
-            )
-          )
-        `)
-        .order("product_id", { ascending: false })
-      
-      if (updatedProductsError) {
-        throw new Error(updatedProductsError.message)
-      }
-      
-      const updatedProducts = updatedProductsData?.map((product: any) => ({
-        id: product.product_id.toString(),
-        name: product.name,
-        price: product.base_price,
-        stock_qty: 0,
-        category: product.categories?.name || "Uncategorized",
-        category_id: product.category_id,
-        attributes: Array.isArray(product.product_attributes)
-          ? product.product_attributes.map((pa: any) => ({
-              name: pa.attributes?.attribute_name || "Unknown",
-              value:
-                pa.value_text ??
-                pa.value_number?.toString() ??
-                pa.value_decimal?.toString() ??
-                pa.value_date?.toString() ??
-                "",
-              type: pa.attributes?.data_type || "text",
-            }))
-          : [],
-      })) || []
-      
-      setProducts(updatedProducts)
-      toast("Product added successfully",{
-        description: `${product.name} has been added to your inventory.`,
-      })
+      setProducts(products)
     } catch (error) {
-      console.error("Error adding product:", error)
-      toast( "Failed to add product",{
-        description: "Please try again later.",
-      })
-      throw error
-    }
-  }
-
-  // Function to update a product
-  const updateProduct = async (productId: string, product: Omit<Product, 'id'>) => {
-    try {
-      // Update the product
-      const { error: productError } = await supabase
-        .from("products")
-        .update({
-          name: product.name,
-          base_price: product.price,
-          category_id: product.category_id
-        })
-        .eq("product_id", parseInt(productId))
-      
-      if (productError) {
-        throw new Error(productError.message)
-      }
-      
-      // Delete existing product attributes
-      await supabase
-        .from("product_attributes")
-        .delete()
-        .eq("product_id", parseInt(productId))
-      
-      // Insert updated product attributes
-      if (product.attributes.length > 0) {
-        // First, we need to get the attribute IDs for the category
-        const { data: attributesData, error: attributesError } = await supabase
-          .from("attributes")
-          .select("attribute_id, attribute_name")
-          .eq("category_id", product.category_id)
-        
-        if (attributesError) {
-          console.error("Error fetching attributes:", attributesError)
-          throw new Error(attributesError.message)
-        }
-        
-        // Create a mapping from attribute name to ID
-        const attributeMap: Record<string, number> = {}
-        attributesData?.forEach(attr => {
-          attributeMap[attr.attribute_name] = attr.attribute_id
-        })
-        
-        // Prepare the product attributes for insertion
-        const productAttributesToInsert = product.attributes.map(attr => {
-          const attributeId = attributeMap[attr.name]
-          if (!attributeId) {
-            console.error(`Attribute ${attr.name} not found for category ${product.category_id}`)
-            return null
-          }
-          
-          const baseInsert = {
-            product_id: parseInt(productId),
-            attribute_id: attributeId
-          }
-          // Add the appropriate value field based on the data type
-          switch (attr.type) {
-            case "number":
-              return { ...baseInsert, value_number: Number(attr.value) || null }
-            case "decimal":
-              return { ...baseInsert, value_decimal: Number(attr.value) || null }
-            case "date":
-              return { ...baseInsert, value_date: attr.value || null }
-            default: // text
-              return { ...baseInsert, value_text: attr.value || null }
-          }
-        }).filter(Boolean) // Remove any null entries
-        
-        if (productAttributesToInsert.length > 0) {
-          const { error: insertError } = await supabase
-            .from("product_attributes")
-            .insert(productAttributesToInsert)
-          
-          if (insertError) {
-            console.error("Error updating product attributes:", insertError)
-            throw new Error(insertError.message)
-          }
-        }
-      }
-      
-      // Refresh the products list
-      const { data: updatedProductsData, error: updatedProductsError } = await supabase
-        .from("products")
-        .select(`
-          product_id,
-          name,
-          base_price,
-          category_id,
-          categories!inner ( name ),
-          product_attributes (
-            attribute_id,
-            value_text,
-            value_number,
-            value_decimal,
-            value_date,
-            attributes!inner (
-              attribute_name,
-              data_type
-            )
-          )
-        `)
-        .order("product_id", { ascending: false })
-      
-      if (updatedProductsError) {
-        throw new Error(updatedProductsError.message)
-      }
-      
-      const updatedProducts = updatedProductsData?.map((product: any) => ({
-        id: product.product_id.toString(),
-        name: product.name,
-        price: product.base_price,
-        stock_qty: 0,
-        category: product.categories?.name || "Uncategorized",
-        category_id: product.category_id,
-        attributes: Array.isArray(product.product_attributes)
-          ? product.product_attributes.map((pa: any) => ({
-              name: pa.attributes?.attribute_name || "Unknown",
-              value:
-                pa.value_text ??
-                pa.value_number?.toString() ??
-                pa.value_decimal?.toString() ??
-                pa.value_date?.toString() ??
-                "",
-              type: pa.attributes?.data_type || "text",
-            }))
-          : [],
-      })) || []
-      
-      setProducts(updatedProducts)
-      toast("Product updated successfully",{
-        description: `${product.name} has been updated.`,
-      })
-    } catch (error) {
-      console.error("Error updating product:", error)
-      toast("Failed to update product",{
-        description: "Please try again later.",
-      })
-      throw error
-    }
-  }
-  
-  // Function to add a category
-  const addCategory = async (category: Omit<Category, 'category_id'>) => {
-    try {
-      const supabase = createClient()
-      
-      // Insert category
-      const { data: newCategory, error: categoryError } = await supabase
-        .from("categories")
-        .insert({
-          name: category.name,
-          description: category.description
-        })
-        .select()
-        .single()
-      
-      if (categoryError) {
-        throw new Error(`Failed to create category: ${categoryError.message}`)
-      }
-      
-      // Insert attributes for the category
-      if (category.attributes.length > 0) {
-        const attributesToInsert = category.attributes.map(attr => ({
-          category_id: newCategory.category_id,
-          attribute_name: attr.attribute_name,
-          data_type: attr.data_type
-        }))
-        
-        const { error: attributesError } = await supabase
-          .from("attributes")
-          .insert(attributesToInsert)
-        
-        if (attributesError) {
-          throw new Error(`Failed to create attributes: ${attributesError.message}`)
-        }
-      }
-      
-      // Refresh categories list
-      const { data: updatedCategoriesData } = await supabase
-        .from("categories")
-        .select(`
-          category_id,
-          name,
-          description,
-          attributes (
-            attribute_id,
-            attribute_name,
-            data_type
-          )
-        `)
-        .order("name")
-      
-      const updatedCategories = updatedCategoriesData?.map((c) => ({
-        category_id: c.category_id,
-        name: c.name,
-        description: c.description,
-        attributes: c.attributes || []
-      })) || []
-      
-      setCategories(updatedCategories)
-      
-      toast("Category added successfully",{
-        description: `${category.name} has been created with its attributes.`,
-      })
-    } catch (error) {
-      console.error("Error adding category:", error)
-      toast("Failed to add category",{
-        description: "Please try again later.",
-      })
-      throw error
-    }
-  }
-  
-  // Function to update a category
-  const updateCategory = async (categoryId: number, category: Partial<Category>) => {
-    try {
-      const supabase = createClient()
-      
-      // Update category
-      const { error: categoryError } = await supabase
-        .from("categories")
-        .update({
-          name: category.name,
-          description: category.description
-        })
-        .eq("category_id", categoryId)
-      
-      if (categoryError) {
-        throw new Error(`Failed to update category: ${categoryError.message}`)
-      }
-      
-      // Get existing attributes for this category
-      const { data: existingAttributes } = await supabase
-        .from("attributes")
-        .select("attribute_id, attribute_name")
-        .eq("category_id", categoryId)
-      
-      // Create a map of existing attribute names to their IDs
-      const existingAttributeMap = new Map(
-        existingAttributes?.map(attr => [attr.attribute_name, attr.attribute_id]) || []
-      )
-      
-      // Process the new attributes
-      const newAttributeNames = new Set(
-        category.attributes?.map(attr => attr.attribute_name) || []
-      )
-      
-      // Find attributes to delete (exist in DB but not in new list)
-      const attributesToDelete = existingAttributes
-        ?.filter(attr => !newAttributeNames.has(attr.attribute_name))
-        .map(attr => attr.attribute_id) || []
-      
-      // Delete attributes that are no longer needed
-      if (attributesToDelete.length > 0) {
-        await supabase
-          .from("attributes")
-          .delete()
-          .in("attribute_id", attributesToDelete)
-      }
-      
-      // Process attributes to add or update
-      if (category.attributes) {
-        for (const attr of category.attributes) {
-          const existingId = existingAttributeMap.get(attr.attribute_name)
-          
-          if (existingId) {
-            // Attribute exists, update it if needed
-            await supabase
-              .from("attributes")
-              .update({
-                attribute_name: attr.attribute_name,
-                data_type: attr.data_type
-              })
-              .eq("attribute_id", existingId)
-          } else {
-            // New attribute, add it
-            await supabase
-              .from("attributes")
-              .insert({
-                category_id: categoryId,
-                attribute_name: attr.attribute_name,
-                data_type: attr.data_type
-              })
-          }
-        }
-      }
-      
-      // Refresh categories list
-      const { data: updatedCategoriesData } = await supabase
-        .from("categories")
-        .select(`
-          category_id,
-          name,
-          description,
-          attributes (
-            attribute_id,
-            attribute_name,
-            data_type
-          )
-        `)
-        .order("name")
-      
-      const updatedCategories = updatedCategoriesData?.map((c) => ({
-        category_id: c.category_id,
-        name: c.name,
-        description: c.description,
-        attributes: c.attributes || []
-      })) || []
-      
-      setCategories(updatedCategories)
-      toast("Category updated successfully",{
-        description: `${category.name} has been updated.`,
-      })
-    } catch (error) {
-      console.error("Error updating category:", error)
-      toast("Failed to update category",{
-        description: "Please try again later.",
-      })
-      throw error
+      console.error("Error fetching data:", error)
+      toast.error("Failed to load data")
+    } finally {
+      setIsLoading(false)
     }
   }
   
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Inventory Management</h1>
-        </div>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="products" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Products
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center gap-2">
-              <FolderOpen className="h-4 w-4" />
-              Categories
-            </TabsTrigger>
-          </TabsList>
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Main Content Card */}
+        <Card className="w-full shadow-sm border-0 md:border">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Products
+                </CardTitle>
+                <CardDescription>
+                  Manage all products and their information
+                </CardDescription>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
+                  <Input
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 w-full"
+                  />
+                </div>
+                
+                <Dialog>
+                  <DialogTrigger asChild>
+                    {profile?.role === 'admin' ? (
+                      <Button className="bg-gray-900 hover:bg-gray-800 text-white whitespace-nowrap">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Product
+                      </Button>
+                    ) : null}
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Add New Product</DialogTitle>
+                      <DialogDescription>
+                        Create a new product with all necessary details
+                      </DialogDescription>
+                    </DialogHeader>
+                    <ProductForm 
+                      categories={categories} 
+                      onSubmit={addProduct} 
+                      isLoading={isLoading}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+          </CardHeader>
           
-          <TabsContent value="products" className="space-y-4">
-            <ProductsTab 
-              products={products} 
-              categories={categories} 
-              addProduct={addProduct}
-              updateProduct={updateProduct}
-              isLoading={isLoading}
-            />
-          </TabsContent>
+          <Separator className="mb-6" />
           
-          <TabsContent value="categories" className="space-y-4">
-            <CategoriesTab 
-              categories={categories} 
-              addCategory={addCategory}
-              updateCategory={updateCategory}
-            />
-          </TabsContent>
-        </Tabs>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-8 w-64" />
+                  <Skeleton className="h-10 w-32" />
+                </div>
+                <div className="rounded-md border">
+                  <div className="border-b p-4">
+                    <div className="grid grid-cols-6 gap-4">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <Skeleton key={i} className="h-4 w-full" />
+                      ))}
+                    </div>
+                  </div>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="border-b p-4">
+                      <div className="grid grid-cols-6 gap-4">
+                        {Array.from({ length: 6 }).map((_, j) => (
+                          <Skeleton key={j} className="h-4 w-full" />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-12 rounded-lg border border-dashed border-gray-300 bg-gray-50">
+                <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                  {searchTerm ? "No products found" : "No products yet"}
+                </h3>
+                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                  {searchTerm 
+                    ? "Try adjusting your search or filters" 
+                    : "Get started by adding your first product"
+                  }
+                </p>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Product
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Add New Product</DialogTitle>
+                      <DialogDescription>
+                        Create a new product with all necessary details
+                      </DialogDescription>
+                    </DialogHeader>
+                    <ProductForm 
+                      categories={categories} 
+                      onSubmit={addProduct} 
+                      isLoading={isLoading}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
+            ) : (
+              <ProductTable 
+                products={filteredProducts} 
+                categories={categories}
+                updateProduct={updateProduct}
+                profile={profile}
+              />
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
 }
-// Products Tab Component
-interface ProductsTabProps {
+
+// Product Table Component
+interface ProductTableProps {
   products: Product[]
   categories: Category[]
-  addProduct: (product: Omit<Product, 'id'>) => Promise<void>
-  updateProduct: (productId: string, product: Omit<Product, 'id'>) => Promise<void>
-  isLoading: boolean
+  updateProduct: (productId: string, product: Omit<Product, "id">) => Promise<void>
+  profile?: Profile | null
 }
-function ProductsTab({ products, categories, addProduct, updateProduct, isLoading }: ProductsTabProps) {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<string>("all")
-  const [sortConfig, setSortConfig] = useState<{
-    key: "name" | "price" | "category" | "stock"
-    direction: "asc" | "desc"
-  }>({ key: "name", direction: "asc" })
-  
-  // State for the add product sheet
-  const [isAddSheetOpen, setIsAddSheetOpen] = useState(false)
-  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
-  const [isAdding, setIsAdding] = useState(false)
-  const [isUpdating, setIsUpdating] = useState(false)
+
+function ProductTable({ products, categories, updateProduct , profile }: ProductTableProps) {
+  const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc' | 'desc'} | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize] = useState(10)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [newProduct, setNewProduct] = useState({
-    name: "",
-    price: 0,
-    stock_qty: 0,
-    category_id: categories[0]?.category_id || 0,
-    attributes: [] as ProductAttribute[]
-  })
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   
-  // Handle category change for the form
-  const handleCategoryChange = (categoryId: number) => {
-    const selectedCategory = categories.find(c => c.category_id === categoryId)
+  const filteredAndSortedProducts = useMemo(() => {
+    let productsCopy = [...products]
     
-    if (selectedCategory) {
-      const newAttributes = selectedCategory.attributes.map(attr => ({
-        name: attr.attribute_name,
-        value: "",
-        type: attr.data_type
-      }))
-      
-      setNewProduct(prev => ({
-        ...prev,
-        category_id: categoryId,
-        attributes: newAttributes
-      }))
-    }
-  }
-  
-  // Handle attribute change for the form
-  const handleAttributeChange = (index: number, value: string) => {
-    setNewProduct(prev => {
-      const updatedAttributes = [...prev.attributes]
-      updatedAttributes[index] = { ...updatedAttributes[index], value }
-      
-      return {
-        ...prev,
-        attributes: updatedAttributes
-      }
-    })
-  }
-  
-  // Handle form submission for adding a product
-  const handleAddProduct = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!newProduct.name || !newProduct.category_id) {
-      toast("Validation error", {
-        description: "Please fill in all required fields",
+    if (sortConfig) {
+      productsCopy.sort((a, b) => {
+        let aValue: any = a[sortConfig.key as keyof Product]
+        let bValue: any = b[sortConfig.key as keyof Product]
+        
+        if (sortConfig.key === 'price' || sortConfig.key === 'stock_qty') {
+          aValue = Number(aValue)
+          bValue = Number(bValue)
+        } else {
+          aValue = String(aValue).toLowerCase()
+          bValue = String(bValue).toLowerCase()
+        }
+        
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
+        return 0
       })
-      return
     }
     
-    setIsAdding(true)
-    
-    try {
-      const selectedCategory = categories.find(c => c.category_id === newProduct.category_id)
-      
-      await addProduct({
-        name: newProduct.name,
-        price: newProduct.price,
-        stock_qty: newProduct.stock_qty,
-        category: selectedCategory?.name || "",
-        category_id: newProduct.category_id,
-        attributes: newProduct.attributes
-      })
-      
-      // Reset form
-      setNewProduct({
-        name: "",
-        price: 0,
-        stock_qty: 0,
-        category_id: categories[0]?.category_id || 0,
-        attributes: []
-      })
-      
-      // Close the sheet after successful addition
-      setIsAddSheetOpen(false)
-      
-      toast("Product added successfully", {
-        description: `${newProduct.name} has been added to your inventory.`,
-      })
-    } catch (error) {
-      console.error("Error adding product:", error)
-      toast("Failed to add product", {
-        description: "Please try again later.",
-      })
-    } finally {
-      setIsAdding(false)
-    }
-  }
+    return productsCopy
+  }, [products, sortConfig])
   
-  // Handle form submission for updating a product
-  const handleUpdateProduct = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!newProduct.name || !newProduct.category_id || !editingProduct) {
-      toast("Validation error", {
-        description: "Please fill in all required fields",
-      })
-      return
-    }
-    
-    setIsUpdating(true)
-    
-    try {
-      const selectedCategory = categories.find(c => c.category_id === newProduct.category_id)
-      
-      await updateProduct(editingProduct.id, {
-        name: newProduct.name,
-        price: newProduct.price,
-        stock_qty: newProduct.stock_qty,
-        category: selectedCategory?.name || "",
-        category_id: newProduct.category_id,
-        attributes: newProduct.attributes
-      })
-      
-      // Reset form
-      setNewProduct({
-        name: "",
-        price: 0,
-        stock_qty: 0,
-        category_id: categories[0]?.category_id || 0,
-        attributes: []
-      })
-      
-      // Close the sheet after successful update
-      setIsEditSheetOpen(false)
-      setEditingProduct(null)
-      
-      toast("Product updated successfully", {
-        description: `${newProduct.name} has been updated.`,
-      })
-    } catch (error) {
-      console.error("Error updating product:", error)
-      toast("Failed to update product", {
-        description: "Please try again later.",
-      })
-    } finally {
-      setIsUpdating(false)
-    }
-  }
-  
-  // Reset form when cancelled
-  const handleCancelAdd = () => {
-    setNewProduct({
-      name: "",
-      price: 0,
-      stock_qty: 0,
-      category_id: categories[0]?.category_id || 0,
-      attributes: []
-    })
-    setIsAddSheetOpen(false)
-  }
-  
-  const handleCancelEdit = () => {
-    setNewProduct({
-      name: "",
-      price: 0,
-      stock_qty: 0,
-      category_id: categories[0]?.category_id || 0,
-      attributes: []
-    })
-    setIsEditSheetOpen(false)
-    setEditingProduct(null)
-  }
-  
-  // Handle edit product
-  const handleEditProduct = (product: Product) => {
-    setEditingProduct(product)
-    setNewProduct({
-      name: product.name,
-      price: product.price,
-      stock_qty: product.stock_qty,
-      category_id: product.category_id,
-      attributes: product.attributes
-    })
-    setIsEditSheetOpen(true)
-  }
-  
-  // Filter and sort products
-  const filteredAndSortedProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.attributes.some(attr => 
-        attr.value.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    
-    const matchesCategory = selectedCategory === "all" || product.category === selectedCategory
-    
-    return matchesSearch && matchesCategory
-  }).sort((a, b) => {
-    const aValue = sortConfig.key === "price" || sortConfig.key === "stock"
-      ? a[sortConfig.key === "stock" ? "stock_qty" : sortConfig.key]
-      : a[sortConfig.key].toLowerCase()
-    const bValue = sortConfig.key === "price" || sortConfig.key === "stock"
-      ? b[sortConfig.key === "stock" ? "stock_qty" : sortConfig.key]
-      : b[sortConfig.key].toLowerCase()
-    
-    if (aValue < bValue) {
-      return sortConfig.direction === "asc" ? -1 : 1
-    }
-    if (aValue > bValue) {
-      return sortConfig.direction === "asc" ? 1 : -1
-    }
-    return 0
-  })
-  
-  const handleSort = (key: "name" | "price" | "category" | "stock") => {
-    setSortConfig(prev => ({
-      key,
-      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
-    }))
-  }
+  const totalPages = Math.ceil(filteredAndSortedProducts.length / pageSize)
+  const paginatedProducts = filteredAndSortedProducts.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  )
   
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -856,829 +586,449 @@ function ProductsTab({ products, categories, addProduct, updateProduct, isLoadin
     return { text: "In Stock", variant: "default" as const }
   }
   
-  return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-3">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Package className="h-5 w-5" />
-              Product Inventory
-            </CardTitle>
-            <CardDescription className="text-sm">
-              Manage your product inventory
-            </CardDescription>
-          </div>
-          
-          {/* Add Product Sheet Trigger */}
-          <Sheet open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen}>
-            <SheetTrigger asChild>
-              <Button size="sm" className="gap-1">
-                <Plus className="h-4 w-4" />
-                Add Product
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[500px] sm:w-[600px] overflow-hidden">
-              <SheetHeader className="px-6 pt-6">
-                <SheetTitle className="text-xl">Add New Product</SheetTitle>
-                <SheetDescription>
-                  Fill in the details for the new product
-                </SheetDescription>
-              </SheetHeader>
-              
-              <div className="overflow-y-auto max-h-[calc(100vh-200px)] px-6 pb-6">
-                <form onSubmit={handleAddProduct} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Product Name</Label>
-                    <Input
-                      id="name"
-                      value={newProduct.name}
-                      onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                      placeholder="Product name"
-                      className="h-10"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Select
-                      value={newProduct.category_id.toString()}
-                      onValueChange={(value) => handleCategoryChange(parseInt(value))}
-                    >
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.category_id} value={category.category_id.toString()}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="price">Price ($)</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={newProduct.price}
-                        onChange={(e) => setNewProduct({...newProduct, price: parseFloat(e.target.value) || 0})}
-                        placeholder="0.00"
-                        className="h-10"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="stock">Stock</Label>
-                      <Input
-                        id="stock"
-                        type="number"
-                        min="0"
-                        value={newProduct.stock_qty}
-                        onChange={(e) => setNewProduct({...newProduct, stock_qty: parseInt(e.target.value) || 0})}
-                        placeholder="0"
-                        className="h-10"
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Dynamic Attributes Section */}
-                  {newProduct.attributes.length > 0 && (
-                    <div className="space-y-4">
-                      <Label className="text-base font-medium">Attributes</Label>
-                      <div className="space-y-4">
-                        {newProduct.attributes.map((attr, index) => (
-                          <div key={index} className="space-y-1">
-                            <Label className="text-sm text-muted-foreground">{attr.name}</Label>
-                            <Input
-                              value={attr.value}
-                              onChange={(e) => handleAttributeChange(index, e.target.value)}
-                              placeholder={`Enter ${attr.name}`}
-                              className="h-10"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </form>
-              </div>
-              
-              {/* Form Actions - Fixed at the bottom */}
-              <SheetFooter className="px-6 pb-6 pt-0">
-                <Button type="button" variant="outline" onClick={handleCancelAdd} className="h-10">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isAdding || !newProduct.name} className="h-10" onClick={handleAddProduct}>
-                  {isAdding ? "Adding..." : "Add Product"}
-                </Button>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
-          
-          {/* Edit Product Sheet */}
-          <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
-            <SheetContent side="right" className="w-[500px] sm:w-[600px] overflow-hidden">
-              <SheetHeader className="px-6 pt-6">
-                <SheetTitle className="text-xl">Edit Product</SheetTitle>
-                <SheetDescription>
-                  Update the product details
-                </SheetDescription>
-              </SheetHeader>
-              
-              <div className="overflow-y-auto max-h-[calc(100vh-200px)] px-6 pb-6">
-                <form onSubmit={handleUpdateProduct} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-name">Product Name</Label>
-                    <Input
-                      id="edit-name"
-                      value={newProduct.name}
-                      onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                      placeholder="Product name"
-                      className="h-10"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-category">Category</Label>
-                    <Select
-                      value={newProduct.category_id.toString()}
-                      onValueChange={(value) => handleCategoryChange(parseInt(value))}
-                    >
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.category_id} value={category.category_id.toString()}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-price">Price ($)</Label>
-                      <Input
-                        id="edit-price"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={newProduct.price}
-                        onChange={(e) => setNewProduct({...newProduct, price: parseFloat(e.target.value) || 0})}
-                        placeholder="0.00"
-                        className="h-10"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-stock">Stock</Label>
-                      <Input
-                        id="edit-stock"
-                        type="number"
-                        min="0"
-                        value={newProduct.stock_qty}
-                        onChange={(e) => setNewProduct({...newProduct, stock_qty: parseInt(e.target.value) || 0})}
-                        placeholder="0"
-                        className="h-10"
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Dynamic Attributes Section */}
-                  {newProduct.attributes.length > 0 && (
-                    <div className="space-y-4">
-                      <Label className="text-base font-medium">Attributes</Label>
-                      <div className="space-y-4">
-                        {newProduct.attributes.map((attr, index) => (
-                          <div key={index} className="space-y-1">
-                            <Label className="text-sm text-muted-foreground">{attr.name}</Label>
-                            <Input
-                              value={attr.value}
-                              onChange={(e) => handleAttributeChange(index, e.target.value)}
-                              placeholder={`Enter ${attr.name}`}
-                              className="h-10"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </form>
-              </div>
-              
-              {/* Form Actions - Fixed at the bottom */}
-              <SheetFooter className="px-6 pb-6 pt-0">
-                <Button type="button" variant="outline" onClick={handleCancelEdit} className="h-10">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isUpdating || !newProduct.name} className="h-10" onClick={handleUpdateProduct}>
-                  {isUpdating ? "Updating..." : "Update Product"}
-                </Button>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
-        </div>
-        
-        {/* Search and filter section */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-9"
-            />
-          </div>
-          <div className="w-full sm:w-48">
-            <Select
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.category_id} value={category.name}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="pt-0">
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-          </div>
-        ) : filteredAndSortedProducts.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">No products found</p>
-            <p className="text-sm mb-4">Try adjusting your search or filters</p>
-            <Button 
-              onClick={() => setIsAddSheetOpen(true)}
-              className="mx-auto"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Your First Product
-            </Button>
-          </div>
-        ) : (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40%]">
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort("name")}
-                      className="h-8 flex items-center gap-1 hover:bg-transparent p-0 font-medium text-xs"
-                    >
-                      Name
-                      <ArrowUpDown className="h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="w-[15%]">
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort("price")}
-                      className="h-8 flex items-center gap-1 hover:bg-transparent p-0 font-medium text-xs"
-                    >
-                      Price
-                      <ArrowUpDown className="h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="w-[20%]">
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort("category")}
-                      className="h-8 flex items-center gap-1 hover:bg-transparent p-0 font-medium text-xs"
-                    >
-                      Category
-                      <ArrowUpDown className="h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="w-[15%]">
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort("stock")}
-                      className="h-8 flex items-center gap-1 hover:bg-transparent p-0 font-medium text-xs"
-                    >
-                      Stock
-                      <ArrowUpDown className="h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="w-[10%]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAndSortedProducts.map((product) => {
-                  const stockStatus = getStockStatus(product.stock_qty)
-                  return (
-                    <TableRow key={product.id} className="hover:bg-muted/30">
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>{formatPrice(product.price)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {product.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={stockStatus.variant} className="text-xs">
-                          {stockStatus.text}
-                        </Badge>
-                        <span className="ml-1 text-xs text-muted-foreground">
-                          ({product.stock_qty})
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditProduct(product)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-// Categories Tab Component
-interface CategoriesTabProps {
-  categories: Category[]
-  addCategory: (category: Omit<Category, 'category_id'>) => Promise<void>
-  updateCategory: (categoryId: number, category: Partial<Category>) => Promise<void>
-}
-function CategoriesTab({ categories, addCategory, updateCategory }: CategoriesTabProps) {
-  const [isAddSheetOpen, setIsAddSheetOpen] = useState(false)
-  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
-  const [newCategory, setNewCategory] = useState({
-    name: "",
-    description: "",
-    attributes: [] as { attribute_id?: number; attribute_name: string; data_type: "text" | "number" | "decimal" | "date" }[]
-  })
-  const [newAttribute, setNewAttribute] = useState({
-    attribute_name: "",
-    data_type: "text" as "text" | "number" | "decimal" | "date"
-  })
-  
-  const handleAddAttribute = () => {
-    if (newAttribute.attribute_name && newAttribute.data_type) {
-      // Check if attribute already exists
-      const attributeExists = newCategory.attributes.some(
-        attr => attr.attribute_name === newAttribute.attribute_name
-      )
-      
-      if (!attributeExists) {
-        setNewCategory(prev => ({
-          ...prev,
-          attributes: [...prev.attributes, { ...newAttribute }]
-        }))
-        setNewAttribute({ attribute_name: "", data_type: "text" })
-      } else {
-        toast(`Attribute "${newAttribute.attribute_name}" already exists for this category.`)
+  const handleSort = (key: string) => {
+    setSortConfig(current => {
+      if (current?.key === key) {
+        return current.direction === 'asc' ? { key, direction: 'desc' } : null
       }
-    }
-  }
-  
-  const handleRemoveAttribute = (index: number) => {
-    setNewCategory(prev => ({
-      ...prev,
-      attributes: prev.attributes.filter((_, i) => i !== index)
-    }))
-  }
-  
-  const handleSubmit = async () => {
-    if (!newCategory.name) return
-    
-    try {
-      await addCategory(newCategory as Category)
-      setIsAddSheetOpen(false)
-      setNewCategory({
-        name: "",
-        description: "",
-        attributes: []
-      })
-    } catch (error) {
-      console.error("Error adding category:", error)
-    }
-  }
-  
-  const handleEdit = (category: Category) => {
-    setEditingCategory(category)
-    setNewCategory({
-      name: category.name,
-      description: category.description || "",
-      attributes: category.attributes.map(attr => ({
-        attribute_id: attr.attribute_id,
-        attribute_name: attr.attribute_name,
-        data_type: attr.data_type
-      }))
+      return { key, direction: 'asc' }
     })
-    setIsEditSheetOpen(true)
   }
   
-  const handleUpdate = async () => {
-    if (!editingCategory || !newCategory.name) return
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product)
+    setIsEditDialogOpen(true)
+  }
+  
+  const getPageNumbers = () => {
+    const pageNumbers = []
+    const maxVisiblePages = 5
     
-    try {
-      const categoryToUpdate: Partial<Category> = {
-        name: newCategory.name,
-        description: newCategory.description,
-        attributes: newCategory.attributes.map(attr => ({
-          attribute_id: attr.attribute_id || 0,
-          attribute_name: attr.attribute_name,
-          data_type: attr.data_type
-        }))
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i)
+      }
+    } else {
+      const startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
+      const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1)
+      
+      if (startPage > 1) {
+        pageNumbers.push(1)
+        if (startPage > 2) {
+          pageNumbers.push("...")
+        }
       }
       
-      await updateCategory(editingCategory.category_id, categoryToUpdate)
-      setIsEditSheetOpen(false)
-      setEditingCategory(null)
-      setNewCategory({
-        name: "",
-        description: "",
-        attributes: []
-      })
-    } catch (error) {
-      console.error("Error updating category:", error)
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.push(i)
+      }
+      
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+          pageNumbers.push("...")
+        }
+        pageNumbers.push(totalPages)
+      }
     }
-  }
-  
-  // Reset form when cancelled
-  const handleCancelAdd = () => {
-    setNewCategory({
-      name: "",
-      description: "",
-      attributes: []
-    })
-    setIsAddSheetOpen(false)
-  }
-  
-  const handleCancelEdit = () => {
-    setNewCategory({
-      name: "",
-      description: "",
-      attributes: []
-    })
-    setEditingCategory(null)
-    setIsEditSheetOpen(false)
+    
+    return pageNumbers
   }
   
   return (
     <>
-      <Card className="shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <FolderOpen className="h-5 w-5" />
-                Categories Management
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Manage product categories and their attributes
-              </CardDescription>
-            </div>
-            
-            {/* Add Category Sheet Trigger */}
-            <Sheet open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen}>
-              <SheetTrigger asChild>
-                <Button size="sm" className="gap-1">
-                  <Plus className="h-4 w-4" />
-                  Add Category
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[500px] sm:w-[600px] overflow-hidden">
-                <SheetHeader className="px-6 pt-6">
-                  <SheetTitle className="text-xl">Add New Category</SheetTitle>
-                  <SheetDescription>
-                    Create a new category and define its attributes
-                  </SheetDescription>
-                </SheetHeader>
-                
-                <div className="overflow-y-auto max-h-[calc(100vh-200px)] px-6 pb-6">
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Category Name</Label>
-                      <Input
-                        id="name"
-                        value={newCategory.name}
-                        onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
-                        placeholder="Category name"
-                        className="h-10"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        value={newCategory.description}
-                        onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
-                        placeholder="Category description"
-                        className="min-h-[100px]"
-                      />
-                    </div>
-                    
-                    {/* Attributes Section */}
-                    <div className="space-y-4">
-                      <Label className="text-base font-medium">Attributes</Label>
-                      <div className="space-y-4">
-                        {newCategory.attributes.map((attr, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <Input
-                              value={attr.attribute_name}
-                              readOnly
-                              className="flex-1 h-10"
-                            />
-                            <Select
-                              value={attr.data_type}
-                              disabled
-                            >
-                              <SelectTrigger className="w-32 h-10">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </Select>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveAttribute(index)}
-                              className="h-10 w-10"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                        
-                        <div className="flex items-center gap-2">
-                          <Input
-                            placeholder="Attribute name"
-                            value={newAttribute.attribute_name}
-                            onChange={(e) => setNewAttribute({...newAttribute, attribute_name: e.target.value})}
-                            className="flex-1 h-10"
-                          />
-                          <Select
-                            value={newAttribute.data_type}
-                            onValueChange={(value: "text" | "number" | "decimal" | "date") => 
-                              setNewAttribute({...newAttribute, data_type: value})
-                            }
-                          >
-                            <SelectTrigger className="w-32 h-10">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="text">Text</SelectItem>
-                              <SelectItem value="number">Number</SelectItem>
-                              <SelectItem value="decimal">Decimal</SelectItem>
-                              <SelectItem value="date">Date</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleAddAttribute}
-                            disabled={!newAttribute.attribute_name}
-                            className="h-10"
-                          >
-                            Add
-                          </Button>
-                        </div>
-                        
-                        {newCategory.attributes.length > 0 && (
-                          <div className="text-xs text-muted-foreground mt-2">
-                            Added attributes: {newCategory.attributes.map(attr => attr.attribute_name).join(", ")}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Form Actions - Fixed at the bottom */}
-                <SheetFooter className="px-6 pb-6 pt-0">
-                  <Button type="button" variant="outline" onClick={handleCancelAdd} className="h-10">
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSubmit} disabled={!newCategory.name} className="h-10">
-                    Save Category
-                  </Button>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="pt-0">
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Attributes</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category) => (
-                  <TableRow key={category.category_id} className="hover:bg-muted/30">
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell>{category.description || "-"}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {category.attributes.length > 0 ? (
-                          <TooltipProvider>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="font-semibold">Product</TableHead>
+              <TableHead className="font-semibold">Category</TableHead>
+              <TableHead className="font-semibold">Status</TableHead>
+              <TableHead className="font-semibold">Price</TableHead>
+              <TableHead className="font-semibold">Stock</TableHead>
+              <TableHead className="font-semibold">Attributes</TableHead>
+              {profile?.role === "admin" && (
+  <TableHead className="font-semibold text-right">Actions</TableHead>
+)}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedProducts.map((product) => {
+              const stockStatus = getStockStatus(product.stock_qty)
+              return (
+                <TableRow key={product.id} className="hover:bg-gray-50/50">
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs">
+                      {product.category}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={stockStatus.variant} className="text-xs">
+                      {stockStatus.text}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {formatPrice(product.price)}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm font-medium">{product.stock_qty}</span>
+                  </TableCell>
+                  <TableCell>
+                    {product.attributes.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 items-center">
+                        {product.attributes.slice(0, 2).map((attr:any, i:any) => (
+                          <TooltipProvider key={i} delayDuration={100}>
                             <Tooltip>
-                              <TooltipTrigger>
-                                <Badge variant="secondary" className="text-xs">
-                                  {category.attributes.length} attributes
-                                </Badge>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <Badge variant="outline" className="text-xs cursor-pointer">
+                                    {attr.name}
+                                  </Badge>
+                                </span>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <div className="max-w-xs">
-                                  {category.attributes.map((attr, index) => (
-                                    <div key={index} className="text-xs">
-                                      {attr.attribute_name} ({attr.data_type})
-                                    </div>
-                                  ))}
+                                <div className="flex flex-col text-xs">
+                                  <span>Value: {attr.value}</span>
+                                  <span>Type: {attr.type}</span>
                                 </div>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">None</span>
+                        ))}
+                        {product.attributes.length > 2 && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <span>
+                                <Badge variant="outline" className="text-xs cursor-pointer bg-muted text-muted-foreground">
+                                  +{product.attributes.length - 2} more
+                                </Badge>
+                              </span>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 max-h-60 overflow-y-auto">
+                              <div className="font-semibold mb-2 text-sm">
+                                Product Attributes
+                              </div>
+                              <div className="space-y-2">
+                                {product.attributes.map((attr:any, i:any) => (
+                                  <div
+                                    key={i}
+                                    className="border-b pb-2 last:border-b-0 last:pb-0"
+                                  >
+                                    <div className="font-medium text-sm">
+                                      {attr.name}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      Value: {attr.value}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      Type: {attr.type}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(category)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-xs text-muted-foreground bg-muted"
+                      >
+                        None
+                      </Badge>
+                    )}
+                  </TableCell>
+                  {profile?.role === "admin" && (
+  <TableCell className="text-right">
+    <div className="flex items-center justify-end gap-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => handleEditProduct(product)}
+        className="h-8 w-8 p-0"
+      >
+        <Edit className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  </TableCell>
+)}
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </div>
       
-      {/* Edit Category Sheet */}
-      <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
-        <SheetContent side="right" className="w-[500px] sm:w-[600px] overflow-hidden">
-          <SheetHeader className="px-6 pt-6">
-            <SheetTitle className="text-xl">Edit Category</SheetTitle>
-            <SheetDescription>
-              Update the category details and attributes
-            </SheetDescription>
-          </SheetHeader>
-          
-          <div className="overflow-y-auto max-h-[calc(100vh-200px)] px-6 pb-6">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Category Name</Label>
-                <Input
-                  id="edit-name"
-                  value={newCategory.name}
-                  onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
-                  placeholder="Category name"
-                  className="h-10"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  value={newCategory.description}
-                  onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
-                  placeholder="Category description"
-                  className="min-h-[100px]"
-                />
-              </div>
-              
-              {/* Attributes Section */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-medium">Attributes</Label>
-                  <span className="text-xs text-muted-foreground">
-                    Click the X to remove an attribute
-                  </span>
-                </div>
-                <div className="space-y-4">
-                  {newCategory.attributes.map((attr, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Input
-                        value={attr.attribute_name}
-                        readOnly
-                        className="flex-1 h-10"
-                      />
-                      <Select
-                        value={attr.data_type}
-                        disabled
-                      >
-                        <SelectTrigger className="w-32 h-10">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </Select>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveAttribute(index)}
-                        className="h-10 w-10 text-red-500 hover:text-red-700 hover:bg-red-50"
-                        title="Remove attribute"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
+      {/* Pagination */}
+      {products.length > 0 && (
+        <div className="flex items-center justify-between space-x-2 py-4">
+          <div className="text-sm text-muted-foreground">
+            Showing {Math.min((currentPage - 1) * pageSize + 1, products.length)} to{" "}
+            {Math.min(currentPage * pageSize, products.length)} of{" "}
+            {products.length} products
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="h-8 px-3"
+            >
+              First
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="h-8 px-3"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {getPageNumbers().map((page, index) => (
+              <Button
+                key={index}
+                variant={page === currentPage ? "default" : "outline"}
+                size="sm"
+                onClick={() => typeof page === "number" && setCurrentPage(page)}
+                disabled={page === "..."}
+                className="h-8 w-8 p-0"
+              >
+                {page}
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="h-8 px-3"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="h-8 px-3"
+            >
+              Last
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+            <DialogDescription>
+              Update the product's information.
+            </DialogDescription>
+          </DialogHeader>
+          <ProductForm 
+            categories={categories} 
+            product={editingProduct}
+            onSubmit={(product) => updateProduct(editingProduct!.id, product)} 
+            isLoading={false}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+// Product Form Component
+interface ProductFormProps {
+  categories: Category[]
+  product?: Product | null
+  onSubmit: (product: Omit<Product, "id">) => Promise<void>
+  isLoading: boolean
+}
+
+function ProductForm({ categories, product, onSubmit, isLoading }: ProductFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formData, setFormData] = useState({
+    name: product?.name || "",
+    price: product?.price || 0,
+    stock_qty: product?.stock_qty || 0,
+    category_id: product?.category_id || categories[0]?.category_id || 0,
+    attributes: product?.attributes || [],
+  })
+  
+  const handleCategoryChange = (categoryId: number) => {
+    const selectedCategory = categories.find((c) => c.category_id === categoryId)
+    if (selectedCategory) {
+      const newAttributes = selectedCategory.attributes.map((attr:any) => ({
+        name: attr.attribute_name,
+        value: "",
+        type: attr.data_type,
+      }))
+      setFormData((prev) => ({
+        ...prev,
+        category_id: categoryId,
+        attributes: newAttributes,
+      }))
+    }
+  }
+  
+  const handleAttributeChange = (index: number, value: string) => {
+    setFormData((prev) => {
+      const updatedAttributes = [...prev.attributes]
+      updatedAttributes[index] = { ...updatedAttributes[index], value }
+      return {
+        ...prev,
+        attributes: updatedAttributes,
+      }
+    })
+  }
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.name || !formData.category_id) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+    
+    setIsSubmitting(true)
+    try {
+      const selectedCategory = categories.find((c) => c.category_id === formData.category_id)
+      await onSubmit({
+        name: formData.name,
+        price: formData.price,
+        stock_qty: formData.stock_qty,
+        category: selectedCategory?.name || "",
+        category_id: formData.category_id,
+        attributes: formData.attributes,
+      })
+    } catch (error) {
+      console.error("Error submitting product:", error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+  
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Tabs defaultValue="basic" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="basic">Basic Info</TabsTrigger>
+          <TabsTrigger value="inventory">Inventory</TabsTrigger>
+          <TabsTrigger value="attributes">Attributes</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="basic" className="space-y-4 pt-4">
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name" className="text-sm font-medium">Product Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Enter product name"
+                required
+                className="w-full"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
+              <Select
+                value={formData.category_id.toString()}
+                onValueChange={(value) => handleCategoryChange(Number.parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.category_id} value={category.category_id.toString()}>
+                      {category.name}
+                    </SelectItem>
                   ))}
-                  
-                  <div className="flex items-center gap-2">
-                    <Input
-                      placeholder="Attribute name"
-                      value={newAttribute.attribute_name}
-                      onChange={(e) => setNewAttribute({...newAttribute, attribute_name: e.target.value})}
-                      className="flex-1 h-10"
-                    />
-                    <Select
-                      value={newAttribute.data_type}
-                      onValueChange={(value: "text" | "number" | "decimal" | "date") => 
-                        setNewAttribute({...newAttribute, data_type: value})
-                      }
-                    >
-                      <SelectTrigger className="w-32 h-10">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="text">Text</SelectItem>
-                        <SelectItem value="number">Number</SelectItem>
-                        <SelectItem value="decimal">Decimal</SelectItem>
-                        <SelectItem value="date">Date</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAddAttribute}
-                      disabled={!newAttribute.attribute_name}
-                      className="h-10"
-                    >
-                      Add
-                    </Button>
-                  </div>
-                  
-                  {newCategory.attributes.length > 0 && (
-                    <div className="text-xs text-muted-foreground mt-2">
-                      Current attributes: {newCategory.attributes.map(attr => attr.attribute_name).join(", ")}
-                    </div>
-                  )}
-                </div>
-              </div>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="price" className="text-sm font-medium">Price ($) *</Label>
+              <Input
+                id="price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.price}
+                onChange={(e) =>
+                  setFormData({ ...formData, price: Number.parseFloat(e.target.value) || 0 })
+                }
+                placeholder="0.00"
+                required
+              />
             </div>
           </div>
-          
-          {/* Form Actions - Fixed at the bottom */}
-          <SheetFooter className="px-6 pb-6 pt-0">
-            <Button type="button" variant="outline" onClick={handleCancelEdit} className="h-10">
-              Cancel
-            </Button>
-            <Button onClick={handleUpdate} disabled={!newCategory.name} className="h-10">
-              Update Category
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-    </>
+        </TabsContent>
+        
+        <TabsContent value="inventory" className="space-y-4 pt-4">
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="stock" className="text-sm font-medium">Stock Quantity</Label>
+              <Input
+                id="stock"
+                type="number"
+                min="0"
+                value={formData.stock_qty}
+                onChange={(e) =>
+                  setFormData({ ...formData, stock_qty: Number.parseInt(e.target.value) || 0 })
+                }
+                placeholder="0"
+              />
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="attributes" className="space-y-4 pt-4">
+          <div className="space-y-4">
+            {formData.attributes.length > 0 ? (
+              formData.attributes.map((attr:any, index:any) => (
+                <div key={index} className="grid gap-2">
+                  <Label className="text-sm font-medium">{attr.name}</Label>
+                  <div className="text-xs text-muted-foreground mb-1">Type: {attr.type}</div>
+                  <Input
+                    value={attr.value}
+                    onChange={(e) => handleAttributeChange(index, e.target.value)}
+                    placeholder={`Enter ${attr.name.toLowerCase()}`}
+                  />
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                No attributes available for this category
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+      
+      <DialogFooter className="pt-4 border-t">
+        <Button 
+          type="submit" 
+          disabled={isSubmitting || !formData.name}
+          className="min-w-[120px]"
+        >
+          {isSubmitting ? "Saving..." : product ? "Update Product" : "Add Product"}
+        </Button>
+      </DialogFooter>
+    </form>
   )
 }
