@@ -6,11 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
 import { CalendarIcon, Building, Truck } from 'lucide-react'
 import { format } from 'date-fns'
-import { cn } from '@/lib/utils'
 import { useState, useCallback, useMemo } from 'react'
 
 // Import new dashboard components
@@ -23,80 +20,81 @@ import { DashboardSkeleton } from '@/components/dashboard/skeletons'
 export default function DashboardPage() {
   const profile = useAuth()
   const { currentLocation, locations, isLoading: locationLoading, setCurrentLocation } = useLocation()
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to: new Date(),
-  })
+  
+  // Current month date range (no picker needed)
+  const currentMonthRange = useMemo(() => {
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    return { from: startOfMonth, to: endOfMonth }
+  }, [])
   
   // Memoize values to prevent unnecessary re-renders
   const userRole = useMemo(() => profile?.profile?.role || 'store_manager', [profile?.profile?.role])
   const isAdmin = useMemo(() => userRole === 'admin', [userRole])
   const isWarehouseManager = useMemo(() => userRole === 'warehouse_manager', [userRole])
   
-  // Memoize location filter
-  const locationFilter = useMemo(() => {
-    if (isAdmin) return null
-    if (currentLocation) return currentLocation.location_id.toString()
-    return null
+  // Updated location and dashboard type logic
+  const { locationFilter, dashboardType } = useMemo(() => {
+    // Non-admin users: use their assigned location
+    if (!isAdmin && currentLocation) {
+      return {
+        locationFilter: currentLocation.location_id.toString(),
+        dashboardType: currentLocation.location_type // 'warehouse' or 'store'
+      }
+    }
+    
+    // Admin users: behavior based on selected location
+    if (isAdmin && currentLocation) {
+      return {
+        locationFilter: currentLocation.location_id.toString(),
+        dashboardType: currentLocation.location_type // Show dashboard type based on selected location
+      }
+    }
+    
+    // Admin with no location selected: show overall dashboard
+    if (isAdmin) {
+      return {
+        locationFilter: null,
+        dashboardType: 'overall' // Show combined data
+      }
+    }
+    
+    // Default fallback
+    return {
+      locationFilter: null,
+      dashboardType: 'store'
+    }
   }, [isAdmin, currentLocation])
+  
+  // Determine if current view should show warehouse-specific features
+  const showWarehouseFeatures = useMemo(() => {
+    return dashboardType === 'warehouse' || isWarehouseManager
+  }, [dashboardType, isWarehouseManager])
 
-  // Dashboard header based on role
+  // Dashboard header based on current dashboard type
   const getDashboardTitle = useCallback(() => {
-    if (isAdmin) return "Business Dashboard"
-    if (isWarehouseManager) return "Warehouse Dashboard"
-    return "Store Dashboard"
-  }, [isAdmin, isWarehouseManager])
+    if (dashboardType === 'warehouse') return "Warehouse Dashboard"
+    if (dashboardType === 'store') return "Store Dashboard"
+    if (dashboardType === 'overall') return "Business Overview"
+    return "Dashboard"
+  }, [dashboardType])
   
   const getDashboardDescription = useCallback(() => {
-    if (isAdmin) return "Overview of all business operations"
-    if (isWarehouseManager) return "Inventory and transfer management"
-    return "Sales and store performance"
-  }, [isAdmin, isWarehouseManager])
+    if (dashboardType === 'warehouse') return "Inventory and transfer management"
+    if (dashboardType === 'store') return "Sales and store performance"
+    if (dashboardType === 'overall') return "Overall business operations"
+    return "Business operations overview"
+  }, [dashboardType])
 
-  // Date Range Picker Component
-  function DateRangePicker() {
+  // Current Month Display Component
+  function CurrentMonthDisplay() {
     return (
-      <div className="flex items-center space-x-2">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              id="date"
-              variant={"outline"}
-              className={cn(
-                "w-[300px] justify-start text-left font-normal",
-                !dateRange && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {dateRange?.from ? (
-                dateRange.to ? (
-                  <>
-                    {format(dateRange.from, "LLL dd, y")} -{" "}
-                    {format(dateRange.to, "LLL dd, y")}
-                  </>
-                ) : (
-                  format(dateRange.from, "LLL dd, y")
-                )
-              ) : (
-                <span>Pick a date</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={dateRange?.from}
-              selected={dateRange}
-              onSelect={(range) => {
-                if (range) {
-                  setDateRange(range as { from: Date; to: Date })
-                }
-              }}
-              numberOfMonths={2}
-            />
-          </PopoverContent>
-        </Popover>
+      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+        <CalendarIcon className="h-4 w-4" />
+        <span>
+          {format(currentMonthRange.from, "MMMM yyyy")} (Current Month)
+        </span>
       </div>
     )
   }
@@ -151,7 +149,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <LocationSelector />
-          {!isWarehouseManager && <DateRangePicker />}
+          <CurrentMonthDisplay />
           <div className="flex items-center space-x-2">
             <Avatar className="h-8 w-8">
               <AvatarImage src={profile.profile.avatar_url || ''} />
@@ -171,14 +169,15 @@ export default function DashboardPage() {
       <KPICards 
         userRole={userRole} 
         locationFilter={locationFilter} 
-        dateRange={dateRange} 
+        dateRange={currentMonthRange}
+        dashboardType={dashboardType}
       />
       
-      {/* Charts - Only for admin and store managers */}
-      {!isWarehouseManager && (
+      {/* Charts - Only for store dashboards */}
+      {!showWarehouseFeatures && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          <SalesChart userRole={userRole} locationFilter={locationFilter} />
-          <ExpenseChart userRole={userRole} locationFilter={locationFilter} />
+          <SalesChart userRole={userRole} locationFilter={locationFilter} dashboardType={dashboardType} />
+          <ExpenseChart userRole={userRole} locationFilter={locationFilter} dashboardType={dashboardType} />
         </div>
       )}
       
@@ -187,16 +186,20 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>
-              {isWarehouseManager ? "Inventory Status" : "Low Stock Items"}
+              {showWarehouseFeatures ? "Inventory Status" : "Low Stock Items"}
             </CardTitle>
             <CardDescription>
-              {isWarehouseManager 
+              {showWarehouseFeatures 
                 ? "Current stock levels in warehouse" 
                 : "Products that need restocking"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <InventoryTable userRole={userRole} locationFilter={locationFilter} />
+            <InventoryTable 
+              userRole={userRole} 
+              locationFilter={locationFilter} 
+              dashboardType={dashboardType}
+            />
           </CardContent>
         </Card>
         
@@ -204,13 +207,17 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Recent Activities</CardTitle>
             <CardDescription>
-              {isWarehouseManager 
+              {showWarehouseFeatures 
                 ? "Latest inventory transfers" 
                 : "Latest transactions and updates"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ActivityFeed userRole={userRole} locationFilter={locationFilter} />
+            <ActivityFeed 
+              userRole={userRole} 
+              locationFilter={locationFilter} 
+              dashboardType={dashboardType}
+            />
           </CardContent>
         </Card>
       </div>

@@ -11,11 +11,12 @@ import { validateInventoryItem, ValidatedInventoryItem } from '@/lib/data-valida
 interface InventoryTableProps {
   userRole: string
   locationFilter: string | null
+  dashboardType: string
 }
 
-async function fetchInventoryData(userRole: string, locationFilter: string | null): Promise<ValidatedInventoryItem[]> {
+async function fetchInventoryData(userRole: string, locationFilter: string | null, dashboardType: string): Promise<ValidatedInventoryItem[]> {
   const supabase = createClient()
-  const isWarehouseManager = userRole === 'warehouse_manager'
+  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse_manager'
 
   let query = supabase
     .from('inventory')
@@ -23,7 +24,7 @@ async function fetchInventoryData(userRole: string, locationFilter: string | nul
       quantity,
       reserved_quantity,
       products(name, sku, base_price),
-      locations(name, location_type)
+      locations!inner(name, location_type)
     `)
     .lt('quantity', 10)
 
@@ -31,8 +32,10 @@ async function fetchInventoryData(userRole: string, locationFilter: string | nul
     query = query.eq('location_id', locationFilter)
   }
 
-  if (isWarehouseManager) {
+  if (showWarehouseData) {
     query = query.eq('locations.location_type', 'warehouse')
+  } else {
+    query = query.eq('locations.location_type', 'store')
   }
 
   const { data, error } = await query.order('quantity', { ascending: true })
@@ -47,10 +50,10 @@ async function fetchInventoryData(userRole: string, locationFilter: string | nul
     .filter((item): item is ValidatedInventoryItem => item !== null)
 }
 
-export function InventoryTable({ userRole, locationFilter }: InventoryTableProps) {
+export function InventoryTable({ userRole, locationFilter, dashboardType }: InventoryTableProps) {
   const { data: inventory, isLoading, error } = useQuery({
-    queryKey: ['inventory', userRole, locationFilter],
-    queryFn: () => fetchInventoryData(userRole, locationFilter),
+    queryKey: ['inventory', userRole, locationFilter, dashboardType],
+    queryFn: () => fetchInventoryData(userRole, locationFilter, dashboardType),
     staleTime: 2 * 60 * 1000, // 2 minutes
   })
 

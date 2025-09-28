@@ -22,41 +22,51 @@ interface KPICardsProps {
   userRole: string
   locationFilter: string | null
   dateRange: { from: Date; to: Date }
+  dashboardType: string
 }
 
 async function fetchKPIData(
   userRole: string, 
   locationFilter: string | null, 
-  dateRange: { from: Date; to: Date }
+  dateRange: { from: Date; to: Date },
+  dashboardType: string
 ): Promise<KPIData> {
   const supabase = createClient()
-  const isWarehouseManager = userRole === 'warehouse_manager'
+  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse_manager'
   
   const dateRangeStrings = {
     from: dateRange.from.toISOString(),
     to: dateRange.to.toISOString()
   }
 
-  if (isWarehouseManager) {
+  if (showWarehouseData) {
     // For warehouse managers, only fetch inventory-related KPIs
+    let inventoryQuery = supabase
+      .from('inventory')
+      .select('quantity, products(base_price), locations!inner(location_type)')
+      .eq('locations.location_type', 'warehouse')
+    
+    let lowStockQuery = supabase
+      .from('inventory')
+      .select('*', { count: 'exact' })
+      .lt('quantity', 10)
+      .eq('locations.location_type', 'warehouse')
+    
+    let transfersQuery = supabase
+      .from('inventory_transfers')
+      .select('*', { count: 'exact' })
+    
+    // Apply location filter if specified
+    if (locationFilter) {
+      inventoryQuery = inventoryQuery.eq('location_id', locationFilter)
+      lowStockQuery = lowStockQuery.eq('location_id', locationFilter)
+      transfersQuery = transfersQuery.or(`from_location_id.eq.${locationFilter},to_location_id.eq.${locationFilter}`)
+    }
+    
     const [inventoryResponse, lowStockResponse, transfersResponse] = await Promise.all([
-      supabase
-        .from('inventory')
-        .select('quantity, products(base_price)')
-        .eq('locations.location_type', 'warehouse')
-        .eq(locationFilter ? 'location_id' : '', locationFilter || ''),
-        
-      supabase
-        .from('inventory')
-        .select('*', { count: 'exact' })
-        .lt('quantity', 10)
-        .eq('locations.location_type', 'warehouse')
-        .eq(locationFilter ? 'location_id' : '', locationFilter || ''),
-        
-      supabase
-        .from('inventory_transfers')
-        .select('*', { count: 'exact' })
-        .or(`from_location_id.eq.${locationFilter},to_location_id.eq.${locationFilter}`, locationFilter ? {} : {})
+      inventoryQuery,
+      lowStockQuery, 
+      transfersQuery
     ])
 
     const inventoryValue = inventoryResponse.data?.reduce((sum: number, item: any) => {
@@ -75,7 +85,68 @@ async function fetchKPIData(
     }
   }
 
-  // For admin and store managers, fetch all KPIs
+  // For store and overall dashboards, fetch sales/expense KPIs
+  let salesQuery = supabase
+    .from('sales')
+    .select('total_amount, sale_date')
+    .eq('status', 'Completed')
+    .gte('sale_date', dateRangeStrings.from)
+    .lte('sale_date', dateRangeStrings.to)
+  
+  let expensesQuery = supabase
+    .from('expenses')
+    .select('amount, expense_date')
+    .eq('status', 'approved')
+    .gte('expense_date', dateRangeStrings.from)
+    .lte('expense_date', dateRangeStrings.to)
+  
+  let customersQuery = supabase
+    .from('customers')
+    .select('*', { count: 'exact' })
+  
+  let inventoryQuery = supabase
+    .from('inventory')
+    .select('quantity, products(base_price)')
+  
+  let lowStockQuery = supabase
+    .from('inventory')
+    .select('*', { count: 'exact' })
+    .lt('quantity', 10)
+  
+  // Apply location filter if specified
+  if (locationFilter) {
+    salesQuery = salesQuery.eq('location_id', locationFilter)
+    expensesQuery = expensesQuery.eq('location_id', locationFilter)
+    customersQuery = customersQuery.eq('location_id', locationFilter)
+    inventoryQuery = inventoryQuery.eq('location_id', locationFilter)
+    lowStockQuery = lowStockQuery.eq('location_id', locationFilter)
+  }
+  
+  // Previous month queries for comparison
+  const prevFrom = new Date(dateRange.from)
+  const prevTo = new Date(dateRange.to)
+  prevFrom.setMonth(prevFrom.getMonth() - 1)
+  prevTo.setMonth(prevTo.getMonth() - 1)
+  
+  let prevSalesQuery = supabase
+    .from('sales')
+    .select('total_amount')
+    .eq('status', 'Completed')
+    .gte('sale_date', prevFrom.toISOString())
+    .lte('sale_date', prevTo.toISOString())
+  
+  let prevExpensesQuery = supabase
+    .from('expenses')
+    .select('amount')
+    .eq('status', 'approved')
+    .gte('expense_date', prevFrom.toISOString())
+    .lte('expense_date', prevTo.toISOString())
+  
+  if (locationFilter) {
+    prevSalesQuery = prevSalesQuery.eq('location_id', locationFilter)
+    prevExpensesQuery = prevExpensesQuery.eq('location_id', locationFilter)
+  }
+  
   const [
     salesResponse,
     prevSalesResponse,
@@ -85,66 +156,13 @@ async function fetchKPIData(
     inventoryResponse,
     lowStockResponse
   ] = await Promise.all([
-    supabase
-      .from('sales')
-      .select('total_amount, sale_date')
-      .eq('status', 'Completed')
-      .gte('sale_date', dateRangeStrings.from)
-      .lte('sale_date', dateRangeStrings.to)
-      .eq(locationFilter ? 'location_id' : '', locationFilter || ''),
-      
-    (() => {
-      const prevFrom = new Date(dateRange.from)
-      const prevTo = new Date(dateRange.to)
-      prevFrom.setMonth(prevFrom.getMonth() - 1)
-      prevTo.setMonth(prevTo.getMonth() - 1)
-      
-      return supabase
-        .from('sales')
-        .select('total_amount')
-        .eq('status', 'Completed')
-        .gte('sale_date', prevFrom.toISOString())
-        .lte('sale_date', prevTo.toISOString())
-        .eq(locationFilter ? 'location_id' : '', locationFilter || '')
-    })(),
-    
-    supabase
-      .from('expenses')
-      .select('amount, expense_date')
-      .eq('status', 'approved')
-      .gte('expense_date', dateRangeStrings.from)
-      .lte('expense_date', dateRangeStrings.to)
-      .eq(locationFilter ? 'location_id' : '', locationFilter || ''),
-      
-    (() => {
-      const prevFrom = new Date(dateRange.from)
-      const prevTo = new Date(dateRange.to)
-      prevFrom.setMonth(prevFrom.getMonth() - 1)
-      prevTo.setMonth(prevTo.getMonth() - 1)
-      
-      return supabase
-        .from('expenses')
-        .select('amount')
-        .eq('status', 'approved')
-        .gte('expense_date', prevFrom.toISOString())
-        .lte('expense_date', prevTo.toISOString())
-        .eq(locationFilter ? 'location_id' : '', locationFilter || '')
-    })(),
-    
-    supabase
-      .from('customers')
-      .select('*', { count: 'exact' }),
-      
-    supabase
-      .from('inventory')
-      .select('quantity, products(base_price)')
-      .eq(locationFilter ? 'location_id' : '', locationFilter || ''),
-      
-    supabase
-      .from('inventory')
-      .select('*', { count: 'exact' })
-      .lt('quantity', 10)
-      .eq(locationFilter ? 'location_id' : '', locationFilter || '')
+    salesQuery,
+    prevSalesQuery,
+    expensesQuery,
+    prevExpensesQuery,
+    customersQuery,
+    inventoryQuery,
+    lowStockQuery
   ])
 
   const totalRevenue = salesResponse.data?.reduce((sum: number, sale: any) => 
@@ -175,14 +193,14 @@ async function fetchKPIData(
   }
 }
 
-export function KPICards({ userRole, locationFilter, dateRange }: KPICardsProps) {
+export function KPICards({ userRole, locationFilter, dateRange, dashboardType }: KPICardsProps) {
   const { data: kpiData, isLoading, error } = useQuery({
-    queryKey: ['kpi-data', userRole, locationFilter, dateRange.from.toISOString(), dateRange.to.toISOString()],
-    queryFn: () => fetchKPIData(userRole, locationFilter, dateRange),
+    queryKey: ['kpi-data', userRole, locationFilter, dateRange.from.toISOString(), dateRange.to.toISOString(), dashboardType],
+    queryFn: () => fetchKPIData(userRole, locationFilter, dateRange, dashboardType),
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 
-  const isWarehouseManager = userRole === 'warehouse_manager'
+  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse_manager'
 
   if (isLoading) {
     return (
@@ -208,7 +226,7 @@ export function KPICards({ userRole, locationFilter, dateRange }: KPICardsProps)
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {!isWarehouseManager && (
+      {!showWarehouseData && (
         <>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -273,7 +291,7 @@ export function KPICards({ userRole, locationFilter, dateRange }: KPICardsProps)
         </>
       )}
 
-      {isWarehouseManager && (
+      {showWarehouseData && (
         <>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -319,16 +337,16 @@ export function KPICards({ userRole, locationFilter, dateRange }: KPICardsProps)
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
-            {isWarehouseManager ? "Total Products" : "Inventory Value"}
+            {showWarehouseData ? "Total Products" : "Inventory Value"}
           </CardTitle>
           <Package className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {isWarehouseManager ? "1,248" : `$${kpiData.inventoryValue.toFixed(2)}`}
+            {showWarehouseData ? "1,248" : `$${kpiData.inventoryValue.toFixed(2)}`}
           </div>
           <p className="text-xs text-muted-foreground">
-            {isWarehouseManager ? "Products in warehouse" : `${kpiData.lowStockCount} products low in stock`}
+            {showWarehouseData ? "Products in warehouse" : `${kpiData.lowStockCount} products low in stock`}
           </p>
         </CardContent>
       </Card>

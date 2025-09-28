@@ -18,19 +18,33 @@ interface ActivityItem {
 interface ActivityFeedProps {
   userRole: string
   locationFilter: string | null
+  dashboardType: string
 }
 
-async function fetchActivities(userRole: string, locationFilter: string | null): Promise<ActivityItem[]> {
+async function fetchActivities(userRole: string, locationFilter: string | null, dashboardType: string): Promise<ActivityItem[]> {
   const supabase = createClient()
-  const isWarehouseManager = userRole === 'warehouse_manager'
+  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse_manager'
+  
+  // Get current month date range
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
 
-  if (isWarehouseManager) {
-    // For warehouse managers, only show inventory transfers
-    const { data: transfers } = await supabase
+  if (showWarehouseData) {
+    // For warehouse dashboards, only show inventory transfers
+    let transfersQuery = supabase
       .from('inventory_transfers')
       .select('created_at, quantity, products(name), from_location:locations(name), to_location:locations(name)')
+      .gte('created_at', startOfMonth.toISOString())
+      .lte('created_at', endOfMonth.toISOString())
       .order('created_at', { ascending: false })
       .limit(8)
+      
+    if (locationFilter) {
+      transfersQuery = transfersQuery.or(`from_location_id.eq.${locationFilter},to_location_id.eq.${locationFilter}`)
+    }
+    
+    const { data: transfers } = await transfersQuery
 
     return (transfers || []).map((transfer: any) => ({
       type: 'transfer',
@@ -40,26 +54,41 @@ async function fetchActivities(userRole: string, locationFilter: string | null):
     }))
   }
 
-  // For admin and store managers, show sales, expenses, and transfers
+  // For store dashboards, show sales, expenses, and transfers
+  let salesQuery = supabase
+    .from('sales')
+    .select('sale_date, total_amount, customers(first_name, last_name)')
+    .gte('sale_date', startOfMonth.toISOString())
+    .lte('sale_date', endOfMonth.toISOString())
+    .order('sale_date', { ascending: false })
+    .limit(3)
+    
+  let expensesQuery = supabase
+    .from('expenses')
+    .select('expense_date, amount, vendor_name')
+    .gte('expense_date', startOfMonth.toISOString())
+    .lte('expense_date', endOfMonth.toISOString())
+    .order('expense_date', { ascending: false })
+    .limit(3)
+    
+  let transfersQuery = supabase
+    .from('inventory_transfers')
+    .select('created_at, quantity, products(name), from_location:locations(name), to_location:locations(name)')
+    .gte('created_at', startOfMonth.toISOString())
+    .lte('created_at', endOfMonth.toISOString())
+    .order('created_at', { ascending: false })
+    .limit(3)
+
+  if (locationFilter) {
+    salesQuery = salesQuery.eq('location_id', locationFilter)
+    expensesQuery = expensesQuery.eq('location_id', locationFilter)
+    transfersQuery = transfersQuery.or(`from_location_id.eq.${locationFilter},to_location_id.eq.${locationFilter}`)
+  }
+  
   const [sales, expenses, transfers] = await Promise.all([
-    supabase
-      .from('sales')
-      .select('sale_date, total_amount, customers(first_name, last_name)')
-      .eq(locationFilter ? 'location_id' : '', locationFilter || '')
-      .order('sale_date', { ascending: false })
-      .limit(3),
-    supabase
-      .from('expenses')
-      .select('expense_date, amount, vendor_name')
-      .eq(locationFilter ? 'location_id' : '', locationFilter || '')
-      .order('expense_date', { ascending: false })
-      .limit(3),
-    supabase
-      .from('inventory_transfers')
-      .select('created_at, quantity, products(name), from_location:locations(name), to_location:locations(name)')
-      .or(`from_location_id.eq.${locationFilter},to_location_id.eq.${locationFilter}`, locationFilter ? {} : {})
-      .order('created_at', { ascending: false })
-      .limit(3)
+    salesQuery,
+    expensesQuery,
+    transfersQuery
   ])
 
   // Combine and format activities
@@ -90,10 +119,10 @@ async function fetchActivities(userRole: string, locationFilter: string | null):
     .slice(0, 8)
 }
 
-export function ActivityFeed({ userRole, locationFilter }: ActivityFeedProps) {
+export function ActivityFeed({ userRole, locationFilter, dashboardType }: ActivityFeedProps) {
   const { data: activities, isLoading, error } = useQuery({
-    queryKey: ['activities', userRole, locationFilter],
-    queryFn: () => fetchActivities(userRole, locationFilter),
+    queryKey: ['activities', userRole, locationFilter, dashboardType],
+    queryFn: () => fetchActivities(userRole, locationFilter, dashboardType),
     staleTime: 3 * 60 * 1000, // 3 minutes
   })
 

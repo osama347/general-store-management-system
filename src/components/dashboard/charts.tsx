@@ -21,20 +21,33 @@ interface ExpenseChartDataItem {
 interface ChartsProps {
   userRole: string
   locationFilter: string | null
+  dashboardType: string
 }
 
 async function fetchSalesData(locationFilter: string | null): Promise<ChartDataItem[]> {
   const supabase = createClient()
+  
+  // Get current month date range
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+  let query = supabase
+    .from('sales')
+    .select('total_amount, sale_date')
+    .eq('status', 'Completed')
+    .gte('sale_date', startOfMonth.toISOString())
+    .lte('sale_date', endOfMonth.toISOString())
 
   if (locationFilter) {
-    const { data } = await supabase
-      .from('sales')
-      .select('total_amount, sale_date')
-      .eq('status', 'Completed')
-      .eq('location_id', locationFilter)
+    query = query.eq('location_id', locationFilter)
+  }
+  
+  const { data } = await query
 
+  if (data) {
     const monthlyData: Record<string, number> = {}
-    data?.forEach((sale) => {
+    data.forEach((sale) => {
       const month = format(new Date(sale.sale_date), 'MMM')
       if (!monthlyData[month]) {
         monthlyData[month] = 0
@@ -46,24 +59,35 @@ async function fetchSalesData(locationFilter: string | null): Promise<ChartDataI
       month,
       total: monthlyData[month]
     }))
-  } else {
-    const { data } = await supabase.rpc('get_monthly_sales')
-    return data || []
   }
+  
+  return []
 }
 
 async function fetchExpenseData(locationFilter: string | null): Promise<ExpenseChartDataItem[]> {
   const supabase = createClient()
+  
+  // Get current month date range
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+  let query = supabase
+    .from('expenses')
+    .select('amount, expense_categories(name)')
+    .eq('status', 'approved')
+    .gte('expense_date', startOfMonth.toISOString())
+    .lte('expense_date', endOfMonth.toISOString())
 
   if (locationFilter) {
-    const { data } = await supabase
-      .from('expenses')
-      .select('amount, expense_categories(name)')
-      .eq('status', 'approved')
-      .eq('location_id', locationFilter)
+    query = query.eq('location_id', locationFilter)
+  }
 
+  const { data } = await query
+
+  if (data) {
     const categoryData: Record<string, number> = {}
-    data?.forEach((expense: any) => {
+    data.forEach((expense: any) => {
       const category = expense.expense_categories?.name || 'Other'
       if (!categoryData[category]) {
         categoryData[category] = 0
@@ -75,21 +99,22 @@ async function fetchExpenseData(locationFilter: string | null): Promise<ExpenseC
       category,
       amount: categoryData[category]
     }))
-  } else {
-    const { data } = await supabase.rpc('get_expenses_by_category')
-    return data || []
   }
+  
+  return []
 }
 
-export function SalesChart({ userRole, locationFilter }: ChartsProps) {
+export function SalesChart({ userRole, locationFilter, dashboardType }: ChartsProps) {
+  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse_manager'
+  
   const { data: salesData, isLoading, error } = useQuery({
-    queryKey: ['sales-chart', locationFilter],
+    queryKey: ['sales-chart', locationFilter, dashboardType],
     queryFn: () => fetchSalesData(locationFilter),
     staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: userRole !== 'warehouse_manager'
+    enabled: !showWarehouseData
   })
 
-  if (userRole === 'warehouse_manager') return null
+  if (showWarehouseData) return null
 
   if (isLoading) return <ChartSkeleton />
 
@@ -125,17 +150,18 @@ export function SalesChart({ userRole, locationFilter }: ChartsProps) {
   )
 }
 
-export function ExpenseChart({ userRole, locationFilter }: ChartsProps) {
+export function ExpenseChart({ userRole, locationFilter, dashboardType }: ChartsProps) {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
+  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse_manager'
 
   const { data: expenseData, isLoading, error } = useQuery({
-    queryKey: ['expense-chart', locationFilter],
+    queryKey: ['expense-chart', locationFilter, dashboardType],
     queryFn: () => fetchExpenseData(locationFilter),
     staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: userRole !== 'warehouse_manager'
+    enabled: !showWarehouseData
   })
 
-  if (userRole === 'warehouse_manager') return null
+  if (showWarehouseData) return null
 
   if (isLoading) return <ChartSkeleton />
 
