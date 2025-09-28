@@ -75,12 +75,8 @@ export function LocationSwitcher() {
     location_type: "",
   })
 
-  // Show loading skeleton while auth or location data is loading
-  if (authLoading || isLoading) {
-    return <LocationSwitcherSkeleton />
-  }
-
   // ---- Sync non-admin user with their profile location ----
+  // This useEffect must be called before any early returns to maintain hooks order
   React.useEffect(() => {
     if (profile && profile.role !== "admin" && locations.length > 0) {
       const assigned = locations.find((loc) => loc.location_id === profile.location_id)
@@ -89,6 +85,11 @@ export function LocationSwitcher() {
       }
     }
   }, [profile, locations, currentLocation, setCurrentLocation])
+
+  // Show loading skeleton while auth or location data is loading
+  if (authLoading || isLoading) {
+    return <LocationSwitcherSkeleton />
+  }
 
   const handleAddLocation = async (e: React.FormEvent) => {
     e.preventDefault()
