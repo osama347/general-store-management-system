@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const locales = ['en', 'es'];
+const locales = ['en', 'fa','ps'];
 const messagesDir = path.join(process.cwd(), 'src', 'i18n', 'messages');
 
 function flattenKeys(obj, prefix = '') {

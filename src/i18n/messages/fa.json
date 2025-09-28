@@ -1,0 +1,133 @@
+{
+  "common": {
+    "navigation": {
+      "home": "",
+      "dashboard": "",
+      "customers": "",
+      "products": "",
+      "sales": "",
+      "reports": "",
+      "logout": ""
+    },
+    "buttons": {
+      "save": "",
+      "cancel": "",
+      "delete": "",
+      "edit": "",
+      "view": ""
+    },
+    "messages": {
+      "loading": "",
+      "error": "",
+      "success": ""
+    }
+  },
+  "dashboard": {
+    "title": "",
+    "welcomeMessage": "",
+    "stats": {
+      "totalCustomers": "",
+      "totalSales": "",
+      "totalExpenses": ""
+    },
+    "cards": {
+      "inventoryStatus": "",
+      "lowStock": "",
+      "recentActivity": ""
+    }
+  },
+  "customers": {
+    "title": "",
+    "list": "",
+    "details": "",
+    "addCustomer": "",
+    "editCustomer": "",
+    "searchPlaceholder": ""
+  },
+  "loans": {
+    "title": "",
+    "loanAmount": "",
+    "loanDate": "",
+    "status": {
+      "active": "",
+      "closed": "",
+      "pending": ""
+    }
+  },
+  "expenses": {
+    "title": "",
+    "addExpense": "",
+    "expenseType": "",
+    "amount": "",
+    "date": "",
+    "notes": ""
+  },
+  "products": {
+    "title": "",
+    "addProduct": "",
+    "editProduct": "",
+    "price": "",
+    "stock": "",
+    "sku": ""
+  },
+  "inventory": {
+    "title": "",
+    "stockLevel": "",
+    "lowStock": "",
+    "outOfStock": "",
+    "reorder": ""
+  },
+  "transfers": {
+    "title": "",
+    "newTransfer": "",
+    "fromAccount": "",
+    "toAccount": "",
+    "amount": "",
+    "transferDate": ""
+  },
+  "categories": {
+    "title": "",
+    "addCategory": "",
+    "editCategory": "",
+    "deleteCategory": "",
+    "list": ""
+  },
+  "sales": {
+    "title": "",
+    "newSale": "",
+    "invoice": "",
+    "total": "",
+    "discount": "",
+    "paymentStatus": ""
+  },
+  "reports": {
+    "title": "",
+    "dailyReport": "",
+    "monthlyReport": "",
+    "yearlyReport": "",
+    "export": ""
+  },
+  "auth": {
+    "login": {
+      "title": "",
+      "email": "",
+      "password": "",
+      "button": "",
+      "forgotPassword": ""
+    },
+    "register": {
+      "title": "",
+      "name": "",
+      "email": "",
+      "password": "",
+      "confirmPassword": "",
+      "button": ""
+    },
+    "errors": {
+      "invalidEmail": "",
+      "requiredField": "",
+      "wrongPassword": "",
+      "passwordMismatch": ""
+    }
+  }
+}

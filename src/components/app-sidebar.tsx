@@ -23,8 +23,12 @@ import {
   FileText,
 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useFormatter, useTranslations } from 'next-intl'
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
+
+   const t = useTranslations('common.navigation')
+  const formatter = useFormatter()
   const { isLoading, hasLocations } = useLocation()
   const { profile, loading: authLoading } = useAuth()
 
@@ -32,7 +36,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   
   const storeItems = [
     {
-      title: "Products",
+      title: t("Products"),
       url: "/products",
       icon: Package,
       items: [

@@ -1,7 +1,16 @@
 {
   "common": {
     "appName": "General Store Management",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "navigation":{
+        "dashboard": "Dashboard",
+        "products": "Products",
+        "sales": "Sales",
+        "customers": "Customers",
+        "expenses": "Expenses",
+        "inventory": "Inventory",
+        "reports": "Reports"
+    }
   },
   "dashboard": {
     "title": {
