@@ -32,7 +32,7 @@ async function fetchKPIData(
   dashboardType: string
 ): Promise<KPIData> {
   const supabase = createClient()
-  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse_manager'
+  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse-manager'
   
   const dateRangeStrings = {
     from: dateRange.from.toISOString(),
@@ -200,7 +200,7 @@ export function KPICards({ userRole, locationFilter, dateRange, dashboardType }:
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 
-  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse_manager'
+  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse-manager'
 
   if (isLoading) {
     return (

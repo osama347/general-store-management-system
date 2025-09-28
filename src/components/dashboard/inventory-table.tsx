@@ -16,7 +16,7 @@ interface InventoryTableProps {
 
 async function fetchInventoryData(userRole: string, locationFilter: string | null, dashboardType: string): Promise<ValidatedInventoryItem[]> {
   const supabase = createClient()
-  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse_manager'
+  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse-manager'
 
   let query = supabase
     .from('inventory')

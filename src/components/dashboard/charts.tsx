@@ -105,7 +105,7 @@ async function fetchExpenseData(locationFilter: string | null): Promise<ExpenseC
 }
 
 export function SalesChart({ userRole, locationFilter, dashboardType }: ChartsProps) {
-  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse_manager'
+  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse-manager'
   
   const { data: salesData, isLoading, error } = useQuery({
     queryKey: ['sales-chart', locationFilter, dashboardType],
@@ -152,7 +152,7 @@ export function SalesChart({ userRole, locationFilter, dashboardType }: ChartsPr
 
 export function ExpenseChart({ userRole, locationFilter, dashboardType }: ChartsProps) {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
-  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse_manager'
+  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse-manager'
 
   const { data: expenseData, isLoading, error } = useQuery({
     queryKey: ['expense-chart', locationFilter, dashboardType],

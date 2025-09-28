@@ -23,7 +23,7 @@ interface ActivityFeedProps {
 
 async function fetchActivities(userRole: string, locationFilter: string | null, dashboardType: string): Promise<ActivityItem[]> {
   const supabase = createClient()
-  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse_manager'
+  const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse-manager'
   
   // Get current month date range
   const now = new Date()
