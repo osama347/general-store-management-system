@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from './auth-provider'
 import { Loader2 } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -13,12 +14,14 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, fallback }: ProtectedRouteProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const locale = useLocale()
+  const t = useTranslations('common')
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/auth')
+      router.push(`/${locale}/auth`)
     }
-  }, [user, loading, router])
+  }, [user, loading, router, locale])
 
   if (loading) {
     return (
@@ -26,7 +29,7 @@ export function ProtectedRoute({ children, fallback }: ProtectedRouteProps) {
         <div className="min-h-screen flex items-center justify-center">
           <div className="flex items-center space-x-2">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span>Loading...</span>
+            <span>{t('loading')}</span>
           </div>
         </div>
       )

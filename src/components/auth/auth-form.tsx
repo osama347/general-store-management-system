@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
+import { useLocale } from 'next-intl'
 
 type AuthMode = 'sign-in' | 'sign-up' | 'forgot-password'
 
@@ -21,6 +22,7 @@ export function AuthForm() {
   const [loading, setLoading] = useState(false)
 
   const supabase = createClient()
+  const locale = useLocale()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,7 +39,7 @@ export function AuthForm() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: `${window.location.origin}/${locale}/auth/callback`,
           },
         })
         
@@ -53,14 +55,13 @@ export function AuthForm() {
         
         // Show success message and redirect
         toast.success('Successfully signed in! Redirecting...')
-        
-        // Redirect to dashboard after a short delay
+
         setTimeout(() => {
-          window.location.href = '/dashboard'
+          window.location.href = `/${locale}/dashboard`
         }, 1500)
       } else if (mode === 'forgot-password') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth/reset-password`,
+          redirectTo: `${window.location.origin}/${locale}/reset-password`,
         })
         
         if (error) throw error
@@ -82,7 +83,7 @@ export function AuthForm() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/${locale}/auth/callback`,
         },
       })
       if (error) throw error

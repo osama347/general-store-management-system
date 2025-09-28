@@ -1,8 +1,21 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { defaultLocale, locales } from '@/i18n/config'
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
+function extractPathname(request: NextRequest) {
+  const segments = request.nextUrl.pathname.split('/').filter(Boolean)
+  const potentialLocale = segments[0]
+  const hasLocale = locales.includes(potentialLocale as (typeof locales)[number])
+
+  return {
+    hasLocale,
+    locale: hasLocale ? (potentialLocale as (typeof locales)[number]) : defaultLocale,
+    pathname: `/${hasLocale ? segments.slice(1).join('/') : segments.join('/')}`,
+  }
+}
+
+export async function updateSession(request: NextRequest, response?: NextResponse) {
+  let supabaseResponse = response ?? NextResponse.next({
     request,
   })
 
@@ -16,7 +29,7 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
+          supabaseResponse = response ?? NextResponse.next({
             request,
           })
           cookiesToSet.forEach(({ name, value, options }) =>
@@ -35,14 +48,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/api')
-  ) {
+  const { hasLocale, locale, pathname } = extractPathname(request)
+
+  if (!user && !pathname.startsWith('/auth') && !pathname.startsWith('/api')) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
-    url.pathname = '/auth'
+    url.pathname = hasLocale ? `/${locale}/auth` : `/${defaultLocale}/auth`
     return NextResponse.redirect(url)
   }
 

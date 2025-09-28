@@ -25,6 +25,12 @@ A comprehensive, production-ready authentication template built with Next.js 15,
 - 📚 **Comprehensive Docs**: Detailed documentation and examples
 - 🧪 **Testing Ready**: Structure prepared for testing implementation
 
+### Internationalization
+- 🌎 **Locale-aware Routing**: Automatic locale prefixes with Next.js middleware
+- 🗂️ **Scoped Messages**: Organized JSON message catalogs per locale
+- ♻️ **Reusable Utilities**: Helpers for locale-aware navigation and formatting
+- ✅ **Consistency Checks**: Automated script to ensure message files stay in sync
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -76,36 +82,44 @@ Open [http://localhost:3000](http://localhost:3000) to see your application.
 ```
 src/
 ├── app/                          # Next.js App Router
-│   ├── (auth)/                   # Authentication routes group
-│   │   ├── callback/             # OAuth callback handler
-│   │   ├── reset-password/       # Password reset page
-│   │   ├── layout.tsx           # Auth layout
-│   │   └── page.tsx             # Main auth page
-│   ├── dashboard/               # Protected dashboard
-│   │   ├── layout.tsx           # Dashboard layout
-│   │   └── page.tsx             # Dashboard home
-│   ├── globals.css              # Global styles
-│   ├── layout.tsx               # Root layout
-│   └── page.tsx                 # Home page (redirects)
+│   ├── (auth)/                   # Legacy auth routes (redirect helpers)
+│   ├── auth/                     # Redirects to default locale auth page
+│   ├── [locale]/                 # Locale-scoped routes
+│   │   ├── (auth)/               # Authentication group per locale
+│   │   │   ├── callback/         # OAuth callback handler
+│   │   │   └── reset-password/   # Password reset page
+│   │   ├── (main)/               # Protected application shell
+│   │   │   └── dashboard/        # Dashboard entry and modules
+│   │   ├── auth/                 # Locale-aware auth entry
+│   │   ├── layout.tsx            # Locale provider layout
+│   │   └── page.tsx              # Redirects to default section per locale
+│   ├── globals.css               # Global styles
+│   ├── layout.tsx                # Root layout with html lang
+│   └── page.tsx                  # Redirects to default locale
+├── i18n/                         # Internationalization utilities
+│   ├── config.ts                 # Locale configuration
+│   ├── request.ts                # next-intl request config
+│   ├── routing.ts                # Locale-aware navigation helpers
+│   └── messages/                 # JSON message catalogs
+│       ├── en.json
+│       └── es.json
 ├── components/                   # Reusable components
-│   ├── auth/                    # Authentication components
-│   │   ├── auth-form.tsx        # Main auth form
-│   │   ├── auth-provider.tsx    # Auth context provider
-│   │   └── protected-route.tsx  # Route protection wrapper
-│   ├── dashboard/               # Dashboard components
-│   │   └── header.tsx           # Dashboard header
-│   │   
-│   └── ui/                      # shadcn/ui components
-├── hooks/                       # Custom React hooks
-│   └── use-auth.ts              # Authentication hook
-├── lib/                         # Utility libraries
-│   └── supabase/                # Supabase configuration
-│   │    ├── client.ts            # Client-side config
-│   │    ├── middleware.ts        # Middleware config
-│   │    └── server.ts            # Server-side config
-│    └── auth/
-│         └──  auth-redirect       # Auth redirection logic
-└── middleware.ts                # Next.js middleware
+│   ├── auth/                     # Authentication components
+│   │   ├── auth-form.tsx         # Main auth form
+│   │   ├── auth-provider.tsx     # Auth context provider
+│   │   └── protected-route.tsx   # Route protection wrapper
+│   ├── dashboard/                # Dashboard components
+│   └── ui/                       # shadcn/ui primitives
+├── hooks/                        # Custom React hooks
+│   └── use-auth.ts               # Authentication hook
+├── lib/                          # Utility libraries
+│   ├── auth/                     # Auth helpers
+│   │   └── auth-redirect.ts      # Auth redirection logic
+│   └── supabase/                 # Supabase configuration
+│       ├── client.ts             # Client-side config
+│       ├── middleware.ts         # Middleware config
+│       └── server.ts             # Server-side config
+└── middleware.ts                 # Next.js middleware (locale + session)
 ```
 
 ## 🔧 Configuration
@@ -120,8 +134,10 @@ The template uses Supabase SSR for optimal performance and SEO. Configuration fi
 
 ### Authentication Flow
 
-1. **Unauthenticated users** → Redirected to `/auth`
-2. **Authentication success** → Redirected to `/dashboard`
+1. **Unauthenticated users** → Redirected to `/{locale}/auth`
+2. **Authentication success** → Redirected to `/{locale}/dashboard`
+3. **Protected routes** → Automatic authentication check via middleware
+
 3. **Protected routes** → Automatic authentication check via middleware
 
 ### Customizing the Auth Form

@@ -1,0 +1,53 @@
+{
+  "common": {
+    "appName": "General Store Management",
+    "loading": "Loading..."
+  },
+  "dashboard": {
+    "title": {
+      "warehouse": "Warehouse Dashboard",
+      "store": "Store Dashboard",
+      "overall": "Business Overview",
+      "default": "Dashboard"
+    },
+    "description": {
+      "warehouse": "Inventory and transfer management",
+      "store": "Sales and store performance",
+      "overall": "Overall business operations",
+      "default": "Business operations overview"
+    },
+    "currentMonth": "{date} (Current Month)",
+    "locationLabel": "Location:",
+    "locationType": {
+      "warehouse": "warehouse",
+      "store": "store"
+    },
+    "inventory": {
+      "titleWarehouse": "Inventory Status",
+      "titleStore": "Low Stock Items",
+      "descWarehouse": "Current stock levels in warehouse",
+      "descStore": "Products that need restocking"
+    },
+    "activity": {
+      "title": "Recent Activities",
+      "descWarehouse": "Latest inventory transfers",
+      "descStore": "Latest transactions and updates"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "detailed": "Detailed Reports"
+    },
+    "cards": {
+      "overview": {
+        "title": "Overview",
+        "description": "Key metrics and performance indicators",
+        "placeholder": "Overview content will be displayed here"
+      },
+      "detailed": {
+        "title": "Detailed Reports",
+        "description": "Comprehensive business reports and analytics",
+        "placeholder": "Detailed reports will be displayed here"
+      }
+    }
+  }
+}

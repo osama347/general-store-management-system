@@ -1,0 +1,118 @@
+{
+  "common": {
+    "navigation": {
+      "home": "",
+      "dashboard": "",
+      "customers": "",
+      "products": "",
+      "sales": "",
+      "reports": "",
+      "logout": ""
+    },
+    "buttons": {
+      "save": "",
+      "cancel": "",
+      "delete": "",
+      "edit": "",
+      "view": ""
+    },
+    "messages": {
+      "loading": "",
+      "error": "",
+      "success": ""
+    }
+  },
+  "dashboard": {
+    "title": "",
+    "welcomeMessage": "",
+    "stats": {
+      "totalCustomers": "",
+      "totalSales": "",
+      "totalExpenses": ""
+    }
+  },
+  "customers": {
+    "title": "",
+    "list": "",
+    "details": "",
+    "addCustomer": "",
+    "editCustomer": ""
+  },
+  "loans": {
+    "title": "",
+    "loanAmount": "",
+    "loanDate": "",
+    "status": {
+      "active": "",
+      "closed": "",
+      "pending": ""
+    }
+  },
+  "expenses": {
+    "title": "",
+    "addExpense": "",
+    "expenseType": "",
+    "amount": "",
+    "date": ""
+  },
+  "products": {
+    "title": "",
+    "addProduct": "",
+    "editProduct": "",
+    "price": "",
+    "stock": ""
+  },
+  "inventory": {
+    "title": "",
+    "stockLevel": "",
+    "lowStock": "",
+    "outOfStock": ""
+  },
+  "transfers": {
+    "title": "",
+    "newTransfer": "",
+    "fromAccount": "",
+    "toAccount": "",
+    "amount": ""
+  },
+  "categories": {
+    "title": "",
+    "addCategory": "",
+    "editCategory": "",
+    "deleteCategory": ""
+  },
+  "sales": {
+    "title": "",
+    "newSale": "",
+    "invoice": "",
+    "total": "",
+    "discount": ""
+  },
+  "reports": {
+    "title": "",
+    "dailyReport": "",
+    "monthlyReport": "",
+    "yearlyReport": ""
+  },
+  "auth": {
+    "login": {
+      "title": "",
+      "email": "",
+      "password": "",
+      "button": ""
+    },
+    "register": {
+      "title": "",
+      "name": "",
+      "email": "",
+      "password": "",
+      "confirmPassword": "",
+      "button": ""
+    },
+    "errors": {
+      "invalidEmail": "",
+      "requiredField": "",
+      "wrongPassword": ""
+    }
+  }
+}

@@ -7,8 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { CalendarIcon, Building, Truck } from 'lucide-react'
-import { format } from 'date-fns'
-import { useState, useCallback, useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
+import { useFormatter, useTranslations } from 'next-intl'
 
 // Import new dashboard components
 import { KPICards } from '@/components/dashboard/kpi-cards'
@@ -20,6 +20,8 @@ import { DashboardSkeleton } from '@/components/dashboard/skeletons'
 export default function DashboardPage() {
   const profile = useAuth()
   const { currentLocation, locations, isLoading: locationLoading, setCurrentLocation } = useLocation()
+  const t = useTranslations('dashboard')
+  const formatter = useFormatter()
   
   // Current month date range (no picker needed)
   const currentMonthRange = useMemo(() => {
@@ -74,18 +76,24 @@ export default function DashboardPage() {
 
   // Dashboard header based on current dashboard type
   const getDashboardTitle = useCallback(() => {
-    if (dashboardType === 'warehouse') return "Warehouse Dashboard"
-    if (dashboardType === 'store') return "Store Dashboard"
-    if (dashboardType === 'overall') return "Business Overview"
-    return "Dashboard"
-  }, [dashboardType])
+    if (dashboardType === 'warehouse') return t('title.warehouse')
+    if (dashboardType === 'store') return t('title.store')
+    if (dashboardType === 'overall') return t('title.overall')
+    return t('title.default')
+  }, [dashboardType, t])
   
   const getDashboardDescription = useCallback(() => {
-    if (dashboardType === 'warehouse') return "Inventory and transfer management"
-    if (dashboardType === 'store') return "Sales and store performance"
-    if (dashboardType === 'overall') return "Overall business operations"
-    return "Business operations overview"
-  }, [dashboardType])
+    if (dashboardType === 'warehouse') return t('description.warehouse')
+    if (dashboardType === 'store') return t('description.store')
+    if (dashboardType === 'overall') return t('description.overall')
+    return t('description.default')
+  }, [dashboardType, t])
+
+  const getLocationTypeLabel = useCallback((type: string | null | undefined) => {
+    if (type === 'warehouse') return t('locationType.warehouse')
+    if (type === 'store') return t('locationType.store')
+    return type ?? ''
+  }, [t])
 
   // Current Month Display Component
   function CurrentMonthDisplay() {
@@ -93,7 +101,12 @@ export default function DashboardPage() {
       <div className="flex items-center space-x-2 text-sm text-muted-foreground">
         <CalendarIcon className="h-4 w-4" />
         <span>
-          {format(currentMonthRange.from, "MMMM yyyy")} (Current Month)
+          {t('currentMonth', {
+            date: formatter.dateTime(currentMonthRange.from, {
+              month: 'long',
+              year: 'numeric',
+            }),
+          })}
         </span>
       </div>
     )
@@ -105,7 +118,7 @@ export default function DashboardPage() {
     
     return (
       <div className="flex items-center space-x-2">
-        <span className="text-sm font-medium">Location:</span>
+        <span className="text-sm font-medium">{t('locationLabel')}</span>
         <div className="flex items-center space-x-1">
           {locations.map(location => (
             <Button
@@ -142,7 +155,10 @@ export default function DashboardPage() {
                 <Truck className="h-4 w-4 mr-1 text-green-500" />
               )}
               <span className="text-sm text-muted-foreground">
-                {currentLocation.name} {isAdmin && `(${currentLocation.location_type})`}
+                {currentLocation.name}
+                {isAdmin && (
+                  <> ({getLocationTypeLabel(currentLocation.location_type)})</>
+                )}
               </span>
             </div>
           )}
@@ -186,12 +202,14 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>
-              {showWarehouseFeatures ? "Inventory Status" : "Low Stock Items"}
+              {showWarehouseFeatures
+                ? t('inventory.titleWarehouse')
+                : t('inventory.titleStore')}
             </CardTitle>
             <CardDescription>
-              {showWarehouseFeatures 
-                ? "Current stock levels in warehouse" 
-                : "Products that need restocking"}
+              {showWarehouseFeatures
+                ? t('inventory.descWarehouse')
+                : t('inventory.descStore')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -205,11 +223,11 @@ export default function DashboardPage() {
         
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activities</CardTitle>
+            <CardTitle>{t('activity.title')}</CardTitle>
             <CardDescription>
-              {showWarehouseFeatures 
-                ? "Latest inventory transfers" 
-                : "Latest transactions and updates"}
+              {showWarehouseFeatures
+                ? t('activity.descWarehouse')
+                : t('activity.descStore')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -226,21 +244,21 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 mb-6">
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="detailed">Detailed Reports</TabsTrigger>
+            <TabsTrigger value="overview">{t('tabs.overview')}</TabsTrigger>
+            <TabsTrigger value="detailed">{t('tabs.detailed')}</TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview">
             <Card>
               <CardHeader>
-                <CardTitle>Overview</CardTitle>
+                <CardTitle>{t('cards.overview.title')}</CardTitle>
                 <CardDescription>
-                  Key metrics and performance indicators
+                  {t('cards.overview.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  Overview content will be displayed here
+                  {t('cards.overview.placeholder')}
                 </p>
               </CardContent>
             </Card>
@@ -249,14 +267,14 @@ export default function DashboardPage() {
           <TabsContent value="detailed">
             <Card>
               <CardHeader>
-                <CardTitle>Detailed Reports</CardTitle>
+                <CardTitle>{t('cards.detailed.title')}</CardTitle>
                 <CardDescription>
-                  Comprehensive business reports and analytics
+                  {t('cards.detailed.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  Detailed reports will be displayed here
+                  {t('cards.detailed.placeholder')}
                 </p>
               </CardContent>
             </Card>
