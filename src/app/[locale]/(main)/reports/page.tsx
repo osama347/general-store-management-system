@@ -1,172 +1,400 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { Download, FileText, Share, RefreshCw, AlertCircle } from 'lucide-react';
+import { FileText, AlertCircle, Loader2, Download } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
+import { PDFGenerator } from '@/lib/pdf-generator';
 
 // shadcn/ui imports
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
-// Custom components
-import { ReportsService } from '@/components/reports/ReportsService';
-import { ReportTemplates } from '@/components/reports/ReportTemplates';
-import { ReportFilters } from '@/components/reports/ReportFilters';
-import { SalesReport } from '@/components/reports/SalesReport';
-import { FinancialReport } from '@/components/reports/FinancialReport';
-import { ProductReport } from '@/components/reports/ProductReport';
-import { CustomerReport } from '@/components/reports/CustomerReport';
-import { InventoryReport } from '@/components/reports/InventoryReport';
+type Location = {
+  location_id: bigint;
+  name: string;
+  location_type: 'warehouse' | 'store';
+};
 
-import type { 
-  Location, 
-  Category, 
-  ExpenseCategory,
-  Sale,
-  Expense,
-  Customer,
-  Inventory,
-  InventoryTransfer,
-  FinancialSummary 
-} from '@/types/reports';
+type Category = {
+  category_id: number;
+  name: string;
+};
 
-// Type definition for DateRange
-type DateRange = {
-  from: Date | undefined
-  to: Date | undefined
+type ExpenseCategory = {
+  category_id: number;
+  name: string;
+};
+
+type Profile = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
 };
 
 const ReportsModule = () => {
-  const [activeReport, setActiveReport] = useState('sales');
-  const [dateRange, setDateRange] = useState<DateRange>({ 
-    from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 
-    to: new Date() 
-  });
-  const [selectedLocation, setSelectedLocation] = useState('all');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [reportFilters, setReportFilters] = useState<{
-    groupBy: 'day' | 'week' | 'month' | 'year';
-    showComparisons: boolean;
-    includeProjections: boolean;
-  }>({
-    groupBy: 'day',
-    showComparisons: true,
-    includeProjections: false
-  });
+  const supabase = createClient();
+  const { profile } = useAuth();
   
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reportData, setReportData] = useState<{
-    salesData: Sale[];
-    financialData: FinancialSummary[];
-    productPerformance: Sale[];
-    customerSegments: { segment: string; count: number; percentage: number; revenue: number; avgOrderValue: number; }[];
-    inventoryReport: Inventory[];
-    expenseData: Expense[];
-    inventoryTransfers: InventoryTransfer[];
-  }>({
-    salesData: [],
-    financialData: [],
-    productPerformance: [],
-    customerSegments: [],
-    inventoryReport: [],
-    expenseData: [],
-    inventoryTransfers: []
-  });
+  // Form state
+  const [reportType, setReportType] = useState<string>('sales');
+  const [startDate, setStartDate] = useState<string>(
+    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  );
+  const [endDate, setEndDate] = useState<string>(
+    new Date().toISOString().split('T')[0]
+  );
+  const [selectedLocation, setSelectedLocation] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedExpenseCategory, setSelectedExpenseCategory] = useState<string>('all');
+  const [selectedStaff, setSelectedStaff] = useState<string>('all');
+  const [reportStatus, setReportStatus] = useState<string>('all');
   
+  // Data state
+  const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
+  const [staff, setStaff] = useState<Profile[]>([]);
   
   // Fetch filter options
   const fetchFilterOptions = async () => {
+    setLoading(true);
     try {
-      const [locationsData, categoriesData, expenseCategoriesData] = await Promise.all([
-        ReportsService.fetchLocations(),
-        ReportsService.fetchCategories(),
-        ReportsService.fetchExpenseCategories()
+      const [locationsRes, categoriesRes, expenseCategoriesRes, staffRes] = await Promise.all([
+        supabase.from('locations').select('location_id, name, location_type'),
+        supabase.from('categories').select('category_id, name'),
+        supabase.from('expense_categories').select('category_id, name').eq('is_active', true),
+        supabase.from('profiles').select('id, full_name, email').eq('is_active', true)
       ]);
       
-      setLocations(locationsData.map(loc => ({
-        ...loc,
-        address: '',  // Add default value for missing property
-        created_at: new Date().toISOString()  // Add default value for missing property
-      })));
-      setCategories(categoriesData);
-      setExpenseCategories(expenseCategoriesData.map(cat => ({
-        ...cat,
-        is_active: true, // Add default value for missing required property
-      })));
+      if (locationsRes.data) setLocations(locationsRes.data);
+      if (categoriesRes.data) setCategories(categoriesRes.data);
+      if (expenseCategoriesRes.data) setExpenseCategories(expenseCategoriesRes.data);
+      if (staffRes.data) setStaff(staffRes.data);
     } catch (err) {
       console.error('Error fetching filter options:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      toast.error('Failed to load filter options');
+    } finally {
+      setLoading(false);
     }
   };
   
-  // Fetch all report data
-  const fetchAllReportData = async () => {
-    setLoading(true);
-    setError(null);
+  // Fetch report data from Supabase
+  const fetchReportData = async () => {
+    const startDateTime = `${startDate}T00:00:00`;
+    const endDateTime = `${endDate}T23:59:59`;
+    
+    console.log('Fetching report data for:', {
+      reportType,
+      startDateTime,
+      endDateTime,
+      selectedLocation,
+      selectedCategory
+    });
     
     try {
+      let query;
+      let data;
+      
+      switch (reportType) {
+        case 'sales': {
+          let salesQuery = supabase
+            .from('sales')
+            .select(`
+              *,
+              customers (first_name, last_name, email, phone),
+              profiles (full_name, email),
+              locations (name, location_type),
+              sale_items (
+                *,
+                products (name, sku, category_id)
+              )
+            `)
+            .gte('sale_date', startDateTime)
+            .lte('sale_date', endDateTime)
+            .order('sale_date', { ascending: false });
+          
+          if (selectedLocation !== 'all') salesQuery = salesQuery.eq('location_id', selectedLocation);
+          if (selectedStaff !== 'all') salesQuery = salesQuery.eq('profile_id', selectedStaff);
+          if (reportStatus !== 'all') salesQuery = salesQuery.eq('status', reportStatus);
+          
+          const { data: salesData, error: salesError } = await salesQuery;
+          if (salesError) throw salesError;
+          data = salesData;
+          break;
+        }
+          
+        case 'inventory': {
+          let inventoryQuery = supabase
+            .from('inventory')
+            .select(`
+              *,
+              products (
+                name,
+                sku,
+                base_price,
+                categories (name)
+              ),
+              locations (name, location_type)
+            `)
+            .gte('updated_at', startDateTime)
+            .lte('updated_at', endDateTime)
+            .order('updated_at', { ascending: false });
+          
+          if (selectedLocation !== 'all') inventoryQuery = inventoryQuery.eq('location_id', selectedLocation);
+          if (selectedCategory !== 'all') inventoryQuery = inventoryQuery.eq('products.category_id', selectedCategory);
+          
+          const { data: inventoryData, error: inventoryError } = await inventoryQuery;
+          if (inventoryError) throw inventoryError;
+          data = inventoryData;
+          break;
+        }
+          
+        case 'expenses': {
+          let expensesQuery = supabase
+            .from('expenses')
+            .select(`
+              *,
+              expense_categories (name),
+              locations (name, location_type),
+              profiles (full_name, email)
+            `)
+            .gte('expense_date', startDateTime)
+            .lte('expense_date', endDateTime)
+            .order('expense_date', { ascending: false });
+          
+          if (selectedLocation !== 'all') expensesQuery = expensesQuery.eq('location_id', selectedLocation);
+          if (selectedExpenseCategory !== 'all') expensesQuery = expensesQuery.eq('category_id', selectedExpenseCategory);
+          if (selectedStaff !== 'all') expensesQuery = expensesQuery.eq('profile_id', selectedStaff);
+          if (reportStatus !== 'all') expensesQuery = expensesQuery.eq('status', reportStatus);
+          
+          const { data: expensesData, error: expensesError } = await expensesQuery;
+          if (expensesError) throw expensesError;
+          data = expensesData;
+          break;
+        }
+          
+        case 'loans': {
+          let loansQuery = supabase
+            .from('loans')
+            .select(`
+              *,
+              customers (first_name, last_name, email, phone, address),
+              locations (name, location_type)
+            `)
+            .gte('loan_date', startDateTime)
+            .lte('loan_date', endDateTime)
+            .order('loan_date', { ascending: false });
+          
+          if (selectedLocation !== 'all') loansQuery = loansQuery.eq('location_id', selectedLocation);
+          if (reportStatus !== 'all') loansQuery = loansQuery.eq('status', reportStatus);
+          
+          const { data: loansData, error: loansError } = await loansQuery;
+          if (loansError) throw loansError;
+          data = loansData;
+          break;
+        }
+          
+        case 'transfers': {
+          let transfersQuery = supabase
+            .from('inventory_transfers')
+            .select(`
+              *,
+              products (name, sku),
+              from_location:locations!inventory_transfers_from_location_id_fkey (name, location_type),
+              to_location:locations!inventory_transfers_to_location_id_fkey (name, location_type),
+              profiles (full_name, email)
+            `)
+            .gte('created_at', startDateTime)
+            .lte('created_at', endDateTime)
+            .order('created_at', { ascending: false });
+          
+          if (selectedLocation !== 'all') {
+            transfersQuery = transfersQuery.or(`from_location_id.eq.${selectedLocation},to_location_id.eq.${selectedLocation}`);
+          }
+          if (selectedStaff !== 'all') transfersQuery = transfersQuery.eq('created_by_profile_id', selectedStaff);
+          
+          const { data: transfersData, error: transfersError } = await transfersQuery;
+          if (transfersError) throw transfersError;
+          data = transfersData;
+          break;
+        }
+          
+        case 'customers': {
+          let customersQuery = supabase
+            .from('customers')
+            .select(`
+              *,
+              locations (name, location_type),
+              sales (sale_id, sale_date, total_amount, status),
+              loans (loan_id, loan_amount, loan_date, due_date, status)
+            `)
+            .gte('created_at', startDateTime)
+            .lte('created_at', endDateTime)
+            .order('created_at', { ascending: false });
+          
+          if (selectedLocation !== 'all') customersQuery = customersQuery.eq('location_id', selectedLocation);
+          
+          const { data: customersData, error: customersError } = await customersQuery;
+          if (customersError) throw customersError;
+          data = customersData;
+          break;
+        }
+          
+        case 'financial': {
+          // Fetch multiple datasets for financial summary
+          const [salesRes, expensesRes, loansRes] = await Promise.all([
+            supabase
+              .from('sales')
+              .select('sale_id, sale_date, total_amount, status, location_id')
+              .gte('sale_date', startDateTime)
+              .lte('sale_date', endDateTime)
+              .eq('status', 'Completed'),
+            supabase
+              .from('expenses')
+              .select('expense_id, expense_date, amount, status, location_id, expense_categories(name)')
+              .gte('expense_date', startDateTime)
+              .lte('expense_date', endDateTime)
+              .eq('status', 'approved'),
+            supabase
+              .from('loans')
+              .select('loan_id, loan_date, loan_amount, status, location_id')
+              .gte('loan_date', startDateTime)
+              .lte('loan_date', endDateTime)
+          ]);
+          
+          if (salesRes.error) throw salesRes.error;
+          if (expensesRes.error) throw expensesRes.error;
+          if (loansRes.error) throw loansRes.error;
+          
+          // Filter by location if needed
+          const filterByLocation = (items: any[]) => {
+            if (selectedLocation === 'all') return items;
+            return items.filter(item => item.location_id?.toString() === selectedLocation);
+          };
+          
+          data = {
+            sales: filterByLocation(salesRes.data || []),
+            expenses: filterByLocation(expensesRes.data || []),
+            loans: filterByLocation(loansRes.data || [])
+          };
+          break;
+        }
+          
+        case 'products': {
+          let productsQuery = supabase
+            .from('products')
+            .select(`
+              *,
+              categories (name),
+              sale_items (quantity, unit_price, total_price, sale_id),
+              inventory (location_id, quantity, reserved_quantity, locations(name))
+            `)
+            .order('name', { ascending: true });
+          
+          if (selectedCategory !== 'all') productsQuery = productsQuery.eq('category_id', selectedCategory);
+          
+          const { data: productsData, error: productsError } = await productsQuery;
+          if (productsError) throw productsError;
+          data = productsData;
+          break;
+        }
+          
+        default:
+          throw new Error('Invalid report type');
+      }
+      
+      console.log('Report data fetched successfully:', {
+        reportType,
+        dataLength: Array.isArray(data) ? data.length : 'N/A (object)',
+        dataKeys: !Array.isArray(data) ? Object.keys(data) : null
+      });
+      
+      return data;
+    } catch (error: any) {
+      console.error('Error fetching report data:', error);
+      // Provide detailed error information
+      const errorMessage = error?.message || error?.error_description || error?.details || 'Unknown database error';
+      throw new Error(`Database error: ${errorMessage}`);
+    }
+  };
+  
+  // Generate PDF report
+  const generatePDFReport = async () => {
+    if (!startDate || !endDate) {
+      toast.error('Please select both start and end dates');
+      return;
+    }
+    
+    console.log('Starting PDF generation for:', reportType);
+    setGenerating(true);
+    
+    try {
+      // Fetch data from Supabase
+      console.log('Calling fetchReportData...');
+      const reportData = await fetchReportData();
+      console.log('fetchReportData completed:', reportData ? 'Data received' : 'No data');
+      
+      if (!reportData || (Array.isArray(reportData) && reportData.length === 0)) {
+        toast.error('No data found for the selected filters');
+        setGenerating(false);
+        return;
+      }
+      
+      // Prepare filters for PDF generation
       const filters = {
-        startDate: dateRange.from?.toISOString() || new Date().toISOString(),
-        endDate: dateRange.to?.toISOString() || new Date().toISOString(),
-        location: selectedLocation,
-        category: selectedCategory,
-        groupBy: reportFilters.groupBy
+        reportType,
+        startDate,
+        endDate,
+        location: selectedLocation !== 'all' ? (locations.find(l => l.location_id.toString() === selectedLocation)?.name || 'Unknown Location') : 'All Locations',
+        category: selectedCategory !== 'all' ? (categories.find(c => c.category_id.toString() === selectedCategory)?.name || 'Unknown Category') : 'All Categories',
+        expenseCategory: selectedExpenseCategory !== 'all' ? (expenseCategories.find(c => c.category_id.toString() === selectedExpenseCategory)?.name || 'Unknown Category') : 'All Categories',
+        staff: selectedStaff !== 'all' ? (staff.find(s => s.id === selectedStaff)?.full_name || staff.find(s => s.id === selectedStaff)?.email || 'Unknown Staff') : 'All Staff',
+        status: reportStatus !== 'all' ? reportStatus : 'All Statuses',
+        generatedBy: profile?.full_name || profile?.email || 'Unknown',
+        generatedAt: new Date().toLocaleString()
       };
       
-      // Create an array of promises for each data fetch
-      const dataPromises = [
-        ReportsService.fetchSalesData(filters),
-        ReportsService.fetchFinancialData(filters),
-        ReportsService.fetchProductPerformance(filters),
-        ReportsService.fetchCustomerAnalytics(filters),
-        ReportsService.fetchInventoryData(filters),
-        ReportsService.fetchExpenseData(filters),
-        ReportsService.fetchInventoryTransfers(filters)
-      ];
+      // Generate and download PDF
+      try {
+        const pdfGenerator = new PDFGenerator();
+        pdfGenerator.download(reportType, reportData, filters);
+        
+        const dataCount = Array.isArray(reportData) 
+          ? reportData.length 
+          : Object.values(reportData).flat().length;
+        
+        toast.success(`PDF report generated successfully!`, {
+          description: `Report contains ${dataCount} records and has been downloaded.`
+        });
+      } catch (pdfError) {
+        console.error('Error generating PDF:', pdfError);
+        throw new Error('Failed to generate PDF: ' + (pdfError instanceof Error ? pdfError.message : 'Unknown error'));
+      }
       
-      // Use Promise.allSettled to handle individual promise failures
-      const results = await Promise.allSettled(dataPromises);
-      
-      // Process results and handle any rejections
-      const processedResults = results.map((result, index) => {
-        if (result.status === 'fulfilled') {
-          return result.value;
-        } else {
-          console.error(`Error fetching data at index ${index}:`, result.reason);
-          // Return empty array for failed requests to prevent undefined errors
-          return [];
-        }
+    } catch (err: any) {
+      console.error('Error generating report:', err);
+      console.error('Error details:', {
+        message: err?.message,
+        stack: err?.stack,
+        name: err?.name,
+        full: err
       });
       
-      // Destructure the processed results
-      const [
-        salesData,
-        financialData,
-        productPerformance,
-        customerSegments,
-        inventoryReport,
-        expenseData,
-        inventoryTransfers
-      ] = processedResults;
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : (err?.message || err?.error_description || 'Unknown error occurred');
       
-      // Ensure all data is an array and filter out any undefined/null values
-      setReportData({
-        salesData: Array.isArray(salesData) ? salesData.filter(Boolean) : [],
-        financialData: Array.isArray(financialData) ? financialData.filter(Boolean) : [],
-        productPerformance: Array.isArray(productPerformance) ? productPerformance.filter(Boolean) : [],
-        customerSegments: Array.isArray(customerSegments) ? customerSegments.filter(Boolean) : [],
-        inventoryReport: Array.isArray(inventoryReport) ? inventoryReport.filter(Boolean) : [],
-        expenseData: Array.isArray(expenseData) ? expenseData.filter(Boolean) : [],
-        inventoryTransfers: Array.isArray(inventoryTransfers) ? inventoryTransfers.filter(Boolean) : []
+      toast.error('Failed to generate report', {
+        description: errorMessage
       });
-    } catch (err) {
-      console.error('Error fetching report data:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
-      setLoading(false);
+      setGenerating(false);
     }
   };
   
@@ -175,153 +403,233 @@ const ReportsModule = () => {
     fetchFilterOptions();
   }, []);
   
-  // Fetch data when filters change
-  useEffect(() => {
-    if (locations.length > 0 && dateRange.from && dateRange.to) {
-      fetchAllReportData();
-    }
-  }, [dateRange, selectedLocation, selectedCategory, reportFilters.groupBy, locations]);
-  
-  // Export Functions
-  const exportReport = async (format: 'pdf' | 'excel' | 'csv') => {
-    try {
-      const filters = {
-        startDate: dateRange.from?.toISOString() || new Date().toISOString(),
-        endDate: dateRange.to?.toISOString() || new Date().toISOString(),
-        location: selectedLocation,
-        category: selectedCategory,
-        groupBy: reportFilters.groupBy,
-        format
-      };
-      
-      // In a real implementation, this would call a Supabase Edge Function to generate the report
-      console.log('Exporting report with filters:', filters);
-      
-      // For now, we'll just show a success message
-      alert(`Report exported as ${format.toUpperCase()} successfully!`);
-    } catch (err) {
-      console.error('Error exporting report:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-    }
-  };
-  
-  const generateReport = () => {
-    fetchAllReportData();
-  };
-  
-  const getReportComponent = () => {
-    switch (activeReport) {
-      case 'sales': 
-        return <SalesReport salesData={reportData.salesData} />;
-      case 'financial': 
-        return <FinancialReport financialData={reportData.financialData} expenseData={reportData.expenseData} />;
-      case 'product': 
-        return <ProductReport productPerformance={reportData.productPerformance} />;
-      case 'customer': 
-        return <CustomerReport customerSegments={reportData.customerSegments} />;
-      case 'inventory': 
-        return <InventoryReport inventoryReport={reportData.inventoryReport} inventoryTransfers={reportData.inventoryTransfers} />;
-      default: 
-        return <SalesReport salesData={reportData.salesData} />;
-    }
-  };
-  
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Reports Generator</h1>
-            <p className="text-muted-foreground mt-1">Generate comprehensive business reports with advanced filtering</p>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={() => generateReport()} className="bg-primary hover:bg-primary/90" disabled={loading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Generate Report
-            </Button>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuLabel>Export Options</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => exportReport('pdf')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Export as PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportReport('excel')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Export as Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportReport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Export as CSV
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant="outline">
-              <Share className="mr-2 h-4 w-4" />
-              Share
-            </Button>
-          </div>
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold text-gray-900">Report Generator</h1>
+          <p className="text-gray-600">Select filters and generate detailed PDF reports</p>
         </div>
         
-        {/* Error Display */}
-        {error && (
-          <Card className="border-destructive">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertCircle className="h-5 w-5" />
-                <span>Error loading report data: {error}</span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        
-        {/* Filters Section */}
-        <ReportFilters
-          dateRange={dateRange}
-          setDateRange={setDateRange}
-          selectedLocation={selectedLocation}
-          setSelectedLocation={setSelectedLocation}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          reportFilters={reportFilters}
-          setReportFilters={setReportFilters}
-          locations={locations}
-          categories={categories}
-        />
-        
-        {/* Report Templates */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Select Report Template</CardTitle>
+        {/* Main Form Card */}
+        <Card className="border-gray-200">
+          <CardHeader className="bg-gray-50">
+            <CardTitle className="text-xl">Report Configuration</CardTitle>
+            <CardDescription>Configure the report parameters and click generate</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ReportTemplates activeReport={activeReport} setActiveReport={setActiveReport} />
-          </CardContent>
-        </Card>
-        
-        {/* Report Content */}
-        <div className="min-h-96">
-          {loading ? (
-            <div className="flex items-center justify-center h-96">
-              <div className="text-center">
-                <RefreshCw className="h-12 w-12 mx-auto animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">Loading report data...</p>
+          <CardContent className="pt-6 space-y-6">
+            {/* Report Type Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="reportType" className="text-sm font-medium">
+                Report Type *
+              </Label>
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger id="reportType">
+                  <SelectValue placeholder="Select report type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sales">Sales Report</SelectItem>
+                  <SelectItem value="inventory">Inventory Report</SelectItem>
+                  <SelectItem value="expenses">Expenses Report</SelectItem>
+                  <SelectItem value="loans">Loans Report</SelectItem>
+                  <SelectItem value="transfers">Inventory Transfers Report</SelectItem>
+                  <SelectItem value="customers">Customers Report</SelectItem>
+                  <SelectItem value="financial">Financial Summary Report</SelectItem>
+                  <SelectItem value="products">Product Performance Report</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">Choose the type of report you want to generate</p>
+            </div>
+
+            {/* Date Range */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startDate" className="text-sm font-medium">
+                  Start Date *
+                </Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  max={endDate}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endDate" className="text-sm font-medium">
+                  End Date *
+                </Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate}
+                />
               </div>
             </div>
-          ) : (
-            getReportComponent()
-          )}
-        </div>
+
+            {/* Location Filter */}
+            <div className="space-y-2">
+              <Label htmlFor="location" className="text-sm font-medium">
+                Location
+              </Label>
+              <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                <SelectTrigger id="location">
+                  <SelectValue placeholder="All locations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Locations</SelectItem>
+                  {locations.map((location) => (
+                    <SelectItem key={location.location_id.toString()} value={location.location_id.toString()}>
+                      {location.name} ({location.location_type})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Conditional Filters based on Report Type */}
+            {(reportType === 'sales' || reportType === 'products' || reportType === 'inventory') && (
+              <div className="space-y-2">
+                <Label htmlFor="category" className="text-sm font-medium">
+                  Product Category
+                </Label>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="All categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.category_id} value={category.category_id.toString()}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {reportType === 'expenses' && (
+              <div className="space-y-2">
+                <Label htmlFor="expenseCategory" className="text-sm font-medium">
+                  Expense Category
+                </Label>
+                <Select value={selectedExpenseCategory} onValueChange={setSelectedExpenseCategory}>
+                  <SelectTrigger id="expenseCategory">
+                    <SelectValue placeholder="All expense categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Expense Categories</SelectItem>
+                    {expenseCategories.map((category) => (
+                      <SelectItem key={category.category_id} value={category.category_id.toString()}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {(reportType === 'sales' || reportType === 'expenses' || reportType === 'transfers') && (
+              <div className="space-y-2">
+                <Label htmlFor="staff" className="text-sm font-medium">
+                  Staff Member
+                </Label>
+                <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+                  <SelectTrigger id="staff">
+                    <SelectValue placeholder="All staff" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Staff</SelectItem>
+                    {staff.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.full_name || member.email || 'Unknown'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {(reportType === 'sales' || reportType === 'loans' || reportType === 'expenses') && (
+              <div className="space-y-2">
+                <Label htmlFor="status" className="text-sm font-medium">
+                  Status
+                </Label>
+                <Select value={reportStatus} onValueChange={setReportStatus}>
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    {reportType === 'sales' && (
+                      <>
+                        <SelectItem value="Completed">Completed</SelectItem>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                      </>
+                    )}
+                    {reportType === 'loans' && (
+                      <>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                      </>
+                    )}
+                    {reportType === 'expenses' && (
+                      <>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Generate Button */}
+            <div className="pt-4">
+              <Button
+                onClick={generatePDFReport}
+                disabled={generating || !startDate || !endDate}
+                className="w-full bg-gray-900 hover:bg-gray-800 text-white h-12 text-base font-medium"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Generating & Downloading PDF...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-5 w-5" />
+                    Generate & Download PDF
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Info Card */}
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-900 space-y-1">
+                <p className="font-medium">Report Generation Information:</p>
+                <ul className="list-disc list-inside space-y-1 text-blue-800 ml-2">
+                  <li>Reports are generated in PDF format for easy sharing and printing</li>
+                  <li>Large reports may take a few moments to generate</li>
+                  <li>Date range is required for all report types</li>
+                  <li>Use filters to narrow down the data included in your report</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
