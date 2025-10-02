@@ -4,6 +4,7 @@ import { FileText, AlertCircle, Loader2, Download } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { PDFGenerator } from '@/lib/pdf-generator';
+import { useTranslations } from 'next-intl';
 
 // shadcn/ui imports
 import { Button } from '@/components/ui/button';
@@ -60,6 +61,8 @@ const ReportsModule = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
   const [staff, setStaff] = useState<Profile[]>([]);
+
+  const t = useTranslations('reports');
   
   // Fetch filter options
   const fetchFilterOptions = async () => {
@@ -403,50 +406,53 @@ const ReportsModule = () => {
     fetchFilterOptions();
   }, []);
   
+  const infoCardItems = [
+    t('generator.infoCard.items.0'),
+    t('generator.infoCard.items.1'),
+    t('generator.infoCard.items.2'),
+    t('generator.infoCard.items.3')
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">Report Generator</h1>
-          <p className="text-gray-600">Select filters and generate detailed PDF reports</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('generator.page.title')}</h1>
+          <p className="text-gray-600">{t('generator.page.description')}</p>
         </div>
-        
-        {/* Main Form Card */}
+
         <Card className="border-gray-200">
           <CardHeader className="bg-gray-50">
-            <CardTitle className="text-xl">Report Configuration</CardTitle>
-            <CardDescription>Configure the report parameters and click generate</CardDescription>
+            <CardTitle className="text-xl">{t('generator.form.card.title')}</CardTitle>
+            <CardDescription>{t('generator.form.card.description')}</CardDescription>
           </CardHeader>
           <CardContent className="pt-6 space-y-6">
-            {/* Report Type Selection */}
             <div className="space-y-2">
               <Label htmlFor="reportType" className="text-sm font-medium">
-                Report Type *
+                {t('generator.form.fields.reportType.label')}
               </Label>
               <Select value={reportType} onValueChange={setReportType}>
                 <SelectTrigger id="reportType">
-                  <SelectValue placeholder="Select report type" />
+                  <SelectValue placeholder={t('generator.form.fields.reportType.placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sales">Sales Report</SelectItem>
-                  <SelectItem value="inventory">Inventory Report</SelectItem>
-                  <SelectItem value="expenses">Expenses Report</SelectItem>
-                  <SelectItem value="loans">Loans Report</SelectItem>
-                  <SelectItem value="transfers">Inventory Transfers Report</SelectItem>
-                  <SelectItem value="customers">Customers Report</SelectItem>
-                  <SelectItem value="financial">Financial Summary Report</SelectItem>
-                  <SelectItem value="products">Product Performance Report</SelectItem>
+                  <SelectItem value="sales">{t('generator.form.fields.reportType.options.sales')}</SelectItem>
+                  <SelectItem value="inventory">{t('generator.form.fields.reportType.options.inventory')}</SelectItem>
+                  <SelectItem value="expenses">{t('generator.form.fields.reportType.options.expenses')}</SelectItem>
+                  <SelectItem value="loans">{t('generator.form.fields.reportType.options.loans')}</SelectItem>
+                  <SelectItem value="transfers">{t('generator.form.fields.reportType.options.transfers')}</SelectItem>
+                  <SelectItem value="customers">{t('generator.form.fields.reportType.options.customers')}</SelectItem>
+                  <SelectItem value="financial">{t('generator.form.fields.reportType.options.financial')}</SelectItem>
+                  <SelectItem value="products">{t('generator.form.fields.reportType.options.products')}</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">Choose the type of report you want to generate</p>
+              <p className="text-xs text-gray-500">{t('generator.form.fields.reportType.helpText')}</p>
             </div>
 
-            {/* Date Range */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="startDate" className="text-sm font-medium">
-                  Start Date *
+                  {t('generator.form.fields.startDate.label')}
                 </Label>
                 <Input
                   id="startDate"
@@ -458,7 +464,7 @@ const ReportsModule = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="endDate" className="text-sm font-medium">
-                  End Date *
+                  {t('generator.form.fields.endDate.label')}
                 </Label>
                 <Input
                   id="endDate"
@@ -470,17 +476,16 @@ const ReportsModule = () => {
               </div>
             </div>
 
-            {/* Location Filter */}
             <div className="space-y-2">
               <Label htmlFor="location" className="text-sm font-medium">
-                Location
+                {t('generator.form.fields.location.label')}
               </Label>
               <Select value={selectedLocation} onValueChange={setSelectedLocation}>
                 <SelectTrigger id="location">
-                  <SelectValue placeholder="All locations" />
+                  <SelectValue placeholder={t('generator.form.fields.location.placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Locations</SelectItem>
+                  <SelectItem value="all">{t('generator.form.fields.location.placeholder')}</SelectItem>
                   {locations.map((location) => (
                     <SelectItem key={location.location_id.toString()} value={location.location_id.toString()}>
                       {location.name} ({location.location_type})
@@ -490,18 +495,17 @@ const ReportsModule = () => {
               </Select>
             </div>
 
-            {/* Conditional Filters based on Report Type */}
             {(reportType === 'sales' || reportType === 'products' || reportType === 'inventory') && (
               <div className="space-y-2">
                 <Label htmlFor="category" className="text-sm font-medium">
-                  Product Category
+                  {t('generator.form.fields.category.label')}
                 </Label>
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                   <SelectTrigger id="category">
-                    <SelectValue placeholder="All categories" />
+                    <SelectValue placeholder={t('generator.form.fields.category.placeholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="all">{t('generator.form.fields.category.placeholder')}</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category.category_id} value={category.category_id.toString()}>
                         {category.name}
@@ -515,14 +519,14 @@ const ReportsModule = () => {
             {reportType === 'expenses' && (
               <div className="space-y-2">
                 <Label htmlFor="expenseCategory" className="text-sm font-medium">
-                  Expense Category
+                  {t('generator.form.fields.expenseCategory.label')}
                 </Label>
                 <Select value={selectedExpenseCategory} onValueChange={setSelectedExpenseCategory}>
                   <SelectTrigger id="expenseCategory">
-                    <SelectValue placeholder="All expense categories" />
+                    <SelectValue placeholder={t('generator.form.fields.expenseCategory.placeholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Expense Categories</SelectItem>
+                    <SelectItem value="all">{t('generator.form.fields.expenseCategory.placeholder')}</SelectItem>
                     {expenseCategories.map((category) => (
                       <SelectItem key={category.category_id} value={category.category_id.toString()}>
                         {category.name}
@@ -536,14 +540,14 @@ const ReportsModule = () => {
             {(reportType === 'sales' || reportType === 'expenses' || reportType === 'transfers') && (
               <div className="space-y-2">
                 <Label htmlFor="staff" className="text-sm font-medium">
-                  Staff Member
+                  {t('generator.form.fields.staff.label')}
                 </Label>
                 <Select value={selectedStaff} onValueChange={setSelectedStaff}>
                   <SelectTrigger id="staff">
-                    <SelectValue placeholder="All staff" />
+                    <SelectValue placeholder={t('generator.form.fields.staff.placeholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Staff</SelectItem>
+                    <SelectItem value="all">{t('generator.form.fields.staff.placeholder')}</SelectItem>
                     {staff.map((member) => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.full_name || member.email || 'Unknown'}
@@ -557,32 +561,32 @@ const ReportsModule = () => {
             {(reportType === 'sales' || reportType === 'loans' || reportType === 'expenses') && (
               <div className="space-y-2">
                 <Label htmlFor="status" className="text-sm font-medium">
-                  Status
+                  {t('generator.form.fields.status.label')}
                 </Label>
                 <Select value={reportStatus} onValueChange={setReportStatus}>
                   <SelectTrigger id="status">
-                    <SelectValue placeholder="All statuses" />
+                    <SelectValue placeholder={t('generator.form.fields.status.placeholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="all">{t('generator.form.fields.status.placeholder')}</SelectItem>
                     {reportType === 'sales' && (
                       <>
-                        <SelectItem value="Completed">Completed</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                        <SelectItem value="Completed">{t('generator.form.fields.status.options.sales.completed')}</SelectItem>
+                        <SelectItem value="Pending">{t('generator.form.fields.status.options.sales.pending')}</SelectItem>
+                        <SelectItem value="Cancelled">{t('generator.form.fields.status.options.sales.cancelled')}</SelectItem>
                       </>
                     )}
                     {reportType === 'loans' && (
                       <>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
+                        <SelectItem value="pending">{t('generator.form.fields.status.options.loans.pending')}</SelectItem>
+                        <SelectItem value="paid">{t('generator.form.fields.status.options.loans.paid')}</SelectItem>
                       </>
                     )}
                     {reportType === 'expenses' && (
                       <>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
+                        <SelectItem value="pending">{t('generator.form.fields.status.options.expenses.pending')}</SelectItem>
+                        <SelectItem value="approved">{t('generator.form.fields.status.options.expenses.approved')}</SelectItem>
+                        <SelectItem value="rejected">{t('generator.form.fields.status.options.expenses.rejected')}</SelectItem>
                       </>
                     )}
                   </SelectContent>
@@ -590,7 +594,6 @@ const ReportsModule = () => {
               </div>
             )}
 
-            {/* Generate Button */}
             <div className="pt-4">
               <Button
                 onClick={generatePDFReport}
@@ -600,12 +603,12 @@ const ReportsModule = () => {
                 {generating ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Generating & Downloading PDF...
+                    {t('generator.actions.generating')}
                   </>
                 ) : (
                   <>
                     <Download className="mr-2 h-5 w-5" />
-                    Generate & Download PDF
+                    {t('generator.actions.generate')}
                   </>
                 )}
               </Button>
@@ -613,18 +616,16 @@ const ReportsModule = () => {
           </CardContent>
         </Card>
 
-        {/* Info Card */}
         <Card className="border-blue-200 bg-blue-50">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-blue-900 space-y-1">
-                <p className="font-medium">Report Generation Information:</p>
+                <p className="font-medium">{t('generator.infoCard.title')}</p>
                 <ul className="list-disc list-inside space-y-1 text-blue-800 ml-2">
-                  <li>Reports are generated in PDF format for easy sharing and printing</li>
-                  <li>Large reports may take a few moments to generate</li>
-                  <li>Date range is required for all report types</li>
-                  <li>Use filters to narrow down the data included in your report</li>
+                  {infoCardItems.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
                 </ul>
               </div>
             </div>
