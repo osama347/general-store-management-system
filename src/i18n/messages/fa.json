@@ -514,12 +514,94 @@
     
   },
   "expenses": {
-    "title": "",
-    "addExpense": "",
-    "expenseType": "",
-    "amount": "",
-    "date": "",
-    "notes": ""
+  
+    "loading": "در حال بارگذاری هزینه‌ها...",
+    "noLocation": {
+      "title": "هیچ مکانی تخصیص داده نشده",
+      "description": "حساب شما به هیچ مکانی متصل نیست. لطفاً با مدیر سیستم تماس بگیرید."
+    },
+    "error": {
+      "title": "امکان بارگیری داده وجود ندارد",
+      "description": "خطایی هنگام بازیابی اطلاعات هزینه‌ها رخ داد."
+    },
+    "header": {
+      "title": "مدیریت هزینه‌ها",
+      "description": "هزینه‌های کسب‌وکار خود را پیگیری و مدیریت کنید",
+      "locationSuffix": "برای {location}"
+    },
+    "dialog": {
+      "addTitle": "افزودن هزینه جدید",
+      "addDescription": "جزئیات هزینه را تکمیل کنید و سپس ذخیره کنید.",
+      "editTitle": "ویرایش هزینه",
+      "editDescription": "اطلاعات هزینه را به‌روزرسانی کنید."
+    },
+    "actions": {
+      "add": "افزودن هزینه",
+      "edit": "ویرایش هزینه",
+      "update": "به‌روزرسانی هزینه",
+      "saving": "در حال ذخیره...",
+      "cancel": "انصراف"
+    },
+    "tabs": {
+      "basic": "اطلاعات اصلی",
+      "details": "جزئیات",
+      "status": "وضعیت"
+    },
+    "form": {
+      "location": "مکان",
+      "category": "دسته‌بندی",
+      "amount": "مبلغ *",
+      "date": "تاریخ *",
+      "vendor": "نام فروشنده",
+      "receipt": "شماره رسید",
+      "description": "توضیحات",
+      "notes": "یادداشت‌ها",
+      "status": "وضعیت"
+    },
+    "statusInfo": {
+      "title": "اطلاعات وضعیت",
+      "pending": {
+        "label": "در انتظار",
+        "description": "هزینه در انتظار تأیید است"
+      },
+      "approved": {
+        "label": "تأیید شده",
+        "description": "هزینه تأیید و پردازش شده است"
+      },
+      "rejected": {
+        "label": "رد شده",
+        "description": "هزینه رد شده است"
+      }
+    },
+    "filters": {
+      "toggle": "فیلترها",
+      "location": "مکان",
+      "allLocations": "همه مکان‌ها",
+      "category": "دسته‌بندی",
+      "allCategories": "همه دسته‌بندی‌ها",
+      "status": "وضعیت",
+      "allStatuses": "همه وضعیت‌ها",
+      "dateRange": "بازه زمانی",
+      "startDate": "تاریخ شروع",
+      "endDate": "تاریخ پایان",
+      "clearAll": "حذف همه فیلترها"
+    },
+    "search": {
+      "placeholder": "جستجوی هزینه‌ها، فروشندگان و رسیدها..."
+    },
+    "table": {
+      "columns": {
+        "date": "تاریخ",
+        "vendor": "فروشنده",
+        "category": "دسته‌بندی",
+        "location": "مکان",
+        "amount": "مبلغ",
+        "status": "وضعیت",
+        "actions": "عملیات"
+      },
+      "empty": "هزینه‌ای یافت نشد"
+    }
+  
   },
   "products": {
     "table": {
@@ -603,21 +685,169 @@
       }
     }
   },
-  "inventory": {
-    "title": "",
-    "stockLevel": "",
-    "lowStock": "",
-    "outOfStock": "",
-    "reorder": ""
-  },
-  "transfers": {
-    "title": "",
-    "newTransfer": "",
-    "fromAccount": "",
-    "toAccount": "",
-    "amount": "",
-    "transferDate": ""
-  },
+  
+    "inventory": {
+      "alerts": {
+        "loadFailed": "امکان بارگذاری داده وجود ندارد"
+      },
+      "page": {
+        "title": "مدیریت موجودی",
+        "description": "سطح موجودی خود را پایش و مدیریت کنید",
+        "searchPlaceholder": "جستجوی محصولات، SKUها، مکان‌ها...",
+        "filtersToggle": "فیلترها",
+        "clearFilters": "حذف همه فیلترها"
+      },
+      "actions": {
+        "addStock": "افزودن موجودی",
+        "cancel": "انصراف",
+        "adding": "در حال افزودن..."
+      },
+      "filters": {
+        "category": {
+          "label": "دسته‌بندی",
+          "all": "همه دسته‌بندی‌ها"
+        },
+        "locationType": {
+          "label": "نوع مکان",
+          "all": "همه انواع",
+          "warehouse": "انبار",
+          "store": "فروشگاه"
+        },
+        "stockLevel": {
+          "label": "سطح موجودی",
+          "all": "همه سطوح",
+          "low": "موجودی کم (کمتر از ۱۰)",
+          "medium": "موجودی متوسط (۱۰ تا ۵۰)",
+          "high": "موجودی زیاد (بیش از ۵۰)"
+        },
+        "priceRange": {
+          "label": "بازه قیمت",
+          "min": "حداقل",
+          "max": "حداکثر"
+        }
+      },
+      "dialog": {
+        "addTitle": "افزودن موجودی جدید",
+        "description": "برای یک محصول در مکان مشخص موجودی اضافه کنید",
+        "fields": {
+          "product": "محصول *",
+          "location": "مکان *",
+          "quantity": "تعداد *"
+        },
+        "placeholders": {
+          "product": "انتخاب محصول",
+          "location": "انتخاب مکان",
+          "quantity": "مقدار را وارد کنید"
+        }
+      },
+      "table": {
+        "columns": {
+          "product": "محصول",
+          "sku": "کد محصول",
+          "location": "مکان",
+          "type": "نوع",
+          "stock": "موجودی",
+          "price": "قیمت"
+        },
+        "unknownProduct": "محصول نامشخص",
+        "unknownLocation": "مکان نامشخص",
+        "unknownType": "نامشخص"
+      }
+    },
+ 
+  
+      "transfers": {
+        "loading": "در حال بارگذاری انتقال‌ها...",
+        "noLocation": {
+          "title": "هیچ مکانی تخصیص داده نشده",
+          "description": "حساب شما به هیچ مکانی متصل نیست. لطفاً با مدیر خود تماس بگیرید."
+        },
+        "error": {
+          "title": "امکان بارگیری داده وجود ندارد",
+          "description": "لطفاً بعداً دوباره تلاش کنید یا اتصال خود را بررسی کنید."
+        },
+        "page": {
+          "title": "انتقال موجودی",
+          "description": "انتقال موجودی بین مکان‌ها را مدیریت کنید",
+          "descriptionSuffix": "برای {location}"
+        },
+        "actions": {
+          "newTransfer": "انتقال جدید",
+          "cancel": "انصراف",
+          "create": "ایجاد انتقال",
+          "creating": "در حال ایجاد..."
+        },
+        "dialog": {
+          "title": "ایجاد انتقال جدید",
+          "description": "جزئیات انتقال را تکمیل کنید و پس از اتمام ذخیره کنید."
+        },
+        "tabs": {
+          "basic": "اطلاعات اصلی",
+          "details": "جزئیات"
+        },
+        "form": {
+          "product": "محصول *",
+          "productPlaceholder": "انتخاب محصول",
+          "productSearch": "جستجوی محصولات...",
+          "noProducts": "هیچ محصولی یافت نشد.",
+          "quantity": "تعداد *",
+          "fromLocation": "مکان مبدأ *",
+          "fromLocationPlaceholder": "انتخاب مکان مبدأ",
+          "toLocation": "مکان مقصد *",
+          "toLocationPlaceholder": "انتخاب مکان مقصد",
+          "staff": "کارمند *",
+          "staffPlaceholder": "انتخاب کارمند",
+          "instructionsTitle": "اطلاعات انتقال",
+          "instructions": [
+            "از موجودی کافی در مکان مبدأ مطمئن شوید.",
+            "بررسی کنید که مکان مقصد فضای کافی برای ذخیره دارد.",
+            "تمام انتقال‌ها برای رهگیری موجودی ثبت می‌شوند."
+          ]
+        },
+        "filters": {
+          "toggle": "فیلترها",
+          "product": {
+            "label": "محصول",
+            "all": "همه محصولات"
+          },
+          "fromLocation": {
+            "label": "مکان مبدأ",
+            "all": "همه مکان‌ها"
+          },
+          "toLocation": {
+            "label": "مکان مقصد",
+            "all": "همه مکان‌ها"
+          },
+          "dateRange": {
+            "label": "بازه زمانی",
+            "start": "تاریخ شروع",
+            "end": "تاریخ پایان"
+          },
+          "clear": "حذف همه فیلترها"
+        },
+        "search": {
+          "placeholder": "جستجوی انتقال‌ها، محصولات، مکان‌ها..."
+        },
+        "table": {
+          "columns": {
+            "date": "تاریخ",
+            "product": "محصول",
+            "from": "مبدأ",
+            "to": "مقصد",
+            "quantity": "تعداد",
+            "staff": "کارمند",
+            "actions": "عملیات"
+          },
+          "noTransfers": "هیچ انتقالی یافت نشد",
+          "unknown": {
+            "product": "محصول نامشخص",
+            "location": "نامشخص",
+            "staff": "نامشخص"
+          }
+        }
+      },
+    
+ 
   "categories": {
     "title": "دسته‌بندی‌ها",
     "description": "لیست تمام دسته‌بندی‌ها",

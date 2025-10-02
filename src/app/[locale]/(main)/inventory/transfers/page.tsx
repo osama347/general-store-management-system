@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/command"
 import { useAuth } from "@/hooks/use-auth"
 import { useLocation } from "@/contexts/LocationContext"
+import { useTranslations } from "next-intl"
 
 const supabase = createClient()
 
@@ -142,6 +143,7 @@ export default function TransfersPage() {
   
   const { profile, loading: authLoading } = useAuth()
   const { locations: allLocations, isLoading: locationLoading } = useLocation()
+  const t= useTranslations('transfers')
   
   // Get the user's location from their profile
   const userLocationId = profile?.location_id
@@ -485,28 +487,30 @@ export default function TransfersPage() {
       loadData()
     }
   }, [authLoading, locationLoading, profile])
+  const instructions = (t.raw("form.instructions") as string[]) ?? []
+  const userLocationIdString = userLocationId ? userLocationId.toString() : undefined
+  const userLocationName = userLocationIdString
+    ? locations.find((location) => location.location_id?.toString() === userLocationIdString)?.name
+    : undefined
 
   if (loading || authLoading || locationLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-700">Loading transfers...</p>
+          <p className="mt-4 text-gray-700">{t("loading")}</p>
         </div>
       </div>
     )
   }
 
-  // Show message if user is not associated with any location
-  if (profile?.role !== 'admin' && !userLocationId) {
+  if (profile?.role !== "admin" && !userLocationId) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="w-full max-w-md p-8 text-center">
           <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-amber-400" />
-          <h2 className="text-xl font-bold mb-2">No Location Assigned</h2>
-          <p className="text-gray-600">
-            Your account is not associated with any location. Please contact your administrator.
-          </p>
+          <h2 className="text-xl font-bold mb-2">{t("noLocation.title")}</h2>
+          <p className="text-gray-600">{t("noLocation.description")}</p>
         </div>
       </div>
     )
@@ -520,40 +524,27 @@ export default function TransfersPage() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-red-900">Unable to load data</p>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
+                <p className="text-sm font-medium text-red-900">{t("error.title")}</p>
+                <p className="text-sm text-red-700 mt-1">{t("error.description")}</p>
+                {!!error && <p className="text-xs text-red-500 mt-2">{error}</p>}
               </div>
             </div>
           </div>
         )}
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          {/* Header Section */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">Inventory Transfers</h1>
+              <h1 className="text-2xl font-semibold text-gray-900">{t("page.title")}</h1>
               <p className="text-sm text-gray-500 mt-1">
-                Manage stock transfers between locations
-                {profile?.role !== 'admin' && profile?.location && (
-                  <span className="ml-1">for {profile.location.name}</span>
+                {t("page.description")}
+                {profile?.role !== "admin" && userLocationName && (
+                  <span className="ml-1">{t("page.descriptionSuffix", { location: userLocationName })}</span>
                 )}
               </p>
             </div>
-            
+
             <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  fetchTransfers()
-                  toast.success("Data refreshed")
-                }}
-                className="text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-              
               <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
                 <DialogTrigger asChild>
                   <Button
@@ -562,28 +553,28 @@ export default function TransfersPage() {
                     className="bg-gray-900 hover:bg-gray-800 text-white"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    New Transfer
+                    {t("actions.newTransfer")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle>Create New Transfer</DialogTitle>
-                    <DialogDescription>
-                      Fill in the transfer details. Click save when you're done.
-                    </DialogDescription>
+                    <DialogTitle>{t("dialog.title")}</DialogTitle>
+                    <DialogDescription>{t("dialog.description")}</DialogDescription>
                   </DialogHeader>
-                  
+
                   <form onSubmit={handleCreateTransfer}>
                     <Tabs defaultValue="basic" className="w-full">
                       <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                        <TabsTrigger value="details">Details</TabsTrigger>
+                        <TabsTrigger value="basic">{t("tabs.basic")}</TabsTrigger>
+                        <TabsTrigger value="details">{t("tabs.details")}</TabsTrigger>
                       </TabsList>
-                      
+
                       <TabsContent value="basic" className="space-y-4 pt-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="product" className="text-sm font-medium">Product *</Label>
+                            <Label htmlFor="product" className="text-sm font-medium">
+                              {t("form.product")}
+                            </Label>
                             <div className="relative">
                               <Button
                                 type="button"
@@ -592,27 +583,28 @@ export default function TransfersPage() {
                                 onClick={() => setProductSelectOpen(!productSelectOpen)}
                               >
                                 {formData.product_id
-                                  ? products.find(p => p.product_id.toString() === formData.product_id)?.name || "Select product"
-                                  : "Select product"}
+                                  ? products.find((p) => p.product_id.toString() === formData.product_id)?.name ||
+                                    t("form.productPlaceholder")
+                                  : t("form.productPlaceholder")}
                                 <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                               </Button>
                               {productSelectOpen && (
                                 <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-md">
                                   <Command>
                                     <CommandInput
-                                      placeholder="Search products..."
+                                      placeholder={t("form.productSearch")}
                                       value={productSearchTerm}
                                       onValueChange={setProductSearchTerm}
                                     />
                                     <CommandList>
-                                      <CommandEmpty>No products found.</CommandEmpty>
+                                      <CommandEmpty>{t("form.noProducts")}</CommandEmpty>
                                       <CommandGroup>
                                         {filteredProducts.map((product) => (
                                           <CommandItem
                                             key={product.product_id}
                                             value={product.product_id.toString()}
                                             onSelect={() => {
-                                              setFormData({...formData, product_id: product.product_id.toString()})
+                                              setFormData({ ...formData, product_id: product.product_id.toString() })
                                               setProductSelectOpen(false)
                                             }}
                                           >
@@ -638,28 +630,32 @@ export default function TransfersPage() {
                               )}
                             </div>
                           </div>
-                          
+
                           <div className="space-y-2">
-                            <Label htmlFor="quantity" className="text-sm font-medium">Quantity *</Label>
+                            <Label htmlFor="quantity" className="text-sm font-medium">
+                              {t("form.quantity")}
+                            </Label>
                             <Input
                               id="quantity"
                               type="number"
                               min="1"
                               placeholder="0"
                               value={formData.quantity}
-                              onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                               required
                             />
                           </div>
-                          
+
                           <div className="space-y-2">
-                            <Label htmlFor="from_location" className="text-sm font-medium">From Location *</Label>
-                            <Select 
-                              value={formData.from_location_id} 
-                              onValueChange={(value) => setFormData({...formData, from_location_id: value})}
+                            <Label htmlFor="from_location" className="text-sm font-medium">
+                              {t("form.fromLocation")}
+                            </Label>
+                            <Select
+                              value={formData.from_location_id}
+                              onValueChange={(value) => setFormData({ ...formData, from_location_id: value })}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="Select source location" />
+                                <SelectValue placeholder={t("form.fromLocationPlaceholder")} />
                               </SelectTrigger>
                               <SelectContent>
                                 {locations.map((location) => (
@@ -670,15 +666,17 @@ export default function TransfersPage() {
                               </SelectContent>
                             </Select>
                           </div>
-                          
+
                           <div className="space-y-2">
-                            <Label htmlFor="to_location" className="text-sm font-medium">To Location *</Label>
-                            <Select 
-                              value={formData.to_location_id} 
-                              onValueChange={(value) => setFormData({...formData, to_location_id: value})}
+                            <Label htmlFor="to_location" className="text-sm font-medium">
+                              {t("form.toLocation")}
+                            </Label>
+                            <Select
+                              value={formData.to_location_id}
+                              onValueChange={(value) => setFormData({ ...formData, to_location_id: value })}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="Select destination location" />
+                                <SelectValue placeholder={t("form.toLocationPlaceholder")} />
                               </SelectTrigger>
                               <SelectContent>
                                 {locations.map((location) => (
@@ -691,40 +689,42 @@ export default function TransfersPage() {
                           </div>
                         </div>
                       </TabsContent>
-                      
+
                       <TabsContent value="details" className="space-y-4 pt-4">
                         <div className="grid grid-cols-1 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="staff" className="text-sm font-medium">Staff Member *</Label>
-                            <Select 
-                              value={formData.created_by_profile_id} 
-                              onValueChange={(value) => setFormData({...formData, created_by_profile_id: value})}
+                            <Label htmlFor="staff" className="text-sm font-medium">
+                              {t("form.staff")}
+                            </Label>
+                            <Select
+                              value={formData.created_by_profile_id}
+                              onValueChange={(value) => setFormData({ ...formData, created_by_profile_id: value })}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="Select staff member" />
+                                <SelectValue placeholder={t("form.staffPlaceholder")} />
                               </SelectTrigger>
                               <SelectContent>
                                 {profiles.map((profile) => (
                                   <SelectItem key={profile.id} value={profile.id}>
-                                    {profile.full_name || profile.email || "Unknown"}
+                                    {profile.full_name || profile.email || t("table.unknown.staff")}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
-                          
+
                           <div className="p-4 bg-gray-50 rounded-lg">
-                            <h4 className="text-sm font-medium text-gray-900 mb-2">Transfer Information</h4>
+                            <h4 className="text-sm font-medium text-gray-900 mb-2">{t("form.instructionsTitle")}</h4>
                             <ul className="text-sm text-gray-600 space-y-1">
-                              <li>• Ensure sufficient inventory is available at the source location</li>
-                              <li>• Verify the destination location has adequate storage space</li>
-                              <li>• All transfers are recorded for inventory tracking purposes</li>
+                              {instructions.map((instruction, index) => (
+                                <li key={index}>• {instruction}</li>
+                              ))}
                             </ul>
                           </div>
                         </div>
                       </TabsContent>
                     </Tabs>
-                    
+
                     <DialogFooter className="pt-4">
                       <Button
                         type="button"
@@ -734,14 +734,21 @@ export default function TransfersPage() {
                           resetForm()
                         }}
                       >
-                        Cancel
+                        {t("actions.cancel")}
                       </Button>
                       <Button
                         type="submit"
-                        disabled={isSubmitting || !formData.product_id || !formData.from_location_id || !formData.to_location_id || !formData.quantity || !formData.created_by_profile_id}
+                        disabled={
+                          isSubmitting ||
+                          !formData.product_id ||
+                          !formData.from_location_id ||
+                          !formData.to_location_id ||
+                          !formData.quantity ||
+                          !formData.created_by_profile_id
+                        }
                         className="bg-gray-900 hover:bg-gray-800 text-white"
                       >
-                        {isSubmitting ? "Creating..." : "Create Transfer"}
+                        {isSubmitting ? t("actions.creating") : t("actions.create")}
                       </Button>
                     </DialogFooter>
                   </form>
@@ -749,14 +756,13 @@ export default function TransfersPage() {
               </Dialog>
             </div>
           </div>
-          
-          {/* Search and Filters */}
+
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
-                  placeholder="Search transfers, products, locations..."
+                  placeholder={t("search.placeholder")}
                   className="pl-10 border-gray-200 bg-gray-50 focus:bg-white"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -769,7 +775,7 @@ export default function TransfersPage() {
               className="border-gray-200 text-gray-600"
             >
               <Filter className="h-4 w-4 mr-2" />
-              Filters
+              {t("filters.toggle")}
               {(filters.product ||
                 filters.fromLocation ||
                 filters.toLocation ||
@@ -781,23 +787,21 @@ export default function TransfersPage() {
               )}
             </Button>
           </div>
-          
+
           {showFilters && (
             <div className="mb-6 pb-6 border-b border-gray-100">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Product</Label>
+                  <Label className="text-sm font-medium text-gray-700">{t("filters.product.label")}</Label>
                   <Select
                     value={filters.product}
-                    onValueChange={(value) =>
-                      setFilters((prev) => ({ ...prev, product: value === "all" ? "" : value }))
-                    }
+                    onValueChange={(value) => setFilters((prev) => ({ ...prev, product: value === "all" ? "" : value }))}
                   >
                     <SelectTrigger className="border-gray-200">
-                      <SelectValue placeholder="All products" />
+                      <SelectValue placeholder={t("filters.product.all")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All products</SelectItem>
+                      <SelectItem value="all">{t("filters.product.all")}</SelectItem>
                       {products.map((product) => (
                         <SelectItem key={product.product_id} value={product.product_id.toString()}>
                           {product.name}
@@ -806,9 +810,9 @@ export default function TransfersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">From Location</Label>
+                  <Label className="text-sm font-medium text-gray-700">{t("filters.fromLocation.label")}</Label>
                   <Select
                     value={filters.fromLocation}
                     onValueChange={(value) =>
@@ -816,10 +820,10 @@ export default function TransfersPage() {
                     }
                   >
                     <SelectTrigger className="border-gray-200">
-                      <SelectValue placeholder="All locations" />
+                      <SelectValue placeholder={t("filters.fromLocation.all")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All locations</SelectItem>
+                      <SelectItem value="all">{t("filters.fromLocation.all")}</SelectItem>
                       {locations.map((location) => (
                         <SelectItem key={location.location_id} value={location.location_id.toString()}>
                           {location.name}
@@ -828,9 +832,9 @@ export default function TransfersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">To Location</Label>
+                  <Label className="text-sm font-medium text-gray-700">{t("filters.toLocation.label")}</Label>
                   <Select
                     value={filters.toLocation}
                     onValueChange={(value) =>
@@ -838,10 +842,10 @@ export default function TransfersPage() {
                     }
                   >
                     <SelectTrigger className="border-gray-200">
-                      <SelectValue placeholder="All locations" />
+                      <SelectValue placeholder={t("filters.toLocation.all")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All locations</SelectItem>
+                      <SelectItem value="all">{t("filters.toLocation.all")}</SelectItem>
                       {locations.map((location) => (
                         <SelectItem key={location.location_id} value={location.location_id.toString()}>
                           {location.name}
@@ -850,13 +854,13 @@ export default function TransfersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Date Range</Label>
+                  <Label className="text-sm font-medium text-gray-700">{t("filters.dateRange.label")}</Label>
                   <div className="flex gap-2">
                     <Input
                       type="date"
-                      placeholder="Start date"
+                      placeholder={t("filters.dateRange.start")}
                       value={filters.dateRange.start}
                       onChange={(e) =>
                         setFilters((prev) => ({
@@ -868,7 +872,7 @@ export default function TransfersPage() {
                     />
                     <Input
                       type="date"
-                      placeholder="End date"
+                      placeholder={t("filters.dateRange.end")}
                       value={filters.dateRange.end}
                       onChange={(e) =>
                         setFilters((prev) => ({
@@ -881,21 +885,15 @@ export default function TransfersPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="text-gray-500"
-                >
-                  Clear all filters
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-gray-500">
+                  {t("filters.clear")}
                 </Button>
               </div>
             </div>
           )}
-          
-          {/* Transfers Table */}
+
           {loading ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
@@ -907,74 +905,64 @@ export default function TransfersPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-gray-100">
-                    <TableHead 
-                      className="font-medium text-gray-700 cursor-pointer"
-                      onClick={() => requestSort("date")}
-                    >
-                      Date
+                    <TableHead className="font-medium text-gray-700 cursor-pointer" onClick={() => requestSort("date")}>
+                      {t("table.columns.date")}
                     </TableHead>
-                    <TableHead 
+                    <TableHead
                       className="font-medium text-gray-700 cursor-pointer"
                       onClick={() => requestSort("product")}
                     >
-                      Product
+                      {t("table.columns.product")}
                     </TableHead>
-                    <TableHead 
+                    <TableHead
                       className="font-medium text-gray-700 cursor-pointer"
                       onClick={() => requestSort("fromLocation")}
                     >
-                      From
+                      {t("table.columns.from")}
                     </TableHead>
-                    <TableHead 
+                    <TableHead
                       className="font-medium text-gray-700 cursor-pointer"
                       onClick={() => requestSort("toLocation")}
                     >
-                      To
+                      {t("table.columns.to")}
                     </TableHead>
-                    <TableHead 
+                    <TableHead
                       className="font-medium text-gray-700 cursor-pointer"
                       onClick={() => requestSort("quantity")}
                     >
-                      Quantity
+                      {t("table.columns.quantity")}
                     </TableHead>
-                    <TableHead 
+                    <TableHead
                       className="font-medium text-gray-700 cursor-pointer"
                       onClick={() => requestSort("staff")}
                     >
-                      Staff
+                      {t("table.columns.staff")}
                     </TableHead>
-                    <TableHead className="font-medium text-gray-700 text-right">
-                      Actions
-                    </TableHead>
+                    <TableHead className="font-medium text-gray-700 text-right">{t("table.columns.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredTransfers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                        No transfers found
+                        {t("table.noTransfers")}
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredTransfers.map((transfer) => (
-                      <TableRow key={transfer.transfer_id.toString()} className="border-gray-100 hover:bg-gray-50">
-                        <TableCell className="font-medium">
-                          {formatDate(transfer.created_at)}
-                        </TableCell>
+                      <TableRow
+                        key={transfer.transfer_id.toString()}
+                        className="border-gray-100 hover:bg-gray-50"
+                      >
+                        <TableCell className="font-medium">{formatDate(transfer.created_at)}</TableCell>
+                        <TableCell>{transfer.products?.name || t("table.unknown.product")}</TableCell>
+                        <TableCell>{transfer.from_location?.name || t("table.unknown.location")}</TableCell>
+                        <TableCell>{transfer.to_location?.name || t("table.unknown.location")}</TableCell>
+                        <TableCell className="font-medium">{transfer.quantity}</TableCell>
                         <TableCell>
-                          {transfer.products?.name || "Unknown Product"}
-                        </TableCell>
-                        <TableCell>
-                          {transfer.from_location?.name || "Unknown"}
-                        </TableCell>
-                        <TableCell>
-                          {transfer.to_location?.name || "Unknown"}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {transfer.quantity}
-                        </TableCell>
-                        <TableCell>
-                          {transfer.profiles?.full_name || transfer.profiles?.email || "Unknown"}
+                          {transfer.profiles?.full_name ||
+                            transfer.profiles?.email ||
+                            t("table.unknown.staff")}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
@@ -986,7 +974,7 @@ export default function TransfersPage() {
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </div> 
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))

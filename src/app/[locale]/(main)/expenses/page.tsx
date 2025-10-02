@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/tabs"
 import { useAuth } from "@/hooks/use-auth"
 import { useLocation } from "@/contexts/LocationContext"
+import {useTranslations} from "next-intl"
 
 const supabase = createClient()
 
@@ -481,27 +482,39 @@ export default function ExpensesPage() {
     }
   }, [authLoading, locationLoading, profile])
 
+  const t = useTranslations("expenses")
+
+  const renderStatusBadge = (status: string) => {
+    switch (status) {
+      case "pending":
+        return <Badge variant="secondary">{t("statusInfo.pending.label")}</Badge>
+      case "approved":
+        return <Badge variant="default">{t("statusInfo.approved.label")}</Badge>
+      case "rejected":
+        return <Badge variant="destructive">{t("statusInfo.rejected.label")}</Badge>
+      default:
+        return <Badge variant="outline">{status}</Badge>
+    }
+  }
+
   if (loading || authLoading || locationLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-700">Loading expenses...</p>
+          <p className="mt-4 text-gray-700">{t("loading")}</p>
         </div>
       </div>
     )
   }
 
-  // Show message if user is not associated with any location
-  if (profile?.role !== 'admin' && !userLocationId) {
+  if (profile?.role !== "admin" && !userLocationId) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="w-full max-w-md p-8 text-center">
           <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-amber-400" />
-          <h2 className="text-xl font-bold mb-2">No Location Assigned</h2>
-          <p className="text-gray-600">
-            Your account is not associated with any location. Please contact your administrator.
-          </p>
+          <h2 className="text-xl font-bold mb-2">{t("noLocation.title")}</h2>
+          <p className="text-gray-600">{t("noLocation.description")}</p>
         </div>
       </div>
     )
@@ -515,26 +528,27 @@ export default function ExpensesPage() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-red-900">Unable to load data</p>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
+                <p className="text-sm font-medium text-red-900">{t("error.title")}</p>
+                <p className="text-sm text-red-700 mt-1">{t("error.description")}</p>
               </div>
             </div>
           </div>
         )}
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          {/* Header Section */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">Expenses Management</h1>
+              <h1 className="text-2xl font-semibold text-gray-900">{t("header.title")}</h1>
               <p className="text-sm text-gray-500 mt-1">
-                Track and manage your business expenses
-                {profile?.role !== 'admin' && profile?.location && (
-                  <span className="ml-1">for {profile.location.name}</span>
+                {t("header.description")}
+                {profile?.role !== "admin" && profile?.location && (
+                  <span className="ml-1">
+                    {t("header.locationSuffix", { location: profile.location.name })}
+                  </span>
                 )}
               </p>
             </div>
-            
+
             <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
               <DialogTrigger asChild>
                 <Button
@@ -546,42 +560,40 @@ export default function ExpensesPage() {
                   className="bg-gray-900 hover:bg-gray-800 text-white"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Expense
+                  {t("actions.add")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>
-                    {editingExpense ? "Edit Expense" : "Add New Expense"}
+                    {editingExpense ? t("dialog.editTitle") : t("dialog.addTitle")}
                   </DialogTitle>
                   <DialogDescription>
-                    {editingExpense 
-                      ? "Update the expense information below." 
-                      : "Fill in the expense details. Click save when you're done."
-                    }
+                    {editingExpense ? t("dialog.editDescription") : t("dialog.addDescription")}
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <form onSubmit={editingExpense ? handleUpdateExpense : handleCreateExpense}>
                   <Tabs defaultValue="basic" className="w-full">
                     <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                      <TabsTrigger value="details">Details</TabsTrigger>
-                      <TabsTrigger value="status">Status</TabsTrigger>
+                      <TabsTrigger value="basic">{t("tabs.basic")}</TabsTrigger>
+                      <TabsTrigger value="details">{t("tabs.details")}</TabsTrigger>
+                      <TabsTrigger value="status">{t("tabs.status")}</TabsTrigger>
                     </TabsList>
-                    
+
                     <TabsContent value="basic" className="space-y-4 pt-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Only show location selector for admin users */}
-                        {profile?.role === 'admin' && (
+                        {profile?.role === "admin" && (
                           <div className="space-y-2">
-                            <Label htmlFor="location" className="text-sm font-medium">Location</Label>
-                            <Select 
-                              value={formData.location_id} 
-                              onValueChange={(value) => setFormData({...formData, location_id: value})}
+                            <Label htmlFor="location" className="text-sm font-medium">
+                              {t("form.location")}
+                            </Label>
+                            <Select
+                              value={formData.location_id}
+                              onValueChange={(value) => setFormData({ ...formData, location_id: value })}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="Select location" />
+                                <SelectValue placeholder={t("form.location")} />
                               </SelectTrigger>
                               <SelectContent>
                                 {locations.map((location) => (
@@ -593,15 +605,17 @@ export default function ExpensesPage() {
                             </Select>
                           </div>
                         )}
-                        
+
                         <div className="space-y-2">
-                          <Label htmlFor="category" className="text-sm font-medium">Category</Label>
-                          <Select 
-                            value={formData.category_id} 
-                            onValueChange={(value) => setFormData({...formData, category_id: value})}
+                          <Label htmlFor="category" className="text-sm font-medium">
+                            {t("form.category")}
+                          </Label>
+                          <Select
+                            value={formData.category_id}
+                            onValueChange={(value) => setFormData({ ...formData, category_id: value })}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select category" />
+                              <SelectValue placeholder={t("form.category")} />
                             </SelectTrigger>
                             <SelectContent>
                               {expenseCategories.map((category) => (
@@ -612,9 +626,11 @@ export default function ExpensesPage() {
                             </SelectContent>
                           </Select>
                         </div>
-                        
+
                         <div className="space-y-2">
-                          <Label htmlFor="amount" className="text-sm font-medium">Amount *</Label>
+                          <Label htmlFor="amount" className="text-sm font-medium">
+                            {t("form.amount")}
+                          </Label>
                           <Input
                             id="amount"
                             type="number"
@@ -622,97 +638,118 @@ export default function ExpensesPage() {
                             min="0"
                             placeholder="0.00"
                             value={formData.amount}
-                            onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                             required
                           />
                         </div>
-                        
+
                         <div className="space-y-2">
-                          <Label htmlFor="expense_date" className="text-sm font-medium">Date *</Label>
+                          <Label htmlFor="expense_date" className="text-sm font-medium">
+                            {t("form.date")}
+                          </Label>
                           <Input
                             id="expense_date"
                             type="date"
                             value={formData.expense_date}
-                            onChange={(e) => setFormData({...formData, expense_date: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })}
                             required
                           />
                         </div>
                       </div>
                     </TabsContent>
-                    
+
                     <TabsContent value="details" className="space-y-4 pt-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="vendor_name" className="text-sm font-medium">Vendor Name</Label>
+                          <Label htmlFor="vendor_name" className="text-sm font-medium">
+                            {t("form.vendor")}
+                          </Label>
                           <Input
                             id="vendor_name"
-                            placeholder="Who was paid"
+                            placeholder={t("form.vendor")}
                             value={formData.vendor_name}
-                            onChange={(e) => setFormData({...formData, vendor_name: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
                           />
                         </div>
-                        
+
                         <div className="space-y-2">
-                          <Label htmlFor="receipt_number" className="text-sm font-medium">Receipt Number</Label>
+                          <Label htmlFor="receipt_number" className="text-sm font-medium">
+                            {t("form.receipt")}
+                          </Label>
                           <Input
                             id="receipt_number"
-                            placeholder="Receipt number"
+                            placeholder={t("form.receipt")}
                             value={formData.receipt_number}
-                            onChange={(e) => setFormData({...formData, receipt_number: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, receipt_number: e.target.value })}
                           />
                         </div>
-                        
+
                         <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+                          <Label htmlFor="description" className="text-sm font-medium">
+                            {t("form.description")}
+                          </Label>
                           <Input
                             id="description"
-                            placeholder="Expense description"
+                            placeholder={t("form.description")}
                             value={formData.description}
-                            onChange={(e) => setFormData({...formData, description: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                           />
                         </div>
-                        
+
                         <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
+                          <Label htmlFor="notes" className="text-sm font-medium">
+                            {t("form.notes")}
+                          </Label>
                           <Input
                             id="notes"
-                            placeholder="Additional notes"
+                            placeholder={t("form.notes")}
                             value={formData.notes}
-                            onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                           />
                         </div>
                       </div>
                     </TabsContent>
-                    
+
                     <TabsContent value="status" className="space-y-4 pt-4">
                       <div className="space-y-2">
-                        <Label htmlFor="status" className="text-sm font-medium">Status</Label>
-                        <Select 
-                          value={formData.status} 
-                          onValueChange={(value) => setFormData({...formData, status: value})}
+                        <Label htmlFor="status" className="text-sm font-medium">
+                          {t("form.status")}
+                        </Label>
+                        <Select
+                          value={formData.status}
+                          onValueChange={(value) => setFormData({ ...formData, status: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue />
+                            <SelectValue placeholder={t("form.status")} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="approved">Approved</SelectItem>
-                            <SelectItem value="rejected">Rejected</SelectItem>
+                            <SelectItem value="pending">{t("statusInfo.pending.label")}</SelectItem>
+                            <SelectItem value="approved">{t("statusInfo.approved.label")}</SelectItem>
+                            <SelectItem value="rejected">{t("statusInfo.rejected.label")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div className="p-4 bg-gray-50 rounded-lg">
-                        <h4 className="text-sm font-medium text-gray-900 mb-2">Status Information</h4>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">{t("statusInfo.title")}</h4>
                         <ul className="text-sm text-gray-600 space-y-1">
-                          <li>• <span className="font-medium">Pending</span>: Expense is awaiting approval</li>
-                          <li>• <span className="font-medium">Approved</span>: Expense has been approved and processed</li>
-                          <li>• <span className="font-medium">Rejected</span>: Expense has been rejected</li>
+                          <li>
+                            • <span className="font-medium">{t("statusInfo.pending.label")}</span>:{" "}
+                            {t("statusInfo.pending.description")}
+                          </li>
+                          <li>
+                            • <span className="font-medium">{t("statusInfo.approved.label")}</span>:{" "}
+                            {t("statusInfo.approved.description")}
+                          </li>
+                          <li>
+                            • <span className="font-medium">{t("statusInfo.rejected.label")}</span>:{" "}
+                            {t("statusInfo.rejected.description")}
+                          </li>
                         </ul>
                       </div>
                     </TabsContent>
                   </Tabs>
-                  
+
                   <DialogFooter className="pt-4">
                     <Button
                       type="button"
@@ -722,28 +759,27 @@ export default function ExpensesPage() {
                         resetForm()
                       }}
                     >
-                      Cancel
+                      {t("actions.cancel")}
                     </Button>
                     <Button
                       type="submit"
                       disabled={isSubmitting || !formData.amount}
                       className="bg-gray-900 hover:bg-gray-800 text-white"
                     >
-                      {isSubmitting ? "Saving..." : editingExpense ? "Update Expense" : "Add Expense"}
+                      {isSubmitting ? t("actions.saving") : editingExpense ? t("actions.update") : t("actions.add")}
                     </Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
           </div>
-          
-          {/* Search and Filters */}
+
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
-                  placeholder="Search expenses, vendors, receipts..."
+                  placeholder={t("search.placeholder")}
                   className="pl-10 border-gray-200 bg-gray-50 focus:bg-white"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -756,7 +792,7 @@ export default function ExpensesPage() {
               className="border-gray-200 text-gray-600"
             >
               <Filter className="h-4 w-4 mr-2" />
-              Filters
+              {t("filters.toggle")}
               {(filters.location ||
                 filters.category ||
                 filters.status ||
@@ -768,14 +804,13 @@ export default function ExpensesPage() {
               )}
             </Button>
           </div>
-          
+
           {showFilters && (
             <div className="mb-6 pb-6 border-b border-gray-100">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {/* Only show location filter for admin users */}
-                {profile?.role === 'admin' && (
+                {profile?.role === "admin" && (
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Location</Label>
+                    <Label className="text-sm font-medium text-gray-700">{t("filters.location")}</Label>
                     <Select
                       value={filters.location}
                       onValueChange={(value) =>
@@ -783,10 +818,10 @@ export default function ExpensesPage() {
                       }
                     >
                       <SelectTrigger className="border-gray-200">
-                        <SelectValue placeholder="All locations" />
+                        <SelectValue placeholder={t("filters.allLocations")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All locations</SelectItem>
+                        <SelectItem value="all">{t("filters.allLocations")}</SelectItem>
                         {locations.map((location) => (
                           <SelectItem key={location.location_id} value={location.location_id.toString()}>
                             {location.name}
@@ -796,9 +831,9 @@ export default function ExpensesPage() {
                     </Select>
                   </div>
                 )}
-                
+
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Category</Label>
+                  <Label className="text-sm font-medium text-gray-700">{t("filters.category")}</Label>
                   <Select
                     value={filters.category}
                     onValueChange={(value) =>
@@ -806,10 +841,10 @@ export default function ExpensesPage() {
                     }
                   >
                     <SelectTrigger className="border-gray-200">
-                      <SelectValue placeholder="All categories" />
+                      <SelectValue placeholder={t("filters.allCategories")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All categories</SelectItem>
+                      <SelectItem value="all">{t("filters.allCategories")}</SelectItem>
                       {expenseCategories.map((category) => (
                         <SelectItem key={category.category_id} value={category.category_id.toString()}>
                           {category.name}
@@ -818,9 +853,9 @@ export default function ExpensesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Status</Label>
+                  <Label className="text-sm font-medium text-gray-700">{t("filters.status")}</Label>
                   <Select
                     value={filters.status}
                     onValueChange={(value) =>
@@ -828,23 +863,23 @@ export default function ExpensesPage() {
                     }
                   >
                     <SelectTrigger className="border-gray-200">
-                      <SelectValue placeholder="All statuses" />
+                      <SelectValue placeholder={t("filters.allStatuses")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All statuses</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
+                      <SelectItem value="all">{t("filters.allStatuses")}</SelectItem>
+                      <SelectItem value="pending">{t("statusInfo.pending.label")}</SelectItem>
+                      <SelectItem value="approved">{t("statusInfo.approved.label")}</SelectItem>
+                      <SelectItem value="rejected">{t("statusInfo.rejected.label")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Date Range</Label>
+                  <Label className="text-sm font-medium text-gray-700">{t("filters.dateRange")}</Label>
                   <div className="flex gap-2">
                     <Input
                       type="date"
-                      placeholder="Start date"
+                      placeholder={t("filters.startDate")}
                       value={filters.dateRange.start}
                       onChange={(e) =>
                         setFilters((prev) => ({
@@ -856,7 +891,7 @@ export default function ExpensesPage() {
                     />
                     <Input
                       type="date"
-                      placeholder="End date"
+                      placeholder={t("filters.endDate")}
                       value={filters.dateRange.end}
                       onChange={(e) =>
                         setFilters((prev) => ({
@@ -869,21 +904,15 @@ export default function ExpensesPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="text-gray-500"
-                >
-                  Clear all filters
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-gray-500">
+                  {t("filters.clearAll")}
                 </Button>
               </div>
             </div>
           )}
-          
-          {/* Expenses Table */}
+
           {loading ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
@@ -895,81 +924,66 @@ export default function ExpensesPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-gray-100">
-                    <TableHead 
-                      className="font-medium text-gray-700 cursor-pointer"
-                      onClick={() => requestSort("date")}
-                    >
-                      Date
+                    <TableHead className="font-medium text-gray-700 cursor-pointer" onClick={() => requestSort("date")}>
+                      {t("table.columns.date")}
                     </TableHead>
-                    <TableHead 
+                    <TableHead
                       className="font-medium text-gray-700 cursor-pointer"
                       onClick={() => requestSort("vendor")}
                     >
-                      Vendor
+                      {t("table.columns.vendor")}
                     </TableHead>
-                    <TableHead 
+                    <TableHead
                       className="font-medium text-gray-700 cursor-pointer"
                       onClick={() => requestSort("category")}
                     >
-                      Category
+                      {t("table.columns.category")}
                     </TableHead>
-                    {/* Only show location column for admin users */}
-                    {profile?.role === 'admin' && (
-                      <TableHead 
+                    {profile?.role === "admin" && (
+                      <TableHead
                         className="font-medium text-gray-700 cursor-pointer"
                         onClick={() => requestSort("location")}
                       >
-                        Location
+                        {t("table.columns.location")}
                       </TableHead>
                     )}
-                    <TableHead 
+                    <TableHead
                       className="font-medium text-gray-700 cursor-pointer"
                       onClick={() => requestSort("amount")}
                     >
-                      Amount
+                      {t("table.columns.amount")}
                     </TableHead>
-                    <TableHead 
+                    <TableHead
                       className="font-medium text-gray-700 cursor-pointer"
                       onClick={() => requestSort("status")}
                     >
-                      Status
+                      {t("table.columns.status")}
                     </TableHead>
                     <TableHead className="font-medium text-gray-700 text-right">
-                      Actions
+                      {t("table.columns.actions")}
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredExpenses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={profile?.role === 'admin' ? 7 : 6} className="text-center py-8 text-gray-500">
-                        No expenses found
+                      <TableCell colSpan={profile?.role === "admin" ? 7 : 6} className="text-center py-8 text-gray-500">
+                        {t("table.empty")}
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredExpenses.map((expense) => (
                       <TableRow key={expense.expense_id} className="border-gray-100 hover:bg-gray-50">
-                        <TableCell className="font-medium">
-                          {formatDate(expense.expense_date)}
-                        </TableCell>
+                        <TableCell className="font-medium">{formatDate(expense.expense_date)}</TableCell>
+                        <TableCell>{expense.vendor_name || "-"}</TableCell>
                         <TableCell>
-                          {expense.vendor_name || "-"}
+                          {expenseCategories.find((c) => c.category_id === expense.category_id)?.name || "-"}
                         </TableCell>
-                        <TableCell>
-                          {expenseCategories.find(c => c.category_id === expense.category_id)?.name || "-"}
-                        </TableCell>
-                        {/* Only show location cell for admin users */}
-                        {profile?.role === 'admin' && (
-                          <TableCell>
-                            {expense.locations?.name || "-"}
-                          </TableCell>
+                        {profile?.role === "admin" && (
+                          <TableCell>{expense.locations?.name || "-"}</TableCell>
                         )}
-                        <TableCell className="font-medium">
-                          {formatCurrency(expense.amount)}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(expense.status)}
-                        </TableCell>
+                        <TableCell className="font-medium">{formatCurrency(expense.amount)}</TableCell>
+                        <TableCell>{renderStatusBadge(expense.status)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Button
@@ -988,7 +1002,7 @@ export default function ExpensesPage() {
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </div> 
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -20,6 +21,7 @@ import {
   AlertTriangle,
   X,
 } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 const supabase = createClient()
 
@@ -85,6 +87,7 @@ export default function InventoryPage() {
     priceRange: { min: "", max: "" },
   })
   const [showFilters, setShowFilters] = useState(false)
+  const t = useTranslations("inventory")
 
   // Data Fetching Functions
   const fetchCategories = async () => {
@@ -146,12 +149,12 @@ export default function InventoryPage() {
   }
 
   // Inventory Function
-  const handleAddInventory = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleAddInventory = async () => {
     setIsSubmitting(true)
     try {
       if (!quantity || isNaN(Number(quantity)) || Number(quantity) <= 0) {
         toast.error("Quantity must be greater than zero!")
+        setIsSubmitting(false)
         return
       }
       const { error } = await supabase.rpc("add_inventory", {
@@ -301,200 +304,75 @@ export default function InventoryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/30">
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-light text-gray-900 tracking-tight">Inventory Management</h1>
-              <p className="text-sm text-gray-500 font-normal">Monitor and manage your stock levels</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  fetchInventory()
-                  toast.success("Data refreshed")
-                }}
-                className="text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => setShowInventoryForm(!showInventoryForm)}
-                className="bg-gray-900 hover:bg-gray-800 text-white shadow-none"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Stock
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
       <main className="max-w-7xl mx-auto px-6 py-8">
         {error && (
           <div className="mb-8 p-4 bg-red-50 border border-red-100 rounded-lg">
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-red-900">Unable to load data</p>
+                <p className="text-sm font-medium text-red-900">{t("alerts.loadFailed")}</p>
                 <p className="text-sm text-red-700 mt-1">{error}</p>
               </div>
             </div>
           </div>
         )}
-        {!loading && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Total Products</p>
-                    <p className="text-2xl font-light text-gray-900 mt-2">{inventory.length}</p>
-                  </div>
-                  <Package className="h-8 w-8 text-gray-400" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Low Stock Items</p>
-                    <p className="text-2xl font-light text-gray-900 mt-2">
-                      {inventory.filter((item) => item.quantity < 10).length}
-                    </p>
-                  </div>
-                  <AlertTriangle className="h-8 w-8 text-amber-400" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Total Locations</p>
-                    <p className="text-2xl font-light text-gray-900 mt-2">{locations.length}</p>
-                  </div>
-                  <Package className="h-8 w-8 text-gray-400" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-        
-        {/* Add Stock Form */}
-        {showInventoryForm && (
-          <Card className="border-0 shadow-sm bg-white mb-6">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-medium text-gray-900">Add New Stock</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowInventoryForm(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Product</Label>
-                  <Select value={productId} onValueChange={setProductId}>
-                    <SelectTrigger className="border-gray-200">
-                      <SelectValue placeholder="Select product" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products.map((product) => (
-                        <SelectItem key={product.product_id} value={product.product_id.toString()}>
-                          {product.name} {product.sku && `(${product.sku})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Location</Label>
-                  <Select value={locationId} onValueChange={setLocationId}>
-                    <SelectTrigger className="border-gray-200">
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations.map((location) => (
-                        <SelectItem key={location.location_id} value={location.location_id.toString()}>
-                          {location.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Quantity</Label>
-                  <Input
-                    type="number"
-                    placeholder="Enter quantity"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    className="border-gray-200"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end pt-4">
-                <Button
-                  onClick={handleAddInventory}
-                  disabled={isSubmitting || !productId || !locationId || !quantity}
-                  className="bg-gray-900 hover:bg-gray-800 text-white"
-                >
-                  {isSubmitting ? "Adding..." : "Add Stock"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        
-        {/* Search and Filters */}
-        <Card className="border-0 shadow-sm bg-white mb-6">
+
+        {/* Inventory Table */}
+        <Card className="border-0 shadow-sm bg-white">
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <Input
-                    placeholder="Search products, SKUs, locations..."
-                    className="pl-10 border-gray-200 bg-gray-50 focus:bg-white"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="space-y-1">
+                  <h1 className="text-2xl font-light text-gray-900 tracking-tight">{t("page.title")}</h1>
+                  <p className="text-sm text-gray-500 font-normal">{t("page.description")}</p>
                 </div>
+                <Button
+                  size="sm"
+                  onClick={() => setShowInventoryForm(!showInventoryForm)}
+                  className="bg-gray-900 hover:bg-gray-800 text-white shadow-none"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t("actions.addStock")}
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="border-gray-200 text-gray-600 hover:text-gray-900"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-                {(filters.category ||
-                  filters.locationType ||
-                  filters.stockLevel ||
-                  filters.priceRange.min ||
-                  filters.priceRange.max) && (
-                  <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
-                    !
-                  </Badge>
-                )}
-              </Button>
+
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      placeholder={t("page.searchPlaceholder")}
+                      className="pl-10 border-gray-200 bg-gray-50 focus:bg-white"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="border-gray-200 text-gray-600 hover:text-gray-900"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  {t("page.filtersToggle")}
+                  {(filters.category ||
+                    filters.locationType ||
+                    filters.stockLevel ||
+                    filters.priceRange.min ||
+                    filters.priceRange.max) && (
+                    <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
+                      !
+                    </Badge>
+                  )}
+                </Button>
+              </div>
             </div>
+
             {showFilters && (
               <div className="mt-6 pt-6 border-t border-gray-100">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Category</Label>
+                    <Label className="text-sm font-medium text-gray-700">{t("filters.category.label")}</Label>
                     <Select
                       value={filters.category}
                       onValueChange={(value) =>
@@ -502,10 +380,10 @@ export default function InventoryPage() {
                       }
                     >
                       <SelectTrigger className="border-gray-200">
-                        <SelectValue placeholder="All categories" />
+                        <SelectValue placeholder={t("filters.category.all")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All categories</SelectItem>
+                        <SelectItem value="all">{t("filters.category.all")}</SelectItem>
                         {categories.map((cat) => (
                           <SelectItem key={cat.category_id} value={cat.category_id.toString()}>
                             {cat.name}
@@ -515,7 +393,7 @@ export default function InventoryPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Location Type</Label>
+                    <Label className="text-sm font-medium text-gray-700">{t("filters.locationType.label")}</Label>
                     <Select
                       value={filters.locationType}
                       onValueChange={(value) =>
@@ -523,17 +401,17 @@ export default function InventoryPage() {
                       }
                     >
                       <SelectTrigger className="border-gray-200">
-                        <SelectValue placeholder="All types" />
+                        <SelectValue placeholder={t("filters.locationType.all")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All types</SelectItem>
-                        <SelectItem value="warehouse">Warehouse</SelectItem>
-                        <SelectItem value="store">Store</SelectItem>
+                        <SelectItem value="all">{t("filters.locationType.all")}</SelectItem>
+                        <SelectItem value="warehouse">{t("filters.locationType.warehouse")}</SelectItem>
+                        <SelectItem value="store">{t("filters.locationType.store")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Stock Level</Label>
+                    <Label className="text-sm font-medium text-gray-700">{t("filters.stockLevel.label")}</Label>
                     <Select
                       value={filters.stockLevel}
                       onValueChange={(value) =>
@@ -541,22 +419,22 @@ export default function InventoryPage() {
                       }
                     >
                       <SelectTrigger className="border-gray-200">
-                        <SelectValue placeholder="All levels" />
+                        <SelectValue placeholder={t("filters.stockLevel.all")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All levels</SelectItem>
-                        <SelectItem value="low">Low Stock (&lt; 10)</SelectItem>
-                        <SelectItem value="medium">Medium Stock (10-50)</SelectItem>
-                        <SelectItem value="high">High Stock (&gt; 50)</SelectItem>
+                        <SelectItem value="all">{t("filters.stockLevel.all")}</SelectItem>
+                        <SelectItem value="low">{t("filters.stockLevel.low")}</SelectItem>
+                        <SelectItem value="medium">{t("filters.stockLevel.medium")}</SelectItem>
+                        <SelectItem value="high">{t("filters.stockLevel.high")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Price Range</Label>
+                    <Label className="text-sm font-medium text-gray-700">{t("filters.priceRange.label")}</Label>
                     <div className="flex gap-2">
                       <Input
                         type="number"
-                        placeholder="Min"
+                        placeholder={t("filters.priceRange.min")}
                         value={filters.priceRange.min}
                         onChange={(e) =>
                           setFilters((prev) => ({
@@ -568,7 +446,7 @@ export default function InventoryPage() {
                       />
                       <Input
                         type="number"
-                        placeholder="Max"
+                        placeholder={t("filters.priceRange.max")}
                         value={filters.priceRange.max}
                         onChange={(e) =>
                           setFilters((prev) => ({
@@ -595,63 +473,40 @@ export default function InventoryPage() {
                     }
                     className="text-gray-500 hover:text-gray-700"
                   >
-                    Clear all filters
+                    {t("page.clearFilters")}
                   </Button>
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-        
-        {/* Inventory Table */}
-        <Card className="border-0 shadow-sm bg-white">
-          <CardContent className="p-0">
+
             {loading ? (
-              <div className="p-6 space-y-4">
+              <div className="mt-6 space-y-4">
                 {[...Array(5)].map((_, i) => (
                   <Skeleton key={i} className="h-12 w-full" />
                 ))}
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto mt-6">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-gray-100">
-                      <TableHead 
-                        className="font-medium text-gray-700 cursor-pointer"
-                        onClick={() => requestSort("product")}
-                      >
-                        Product
+                      <TableHead className="font-medium text-gray-700 cursor-pointer" onClick={() => requestSort("product")}>
+                        {t("table.columns.product")}
                       </TableHead>
-                      <TableHead 
-                        className="font-medium text-gray-700 cursor-pointer"
-                        onClick={() => requestSort("sku")}
-                      >
-                        SKU
+                      <TableHead className="font-medium text-gray-700 cursor-pointer" onClick={() => requestSort("sku")}>
+                        {t("table.columns.sku")}
                       </TableHead>
-                      <TableHead 
-                        className="font-medium text-gray-700 cursor-pointer"
-                        onClick={() => requestSort("location")}
-                      >
-                        Location
+                      <TableHead className="font-medium text-gray-700 cursor-pointer" onClick={() => requestSort("location")}>
+                        {t("table.columns.location")}
                       </TableHead>
-                      <TableHead 
-                        className="font-medium text-gray-700 cursor-pointer"
-                        onClick={() => requestSort("type")}
-                      >
-                        Type
+                      <TableHead className="font-medium text-gray-700 cursor-pointer" onClick={() => requestSort("type")}>
+                        {t("table.columns.type")}
                       </TableHead>
-                      <TableHead 
-                        className="font-medium text-gray-700 cursor-pointer"
-                        onClick={() => requestSort("stock")}
-                      >
-                        Stock
+                      <TableHead className="font-medium text-gray-700 cursor-pointer" onClick={() => requestSort("stock")}>
+                        {t("table.columns.stock")}
                       </TableHead>
-                      <TableHead 
-                        className="font-medium text-gray-700 cursor-pointer"
-                        onClick={() => requestSort("price")}
-                      >
-                        Price
+                      <TableHead className="font-medium text-gray-700 cursor-pointer" onClick={() => requestSort("price")}>
+                        {t("table.columns.price")}
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -659,24 +514,34 @@ export default function InventoryPage() {
                     {filteredAndSortedInventory.map((item, index) => (
                       <TableRow key={index} className="border-gray-50 hover:bg-gray-50/50">
                         <TableCell className="font-medium text-gray-900">
-                          {item.products?.name || "Unknown Product"}
+                          {item.products?.name || t("table.unknownProduct")}
                         </TableCell>
                         <TableCell className="text-gray-600">{item.products?.sku || "—"}</TableCell>
                         <TableCell className="text-gray-600">
-                          {item.locations?.name || "Unknown Location"}
+                          {item.locations?.name || t("table.unknownLocation")}
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant={item.locations?.location_type === "warehouse" ? "secondary" : "outline"}
                             className="capitalize"
                           >
-                            {item.locations?.location_type || "Unknown"}
+                            {item.locations?.location_type === "warehouse"
+                              ? t("filters.locationType.warehouse")
+                              : item.locations?.location_type === "store"
+                              ? t("filters.locationType.store")
+                              : t("table.unknownType")}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <span
-                              className={`font-medium ${item.quantity < 10 ? "text-red-600" : item.quantity < 50 ? "text-amber-600" : "text-green-600"}`}
+                              className={`font-medium ${
+                                item.quantity < 10
+                                  ? "text-red-600"
+                                  : item.quantity < 50
+                                  ? "text-amber-600"
+                                  : "text-green-600"
+                              }`}
                             >
                               {item.quantity}
                             </span>
@@ -695,6 +560,78 @@ export default function InventoryPage() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Add Stock Dialog */}
+      <Dialog open={showInventoryForm} onOpenChange={setShowInventoryForm}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              {t("dialog.addTitle")}
+            </DialogTitle>
+            <DialogDescription>{t("dialog.description")}</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">{t("dialog.fields.product")}</Label>
+              <Select value={productId} onValueChange={setProductId}>
+                <SelectTrigger className="border-gray-200">
+                  <SelectValue placeholder={t("dialog.placeholders.product")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((product) => (
+                    <SelectItem key={product.product_id} value={product.product_id.toString()}>
+                      {product.name} {product.sku && `(${product.sku})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">{t("dialog.fields.location")}</Label>
+              <Select value={locationId} onValueChange={setLocationId}>
+                <SelectTrigger className="border-gray-200">
+                  <SelectValue placeholder={t("dialog.placeholders.location")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((location) => (
+                    <SelectItem key={location.location_id} value={location.location_id.toString()}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">{t("dialog.fields.quantity")}</Label>
+              <Input
+                type="number"
+                placeholder={t("dialog.placeholders.quantity")}
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className="border-gray-200"
+                min="0"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowInventoryForm(false)} disabled={isSubmitting}>
+              {t("actions.cancel")}
+            </Button>
+            <Button
+              onClick={handleAddInventory}
+              disabled={isSubmitting || !productId || !locationId || !quantity}
+              className="bg-gray-900 hover:bg-gray-800 text-white"
+            >
+              {isSubmitting ? t("actions.adding") : t("actions.addStock")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
