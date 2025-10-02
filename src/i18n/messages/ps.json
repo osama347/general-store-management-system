@@ -1,40 +1,37 @@
 {
   "common": {
-    "appName": "General Store Management",
-    "loading": "Loading...",
-    "navigation":{
-        "dashboard": "ډېشبورډ",
-        "products":{
-          "title":"محصولات",
-          "all-products":"ټول محصولات",
-          "categories":"کتګورۍ"
-        } ,
-        "sales": "خرڅلاوی",
-        "customers": {
-          "title":"پېرودونکي",
-          "all-customers":"ټول پېرودونکي",
-          "customers-loans":"پېرودونکي قرضې"
-        },
-        "expenses": {
-          "title":"لګښتونه",
-          "all-expenses":"ټول لګښتونه"
-          
-        },
-        "inventory": {
-          "title":"انوینټري",
-          "all-inventory":"ټوله انوینټري",
-          "inventory-transfers":"د انوینټري لېږدونه"
-        },
-        "reports": "راپورونه",
-        "navUser": {
-      "settings": "تنظیمات",
-      "notifications": "اطلاعات",
-      "logout": "وتل",
-      "fallbackName": "کارن",
-      "fallbackEmail": "کارن@example.com"
-    }
-
-        
+    "appName": "د پلورنځي مدیریت سیسټم",
+    "loading": "په بارولو کې...",
+    "navigation": {
+      "dashboard": "ډېشبورډ",
+      "products": {
+        "title": "محصولات",
+        "all-products": "ټول محصولات",
+        "categories": "کټګورۍ"
+      },
+      "sales": "خرڅلاوی",
+      "customers": {
+        "title": "پېرودونکي",
+        "all-customers": "ټول پېرودونکي",
+        "customers-loans": "د پېرودونکو قرضې"
+      },
+      "expenses": {
+        "title": "لګښتونه",
+        "all-expenses": "ټول لګښتونه"
+      },
+      "inventory": {
+        "title": "موجودي",
+        "all-inventory": "ټوله موجودي",
+        "inventory-transfers": "د موجودۍ لېږدونه"
+      },
+      "reports": "راپورونه",
+      "navUser": {
+        "settings": "تنظیمات",
+        "notifications": "خبرتیاوې",
+        "logout": "وتل",
+        "fallbackName": "کارن",
+        "fallbackEmail": "کارن@example.com"
+      }
     }
   },
   "dashboard": {
@@ -52,9 +49,9 @@
           "placeholder": "د لنډیز لپاره ځای ناستی"
         },
         "detailed": {
-          "title": "تفصيلي",
-          "description": "د سیسټم تفصيلي معلومات",
-          "placeholder": "د تفصيلي معلوماتو لپاره ځای ناستی"
+          "title": "تفصیلي",
+          "description": "د سیسټم تفصیلي معلومات",
+          "placeholder": "د تفصیلي معلوماتو لپاره ځای ناستی"
         }
       }
     },
@@ -75,23 +72,22 @@
     "kpiCards": {
       "revenue": {
         "title": "ټول عایدات",
-        "comparison": "د تېر میاشت په پرتله"
+        "comparison": "د تېر میاشتې په پرتله"
       },
       "expenses": {
         "title": "ټول لګښتونه",
-        "comparison": "د تېر میاشت په پرتله"
+        "comparison": "د تېر میاشتې په پرتله"
       },
       "customers": {
         "title": "فعال پېرودونکي",
         "subtitle": "ټول راجستر شوي پېرودونکي"
       },
       "inventory": {
-        "title": "د انوینټري ارزښت",
+        "title": "د موجودۍ ارزښت",
         "lowStock": "لږ موجودي",
-        "pendingTransfers": "معطل لېږدونه",
+        "pendingTransfers": "په تمه لېږدونه",
         "totalValue": "ټول ارزښت",
         "totalProducts": "ټول محصولات"
-
       },
       "states": {
         "loading": "د معلوماتو په بارولو کې...",
@@ -102,11 +98,11 @@
     "charts": {
       "sales": {
         "title": "د خرڅلاو لنډیز",
-        "description": "د روان کال میاشتني خرڅلاو",
+        "description": "د روانې کال میاشتنۍ خرڅلاو",
         "totalSales": "ټول خرڅلاو"
       },
       "expenses": {
-        "title": "د لګښتونو وېش",
+        "title": "د لګښتونو ویش",
         "description": "د کټګورۍ په اساس لګښتونه",
         "amount": "مقدار"
       }
@@ -118,7 +114,7 @@
         "store": "د پلورنځي وروستي فعالیتونه"
       },
       "noActivities": "کوم وروستی فعالیت نشته",
-      "loadError": "د فعالیتونو په لوډولو کې ستونزه"
+      "loadError": "د فعالیتونو په بارولو کې ستونزه"
     },
     "inventoryTable": {
       "title": {
@@ -134,82 +130,472 @@
         "sku": "د محصول کوډ",
         "location": "ځای",
         "stock": "موجودي",
-        "reserved": "ریزرف شوي",
+        "reserved": "ریزرو شوی",
         "value": "ارزښت"
       },
       "noData": "لږ موجودي لرونکي محصولات نشته",
-      "loadError": "د موجودۍ په لوډولو کې ستونزه"
+      "loadError": "د موجودۍ په بارولو کې ستونزه"
     }
   },
   "customers": {
-      "title": "پېرودونکي",
-      "description": "د پېرودونکو لیست",
-      "loading": "په لوډ کولو کې...",
-      "error": "یوه تېروتنه رامنځته شوه",
-      "addCustomer": "نوی پېرودونکی",
-      "walkInCustomer": "عادي پېرودونکی",
-      "currentLocation": "اوسنی ځای",
-      "searchPlaceholder": "د نوم، برېښنالیک یا تلیفون په اساس پېرودونکي ولټوئ...",
-      "viewCustomer": "د پېرودونکي معلومات وګورئ",
-      "editCustomer": "د پېرودونکي معلومات سم کړئ",
-      "deleteCustomer": "پېرودونکی له منځه یوسئ",
-      "confirmDelete": "آیا تاسو ډاډه یاست چې دا پېرودونکی له منځه وړل غواړئ؟",
-      "table": {
-        "columns": {
-          "name": "نوم",
-          "email": "برېښنالیک",
-          "phone": "تلیفون",
-          "location": "ځای",
-          "address": "پته",
-          "loans": "قرضې",
-          "joined": "نېټه",
-          "actions": "عملیات"
+    "title": "پېرودونکي",
+    "description": "د پېرودونکو لیست",
+    "addCustomer": "نوی پېرودونکی",
+    "walkInCustomer": "عادي پېرودونکی",
+    "currentLocation": "اوسنی ځای",
+    "searchPlaceholder": "د نوم، برېښنالیک یا تلیفون په اساس پېرودونکي ولټوئ...",
+    "loading": "د پېرودونکو په بارولو کې...",
+    "error": {
+      "title": "د پېرودونکو په بارولو کې ستونزه",
+      "description": "مهرباني وکړئ وروسته بیا هڅه وکړئ یا خپل اتصال وګورئ.",
+      "technicalDetails": "تخنیکي تفصیلات",
+      "retry": "بیا هڅه وکړئ"
+    },
+    "noLocation": {
+      "title": "هیڅ ځای ټاکل شوی نه دی",
+      "description": "ستاسو حساب له هیڅ ځای سره وصل نه دی. مهرباني وکړئ د سیسټم مدیر سره اړیکه ونیسئ."
+    },
+    "header": {
+      "title": "د پېرودونکو مدیریت ({count})",
+      "locationContext": "د پېرودونکو ښکاره کول لپاره: {location}",
+      "buttons": {
+        "walkInCustomer": {
+          "title": "عادي پېرودونکی",
+          "label": "عادي پېرودونکی وګورئ"
         },
-        "noData": "هیڅ پېرودونکی نشته",
-        "loadError": "د پېرودونکو په ترلاسه کولو کې ستونزه"
-      },
-      "form": {
-        "firstName": "لومړی نوم",
-        "lastName": "تخلص",
-        "email": "برېښنالیک",
-        "phone": "تلیفون شمېره",
-        "address": "پته",
-        "required": "دا ځای باید ډک شي",
-        "submit": "ثبت کړئ",
-        "cancel": "لغوه کړئ"
-      },
-      "status": {
-        "active": "فعال",
-        "inactive": "غیر فعال",
-        "all": "ټول"
+        "addCustomer": {
+          "title": "پېرودونکی اضافه کړئ",
+          "label": "نوی پېرودونکی اضافه کړئ"
+        }
+      }
+    },
+    "filters": {
+      "search": {
+        "placeholder": "د نوم، برېښنالیک یا تلیفون په اساس پېرودونکي ولټوئ..."
       },
       "location": {
-        "all": "ټول ځایونه",
-        "current": "اوسنی ځای"
+        "title": "ځای",
+        "currentLocation": "اوسنی ځای ({name})",
+        "allLocations": "ټول ځایونه"
+      },
+      "status": {
+        "title": "حالت",
+        "allCustomers": "ټول پېرودونکي",
+        "withLoans": "د قرضې سره",
+        "noLoans": "د قرضې پرته"
+      }
+    },
+    "table": {
+      "columns": {
+        "name": "نوم",
+        "location": "ځای",
+        "contact": "د اړیکې معلومات",
+        "address": "پته",
+        "loans": "قرضې",
+        "joined": "د غړیتوب نېټه",
+        "actions": "عملیات"
+      },
+      "cells": {
+        "id": "پېژندنه",
+        "noAddress": "پته نشته",
+        "activeLoans": "فعال قرضې",
+        "contact": {
+          "email": "برېښنالیک",
+          "phone": "تلیفون"
+        }
+      },
+      "noResults": {
+        "title": "پېرودونکی و نه موندل شو",
+        "withFilters": "د لټون فلټرونه سم کړئ",
+        "noCustomers": "د لومړي پېرودونکي په اضافه کولو پیل وکړئ"
       },
       "pagination": {
-        "page": "پاڼه",
+        "showing": "ښکاره کول",
+        "to": "تر",
         "of": "له",
-        "items": "توکي"
+        "results": "نتیجه",
+        "previous": "مخکینی",
+        "next": "بل"
+      },
+      "actions": {
+        "view": "تفصیلات وګورئ",
+        "edit": "پېرودونکی سم کړئ",
+        "delete": "پېرودونکی حذف کړئ"
       }
+    },
+    "addnewform": {
+      "title": "نوی پېرودونکی اضافه کړئ",
+      "description": "د پېرودونکي معلومات ولیکئ. د پای ته رسیدو وروسته خوندي کولو باندې کلیک وکړئ.",
+      "locationAssociation": "دا پېرودونکی به له {location} سره تړل شي.",
+      "form": {
+        "firstName": "نوم *",
+        "lastName": "تخلص *",
+        "email": "برېښنالیک",
+        "phone": "تلیفون",
+        "address": "پته"
+      },
+      "buttons": {
+        "cancel": "لغوه کړئ",
+        "create": "پېرودونکی جوړ کړئ",
+        "creating": "په جوړولو کې..."
+      }
+    },
+    "updateform": {
+      "title": "پېرودونکی سم کړئ",
+      "description": "د پېرودونکي معلومات تازه کړئ. د پای ته رسیدو وروسته خوندي کولو باندې کلیک وکړئ.",
+      "form": {
+        "firstName": "نوم *",
+        "lastName": "تخلص *",
+        "email": "برېښنالیک",
+        "phone": "تلیفون",
+        "address": "پته"
+      },
+      "buttons": {
+        "cancel": "لغوه کړئ",
+        "update": "پېرودونکی تازه کړئ",
+        "updating": "په تازه کولو کې..."
+      }
+    },
+    "customerdetails": {
+      "dialog": {
+        "title": "د پېرودونکي تفصیلات",
+        "description": "د پېرودونکي معلومات او د قرضې تاریخچه",
+        "info": {
+          "fullName": "بشپړ نوم",
+          "customerId": "د پېرودونکي شمېره",
+          "email": "برېښنالیک",
+          "phone": "تلیفون",
+          "address": "پته",
+          "location": "ځای",
+          "memberSince": "غړی له",
+          "totalLoans": "ټولې قرضې"
+        },
+        "loanHistory": {
+          "title": "د قرضې تاریخچه",
+          "loanId": "د قرضې شمېره",
+          "noDueDate": "د سررسید نېټه نشته",
+          "noHistory": {
+            "title": "د قرضې تاریخچه نشته",
+            "message": "د قرضې تاریخچه نشته"
+          }
+        }
+      }
+    }
   },
   "loans": {
-    "title": "",
-    "loanAmount": "",
-    "loanDate": "",
-    "status": {
-      "active": "",
-      "closed": "",
-      "pending": ""
+    "loading": "د قرضو په بارولو کې...",
+    "error": {
+      "title": "د قرضو په بارولو کې ستونزه",
+      "description": "مهرباني وکړئ وروسته بیا هڅه وکړئ یا خپل اتصال وګورئ.",
+      "technicalDetails": "تخنیکي تفصیلات",
+      "retry": "بیا هڅه وکړئ"
+    },
+    "noLocation": {
+      "title": "هیڅ ځای ټاکل شوی نه دی",
+      "description": "ستاسو حساب له هیڅ ځای سره وصل نه دی. مهرباني وکړئ د سیسټم مدیر سره اړیکه ونیسئ."
+    },
+    "cards": {
+      "totalLoans": {
+        "title": "ټولې قرضې",
+        "icon": "کریډیټ کارټ"
+      },
+      "totalAmount": {
+        "title": "ټوله اندازه",
+        "icon": "د ډالر نښه"
+      },
+      "pending": {
+        "title": "په تمه",
+        "icon": "ساعت"
+      },
+      "paid": {
+        "title": "تادیه شوی",
+        "icon": "د ټیک نښه"
+      }
+    },
+    "tabs": {
+      "all-loans": {
+        "title": "ټولې قرضې",
+        "icon": "کریډیټ کارټ",
+        "search": {
+          "placeholder": "د پېرودونکي نوم، برېښنالیک یا د قرضې شمېرې په اساس ولټوئ..."
+        },
+        "filters": {
+          "location": {
+            "title": "ځای",
+            "current": "اوسنی ځای ({name})",
+            "all": "ټول ځایونه"
+          },
+          "status": {
+            "title": "حالت",
+            "all": "ټول حالتونه",
+            "pending": "په تمه",
+            "paid": "تادیه شوی"
+          }
+        },
+        "table": {
+          "columns": {
+            "loanId": "د قرضې شمېره",
+            "customer": "پېرودونکی",
+            "location": "ځای",
+            "amount": "اندازه",
+            "loanDate": "د قرضې نېټه",
+            "dueDate": "د سررسید نېټه",
+            "status": "حالت",
+            "actions": "عملیات"
+          },
+          "noDueDate": "د سررسید نېټه نشته",
+          "completed": "بشپړ شوی",
+          "noLoans": {
+            "title": "قرضه و نه موندل شوه",
+            "withFilters": "د لټون فلټرونه سم کړئ",
+            "noLoansYet": "د لومړۍ قرضې په اضافه کولو پیل وکړئ"
+          },
+          "pagination": {
+            "showing": "ښکاره کول",
+            "to": "تر",
+            "of": "له",
+            "results": "نتیجه",
+            "previous": "مخکینی",
+            "next": "بل"
+          },
+          "actions": {
+            "view": "تفصیلات وګورئ",
+            "edit": "قرضه سم کړئ",
+            "markAsPaid": "د تادیه شوي په توګه نښه کړئ",
+            "delete": "قرضه حذف کړئ"
+          }
+        }
+      },
+      "customer-notebooks": {
+        "title": "د پېرودونکو د قرضې دفترچې",
+        "icon": "دفترچه",
+        "description": "د قرضې دفترچه لیدلو لپاره یو پېرودونکی انتخاب کړئ",
+        "noCustomers": {
+          "title": "پېرودونکی و نه موندل شو",
+          "description": "د قرضې دفترچې جوړولو لپاره پېرودونکي اضافه کړئ"
+        },
+        "customerCard": {
+          "email": "برېښنالیک",
+          "stats": {
+            "loans": "قرضې",
+            "amount": "اندازه",
+            "pending": "په تمه",
+            "paid": "تادیه شوی"
+          },
+          "buttons": {
+            "view": "وګورئ",
+            "addLoan": "قرضه اضافه کړئ"
+          }
+        }
+      },
+      "customer-notebook": {
+        "title": "د پېرودونکي دفترچه",
+        "icon": "کارن",
+        "loanTitle": "د {name} د قرضې دفترچه",
+        "filters": {
+          "searchPlaceholder": "د قرضې شمېرې په اساس ولټوئ...",
+          "allStatus": "ټول حالتونه"
+        },
+        "table": {
+          "columns": {
+            "loanId": "د قرضې شمېره",
+            "amount": "اندازه",
+            "loanDate": "د قرضې نېټه",
+            "dueDate": "د سررسید نېټه",
+            "status": "حالت",
+            "actions": "عملیات"
+          },
+          "noDueDate": "د سررسید نېټه نشته",
+          "completed": "بشپړ شوی",
+          "noLoans": {
+            "title": "د دې پېرودونکي لپاره قرضه و نه موندل شوه",
+            "withFilters": "د لټون فلټرونه سم کړئ",
+            "noLoansYet": "د قرضې په اضافه کولو پیل وکړئ"
+          }
+        },
+        "summary": {
+          "title": "د پېرودونکي لنډیز",
+          "stats": {
+            "totalLoans": "ټولې قرضې",
+            "totalAmount": "ټوله اندازه",
+            "pending": "په تمه",
+            "paid": "تادیه شوی"
+          }
+        },
+        "actions": {
+          "addLoan": "قرضه اضافه کړئ",
+          "viewDetails": "تفصیلات وګورئ",
+          "editLoan": "قرضه سم کړئ",
+          "markAsPaid": "د تادیه شوي په توګه نښه کړئ",
+          "deleteLoan": "قرضه حذف کړئ"
+        }
+      },
+      "actions": {
+        "addLoan": {
+          "title": "قرضه اضافه کړئ",
+          "icon": "د اضافې نښه"
+        }
+      }
+    },
+    "addnewform": {
+      "title": "نوې قرضه اضافه کړئ",
+      "description": {
+        "specificCustomer": "د {name} لپاره قرضه اضافه کړئ",
+        "general": "د یو پېرودونکي لټون وکړئ او د قرضې تفصیلات بشپړ کړئ."
+      },
+      "locationNotice": "دا قرضه به له {location} سره تړل شي.",
+      "fields": {
+        "selectCustomer": "پېرودونکی انتخاب کړئ",
+        "searchPlaceholder": "پېرودونکي د نوم یا برېښنالیک په اساس ولټوئ...",
+        "noCustomersFound": "هیڅ پېرودونکی و نه موندل شو",
+        "customer": "پېرودونکی",
+        "amount": "د قرضې اندازه",
+        "dueDateOptional": "د سررسید نېټه (اختیاري)",
+        "status": "حالت"
+      },
+      "statusOptions": {
+        "pending": "په تمه",
+        "paid": "تادیه شوی"
+      },
+      "buttons": {
+        "cancel": "لغوه کړئ",
+        "create": "قرضه جوړه کړئ",
+        "creating": "په جوړولو کې..."
+      }
+    },
+    "updateform": {
+      "title": "قرضه سم کړئ",
+      "description": "د قرضې تفصیلات تازه کړئ.",
+      "fields": {
+        "amount": "د قرضې اندازه *",
+        "dueDateOptional": "د سررسید نېټه (اختیاري)",
+        "status": "حالت"
+      },
+      "statusOptions": {
+        "pending": "په تمه",
+        "paid": "تادیه شوی"
+      },
+      "buttons": {
+        "cancel": "لغوه کړئ",
+        "update": "قرضه تازه کړئ",
+        "updating": "په تازه کولو کې..."
+      }
+    },
+    "paymentDialog": {
+      "title": "تادیه ثبت کړئ",
+      "description": "دا قرضه د تادیه شوي په توګه نښه کړئ.",
+      "loanAmount": "د قرضې اندازه",
+      "customer": "پېرودونکی",
+      "location": "ځای",
+      "actions": {
+        "cancel": "لغوه کړئ",
+        "markAsPaid": "د تادیه شوي په توګه نښه کړئ",
+        "processing": "په پروسس کولو کې..."
+      }
+    },
+    "viewLoanDialog": {
+      "title": "د قرضې تفصیلات",
+      "description": "د قرضې بشپړ معلومات",
+      "fields": {
+        "loanId": "د قرضې شمېره",
+        "amount": "اندازه",
+        "customer": "پېرودونکی",
+        "customerEmail": "د پېرودونکي برېښنالیک",
+        "location": "ځای",
+        "loanDate": "د قرضې نېټه",
+        "dueDate": "د سررسید نېټه",
+        "noDueDate": "د سررسید نېټه نشته",
+        "status": "حالت"
+      }
     }
   },
   "expenses": {
-    "title": "",
-    "addExpense": "",
-    "expenseType": "",
-    "amount": "",
-    "date": "",
-    "notes": ""
+    "loading": "د لګښتونو په بارولو کې...",
+    "noLocation": {
+      "title": "هیڅ ځای ټاکل شوی نه دی",
+      "description": "ستاسو حساب له هیڅ ځای سره وصل نه دی. مهرباني وکړئ د سیسټم مدیر سره اړیکه ونیسئ."
+    },
+    "error": {
+      "title": "د معلوماتو بارولو امکان نشته",
+      "description": "د لګښتونو معلوماتو ترلاسه کولو کې ستونزه رامنځته شوه."
+    },
+    "header": {
+      "title": "د لګښتونو مدیریت",
+      "description": "د خپل سوداګرۍ لګښتونه تعقیب او مدیریت کړئ",
+      "locationSuffix": "د {location} لپاره"
+    },
+    "dialog": {
+      "addTitle": "نوی لګښت اضافه کړئ",
+      "addDescription": "د لګښت تفصیلات بشپړ کړئ او بیا خوندي کړئ.",
+      "editTitle": "لګښت سم کړئ",
+      "editDescription": "د لګښت معلومات تازه کړئ."
+    },
+    "actions": {
+      "add": "لګښت اضافه کړئ",
+      "edit": "لګښت سم کړئ",
+      "update": "لګښت تازه کړئ",
+      "saving": "په خوندي کولو کې...",
+      "cancel": "لغوه کړئ"
+    },
+    "tabs": {
+      "basic": "اساسي معلومات",
+      "details": "تفصیلات",
+      "status": "حالت"
+    },
+    "form": {
+      "location": "ځای",
+      "category": "کټګوري",
+      "amount": "اندازه *",
+      "date": "نېټه *",
+      "vendor": "د پلورونکي نوم",
+      "receipt": "د رسید شمېره",
+      "description": "تفصیلات",
+      "notes": "یادښتونه",
+      "status": "حالت"
+    },
+    "statusInfo": {
+      "title": "د حالت معلومات",
+      "pending": {
+        "label": "په تمه",
+        "description": "لګښت د تصدیق په تمه دی"
+      },
+      "approved": {
+        "label": "تصدیق شوی",
+        "description": "لګښت تصدیق او پروسس شوی دی"
+      },
+      "rejected": {
+        "label": "رد شوی",
+        "description": "لګښت رد شوی دی"
+      }
+    },
+    "filters": {
+      "toggle": "فلټرونه",
+      "location": "ځای",
+      "allLocations": "ټول ځایونه",
+      "category": "کټګوري",
+      "allCategories": "ټولې کټګورۍ",
+      "status": "حالت",
+      "allStatuses": "ټول حالتونه",
+      "dateRange": "د وخت موده",
+      "startDate": "د پیل نېټه",
+      "endDate": "د پای نېټه",
+      "clearAll": "ټول فلټرونه حذف کړئ"
+    },
+    "search": {
+      "placeholder": "لګښتونه، پلورونکي او رسیدونه ولټوئ..."
+    },
+    "table": {
+      "columns": {
+        "date": "نېټه",
+        "vendor": "پلورونکی",
+        "category": "کټګوري",
+        "location": "ځای",
+        "amount": "اندازه",
+        "status": "حالت",
+        "actions": "عملیات"
+      },
+      "empty": "لګښت و نه موندل شو"
+    }
   },
   "products": {
     "table": {
@@ -305,19 +691,162 @@
       
   },
   "inventory": {
-    "title": "",
-    "stockLevel": "",
-    "lowStock": "",
-    "outOfStock": "",
-    "reorder": ""
+    "alerts": {
+      "loadFailed": "د معلوماتو بارولو امکان نشته"
+    },
+    "page": {
+      "title": "د موجودۍ مدیریت",
+      "description": "د خپلې موجودۍ کچه څارنه او مدیریت کړئ",
+      "searchPlaceholder": "محصولات، SKUونه، ځایونه ولټوئ...",
+      "filtersToggle": "فلټرونه",
+      "clearFilters": "ټول فلټرونه حذف کړئ"
+    },
+    "actions": {
+      "addStock": "موجودي اضافه کړئ",
+      "cancel": "لغوه کړئ",
+      "adding": "په اضافه کولو کې..."
+    },
+    "filters": {
+      "category": {
+        "label": "کټګوري",
+        "all": "ټولې کټګورۍ"
+      },
+      "locationType": {
+        "label": "د ځای ډول",
+        "all": "ټول ډولونه",
+        "warehouse": "ګدام",
+        "store": "پلورنځی"
+      },
+      "stockLevel": {
+        "label": "د موجودۍ کچه",
+        "all": "ټولې کچې",
+        "low": "لږه موجودي (له ۱۰ څخه کمه)",
+        "medium": "منځنۍ موجودي (۱۰ تر ۵۰)",
+        "high": "ډېره موجودي (له ۵۰ څخه زیاته)"
+      },
+      "priceRange": {
+        "label": "د بیې موده",
+        "min": "لږترلږه",
+        "max": "ډېره"
+      }
+    },
+    "dialog": {
+      "addTitle": "نوې موجودي اضافه کړئ",
+      "description": "په یو ځانګړي ځای کې د یو محصول لپاره موجودي اضافه کړئ",
+      "fields": {
+        "product": "محصول *",
+        "location": "ځای *",
+        "quantity": "شمېر *"
+      },
+      "placeholders": {
+        "product": "محصول انتخاب کړئ",
+        "location": "ځای انتخاب کړئ",
+        "quantity": "مقدار ولیکئ"
+      }
+    },
+    "table": {
+      "columns": {
+        "product": "محصول",
+        "sku": "د محصول کوډ",
+        "location": "ځای",
+        "type": "ډول",
+        "stock": "موجودي",
+        "price": "بیه"
+      },
+      "unknownProduct": "نامعلوم محصول",
+      "unknownLocation": "نامعلوم ځای",
+      "unknownType": "نامعلوم"
+    }
   },
   "transfers": {
-    "title": "",
-    "newTransfer": "",
-    "fromAccount": "",
-    "toAccount": "",
-    "amount": "",
-    "transferDate": ""
+    "loading": "د لېږدونو په بارولو کې...",
+    "noLocation": {
+      "title": "هیڅ ځای ټاکل شوی نه دی",
+      "description": "ستاسو حساب له هیڅ ځای سره وصل نه دی. مهرباني وکړئ د خپل مدیر سره اړیکه ونیسئ."
+    },
+    "error": {
+      "title": "د معلوماتو بارولو امکان نشته",
+      "description": "مهرباني وکړئ وروسته بیا هڅه وکړئ یا خپل اتصال وګورئ."
+    },
+    "page": {
+      "title": "د موجودۍ لېږد",
+      "description": "د ځایونو تر منځ د موجودۍ لېږد مدیریت کړئ",
+      "descriptionSuffix": "د {location} لپاره"
+    },
+    "actions": {
+      "newTransfer": "نوی لېږد",
+      "cancel": "لغوه کړئ",
+      "create": "لېږد جوړ کړئ",
+      "creating": "په جوړولو کې..."
+    },
+    "dialog": {
+      "title": "نوی لېږد جوړ کړئ",
+      "description": "د لېږد تفصیلات بشپړ کړئ او د پای ته رسیدو وروسته خوندي کړئ."
+    },
+    "tabs": {
+      "basic": "اساسي معلومات",
+      "details": "تفصیلات"
+    },
+    "form": {
+      "product": "محصول *",
+      "productPlaceholder": "محصول انتخاب کړئ",
+      "productSearch": "محصولات ولټوئ...",
+      "noProducts": "هیڅ محصول و نه موندل شو.",
+      "quantity": "شمېر *",
+      "fromLocation": "د مبدا ځای *",
+      "fromLocationPlaceholder": "د مبدا ځای انتخاب کړئ",
+      "toLocation": "د مقصد ځای *",
+      "toLocationPlaceholder": "د مقصد ځای انتخاب کړئ",
+      "staff": "کارمند *",
+      "staffPlaceholder": "کارمند انتخاب کړئ",
+      "instructionsTitle": "د لېږد معلومات",
+      "instructions": [
+        "د مبدا ځای کې د کافي موجودۍ څخه ډاډه شئ.",
+        "وګورئ چې د مقصد ځای د ذخیرې لپاره کافي ځای لري.",
+        "ټول لېږدونه د موجودۍ تعقیب لپاره ثبت کېږي."
+      ]
+    },
+    "filters": {
+      "toggle": "فلټرونه",
+      "product": {
+        "label": "محصول",
+        "all": "ټول محصولات"
+      },
+      "fromLocation": {
+        "label": "د مبدا ځای",
+        "all": "ټول ځایونه"
+      },
+      "toLocation": {
+        "label": "د مقصد ځای",
+        "all": "ټول ځایونه"
+      },
+      "dateRange": {
+        "label": "د وخت موده",
+        "start": "د پیل نېټه",
+        "end": "د پای نېټه"
+      },
+      "clear": "ټول فلټرونه حذف کړئ"
+    },
+    "search": {
+      "placeholder": "لېږدونه، محصولات، ځایونه ولټوئ..."
+    },
+    "table": {
+      "columns": {
+        "date": "نېټه",
+        "product": "محصول",
+        "from": "مبدا",
+        "to": "مقصد",
+        "quantity": "شمېر",
+        "staff": "کارمند",
+        "actions": "عملیات"
+      },
+      "noTransfers": "هیڅ لېږد و نه موندل شو",
+      "unknown": {
+        "product": "نامعلوم محصول",
+        "location": "نامعلوم",
+        "staff": "نامعلوم"
+      }
+    }
   },
   "categories": {
     "title": "گتګورۍ",
@@ -365,165 +894,229 @@
     }
   },
   "sales": {
-    "loading": "صبر وکړئ...",
+    "loading": "مهرباني وکړئ صبر وکړئ...",
     "tryAgain": "بیا هڅه وکړئ",
-    "somethingwentwrong": "یو څه غلط شول",
-    "nolocationselected":"هیڅ ځای نه دی ټاکل شوی",
-    "pleaseselectalocation":"مهرباني وکړئ د محصولاتو د لیدو لپاره یو ځای وټاکئ",
+    "somethingwentwrong": "ستونزه رامنځته شوه",
+    "nolocationselected": "هیڅ ځای انتخاب شوی نه دی",
+    "pleaseselectalocation": "مهرباني وکړئ د محصولاتو لیدلو لپاره یو ځای انتخاب کړئ",
     "pointofsale": "د خرڅلاو ټکی",
-    "processtransactions": "راکړه ورکړه په مؤثره توګه پروسس کړئ",
+    "processtransactions": "په اغېزمنه توګه معاملې پروسس کړئ",
     "products": "محصولات",
-    "customers": "پېرودونکي", 
-    "searchplaceholder": "محصولات ولټوه",
-
-
-
-
-    "tabs":{
-      "terminal":"ترمینل",
-      "history":"تاریخچه",
-      "analytics":"تحلیلونه"
+    "customers": "پېرودونکي",
+    "searchplaceholder": "محصولات ولټوئ",
+    "tabs": {
+      "terminal": "ټرمینل",
+      "history": "تاریخچه",
+      "analytics": "تحلیلونه"
     },
     "header": {
       "title": "خرڅلاوی",
       "description": "د ټولو خرڅلاو لیست"
     },
     "availableProducts": {
-      "title": " محصولات",
-      "availableProducts":" محصولات موجود دی",
-      "left": "پاتی دی",
-      "searchPlaceholder": "محصولات ولټوه...",
-      "addtocart": "کراچی ته اضافه کول",
-      "allcategories":"ټولې کټګورۍ",
-      "noproductsfound":"هیڅ محصول ونه موندل شو",
-      "tryadjusting":"د لټون یا پلتولو معلوماتو سم کری",
-      "addmore":"نور اضافه کری",
-
-      
+      "title": "محصولات",
+      "availableProducts": "محصول موجود دی",
+      "left": "پاتې",
+      "searchPlaceholder": "محصولات ولټوئ...",
+      "addtocart": "سبد ته اضافه کړئ",
+      "allcategories": "ټولې کټګورۍ",
+      "noproductsfound": "هیڅ محصول و نه موندل شو",
+      "tryadjusting": "د لټون فلټرونه سم کړئ",
+      "addmore": "نور اضافه کړئ",
       "noData": "هیڅ معلومات نشته",
       "loadError": "د معلوماتو په ترلاسه کولو کې ستونزه"
     },
-    "customer":{
-        "label":"پېرودونکی",
-        "selectPlaceholder":"پېرودونکی وټاکئ",
-        "addNew":"نوی پېرودونکی اضافه کړئ",
-        "changeCustomer":"پېرودونکی بدل کړئ",
-        "removeCustomer":"پېرودونکی لرې کړئ",
-        "addcustomerform":{
-          "title":"نوی پېرودونکی",
-          "description":"د نوي پېرودونکي لپاره معلومات اضافه کړئ",
-          
-          "formFields":{
-            "firstname":"د پېرودونکي نوم",
-            "lastname":"د پېرودونکي تخلص",
-            "email":"د پېرودونکي ایمیل",
-            "phone":"د پېرودونکي تلیفون",
-            "address":"د پېرودونکي پته"
+    "customer": {
+      "label": "پېرودونکی",
+      "selectPlaceholder": "پېرودونکی انتخاب کړئ",
+      "addNew": "نوی پېرودونکی اضافه کړئ",
+      "changeCustomer": "پېرودونکی بدل کړئ",
+      "removeCustomer": "پېرودونکی لرې کړئ",
+      "addcustomerform": {
+        "title": "نوی پېرودونکی",
+        "description": "د نوي پېرودونکي لپاره معلومات اضافه کړئ",
+        "formFields": {
+          "firstname": "د پېرودونکي نوم",
+          "lastname": "د پېرودونکي تخلص",
+          "email": "د پېرودونکي برېښنالیک",
+          "phone": "د پېرودونکي تلیفون",
+          "address": "د پېرودونکي پته"
+        }
+      }
+    },
+    "staff": {
+      "title": "کارکوونکي"
+    },
+    "cart": {
+      "title": "سبد",
+      "empty": "سبد خالي دی",
+      "items": "توکي",
+      "addproductstostart": "د پیل لپاره محصولات اضافه کړئ",
+      "total": "ټول",
+      "checkout": "تصفیه حساب",
+      "proceedpayment": "تادیې ته دوام ورکړئ",
+      "completetransaction": "معامله بشپړه کړئ",
+      "ordersummary": "د امر لنډیز",
+      "confirmpayment": "تادیه تصدیق کړئ"
+    },
+    "saleshistory": {
+      "title": "د خرڅلاو تاریخچه",
+      "totalSales": "ټول خرڅلاو",
+      "filters": "فلټرونه",
+      "transactions": "معاملې",
+      "averagesale": "اوسط خرڅلاو",
+      "completed": "بشپړ شوی",
+      "daterange": "د وخت موده",
+      "from": "له",
+      "to": "تر",
+      "status": "حالت",
+      "allstatuses": "ټول حالتونه",
+      "canceled": "لغوه شوی",
+      "pending": "په تمه",
+      "apply": "پلي کړئ",
+      "reset": "ریسیټ کړئ",
+      "export": "صادرول",
+      "notransactions": "هیڅ معامله و نه موندل شوه",
+      "tryadjusting": "د لټون فلټرونه سم کړئ",
+      "next": "بل",
+      "previous": "مخکینی",
+      "saledetails": {
+        "title": "د خرڅلاو تفصیلات",
+        "invoice": "فاکتور",
+        "date": "نېټه",
+        "customer": "پېرودونکی",
+        "status": "حالت",
+        "totalamount": "ټوله اندازه",
+        "items": "توکي",
+        "printreciept": "رسید چاپ کړئ",
+        "viewfulldetails": "بشپړ تفصیلات وګورئ",
+        "emailreciept": "رسید برېښنالیک وکړئ",
+        "notes": "یادښتونه",
+        "saleId": "د خرڅلاو شمېره",
+        "completed": "بشپړ شوی"
+      }
+    },
+    "Analytics": {
+      "title": "تحلیلونه",
+      "revenue": "ټول عایدات",
+      "transactions": "معاملې",
+      "activeCustomers": "فعال پېرودونکي",
+      "insights": "چټک لیدنه",
+      "avgTransaction": "اوسط معامله",
+      "productsInStock": "موجود محصولات",
+      "alltime": "ټول وخت",
+      "completedSales": "بشپړ شوي خرڅلاو",
+      "registeredUsers": "راجستر شوي کارنان"
+    }
+  },
+  "reports": {
+    "title": "راپورونه",
+    "generator": {
+      "page": {
+        "title": "د راپور جوړونکی",
+        "description": "فلټرونه انتخاب کړئ او دقیق PDF راپورونه جوړ کړئ"
+      },
+      "form": {
+        "card": {
+          "title": "د راپور ترتیب",
+          "description": "د راپور پارامترونه تنظیم کړئ او د جوړولو باندې کلیک وکړئ"
+        },
+        "fields": {
+          "reportType": {
+            "label": "د راپور ډول *",
+            "placeholder": "د راپور ډول انتخاب کړئ",
+            "helpText": "د جوړولو لپاره د راپور ډول انتخاب کړئ",
+            "options": {
+              "sales": "د خرڅلاو راپور",
+              "inventory": "د موجودۍ راپور",
+              "expenses": "د لګښتونو راپور",
+              "loans": "د قرضو راپور",
+              "transfers": "د موجودۍ لېږد راپور",
+              "customers": "د پېرودونکو راپور",
+              "financial": "د مالي لنډیز راپور",
+              "products": "د محصول فعالیت راپور"
+            }
+          },
+          "startDate": {
+            "label": "د پیل نېټه *"
+          },
+          "endDate": {
+            "label": "د پای نېټه *"
+          },
+          "location": {
+            "label": "ځای",
+            "placeholder": "ټول ځایونه"
+          },
+          "category": {
+            "label": "د محصول کټګوري",
+            "placeholder": "ټولې کټګورۍ"
+          },
+          "expenseCategory": {
+            "label": "د لګښت کټګوري",
+            "placeholder": "د لګښت ټولې کټګورۍ"
+          },
+          "staff": {
+            "label": "کارمند",
+            "placeholder": "ټول کارمندان"
+          },
+          "status": {
+            "label": "حالت",
+            "placeholder": "ټول حالتونه",
+            "options": {
+              "sales": {
+                "completed": "بشپړ شوی",
+                "pending": "په تمه",
+                "cancelled": "لغوه شوی"
+              },
+              "loans": {
+                "pending": "په تمه",
+                "paid": "تادیه شوی"
+              },
+              "expenses": {
+                "pending": "په تمه",
+                "approved": "تصدیق شوی",
+                "rejected": "رد شوی"
+              }
+            }
           }
         }
       },
-      "staff":{
-        "title":"کارکوونکی"
-
+      "actions": {
+        "generate": "PDF جوړ او ډانلوډ کړئ",
+        "generating": "PDF په جوړولو او ډانلوډولو کې..."
       },
-    "cart": {
-      "title": "کراچۍ",
-      "empty": "کراچۍ خالي ده",
-      "items": "توکي",
-      "addproductstostart": "پروډکټونه اضافه کړئ ترڅو پیل کړئ",
-      "total": "ټول",
-      "checkout": "چیک آوټ",
-      "proceedpayment": "تادیې ته دوام ورکړئ",
-      "completetransaction": "راکړه ورکړه بشپړه کړئ",
-      "ordersummary": "د فرمایش لنډیز",
-      "confirmpayment": "تادیه تایید کړئ"
-    },
-    "saleshistory":{
-      "title":"د خرڅلاو تاریخچه",
-      "totalSales":"ټول خرڅلاو",
-      "filters":"پلتونه",
-      "transactions":"راکړه ورکړه",
-      "averagesale":"اوسط خرڅلاو",
-      "completed":"بشپړ شوی",
-      "daterange":"د نیټې حد",
-      "from": "له ",
-      "to": "تر ",
-      "status":"حالت",
-      "allstatuses":"ټول حالتونه",
-      "canceled":"لغوه شوی",
-      "pending":"په تمه",
-      "apply":"پلي کول",
-      "reset":"ختمول",
-      "export":"صادرات",
-      "notransactions":"هیڅ راکړه ورکړه ونه موندل شوه",
-      "tryadjusting":"د لټون یا پلتولو معلوماتو سم کری",
-      "next":"بل",
-      "previous":"تېر",
-      "saledetails":{
-        "title":"د خرڅلاو تفصیل",
-        
-        "invoice":"رسید",
-        "date":"نیټه",
-        "customer":"پېرودونکی",
-        
-        "status":"حالت",
-        "totalamount":"ټول مقدار",
-        "items":"توکي",
-        "printreciept":"رسید چاپ کړئ",
-        "viewfulldetails":"بشپړ تفصیل وګورئ",
-        "emailreciept":"د رسید ایمیل",
-
-        
-        "notes":"یادښتونه",
-        "saleId": "د خرڅلاو نمبر",
-        "completed": "بشپړ شوی"
+      "infoCard": {
+        "title": "د راپور جوړولو معلومات:",
+        "items": [
+          "راپورونه د شریکولو او چاپولو لپاره په PDF بڼه جوړېږي",
+          "لوی راپورونه ممکن د جوړولو لپاره څو شېبې ووخت ونیسي",
+          "د ټولو راپورونو ډولونو لپاره د وخت موده اړینه ده",
+          "د راپور کې د شامل معلوماتو محدودولو لپاره فلټرونه وکاروئ"
+        ]
       }
-
-
-      
-  },
-  "Analytics": {
-    "title": "تحلیلونه",
-    "revenue": "ټول عایدات",
-    "transactions": "راکړې ورکړې",
-    "activeCustomers": "فعال پېرودونکي",
-    "insights": "چټک لیدنه",
-    "avgTransaction": "اوسط راکړه ورکړه",
-    "productsInStock": "موجود محصولات",
-    "alltime": "ټول وخت",
-    "completedSales": "بشپړ شوي خرڅلاو",
-    "registeredUsers": "راجستر شوي پېرودونکی"
-   
-  }
-  },
-  "reports": {
-    "title": "",
-    "dailyReport": "",
-    "monthlyReport": "",
-    "yearlyReport": "",
-    "export": ""
+    }
   },
   "auth": {
     "login": {
-      "title": "",
-      "email": "",
-      "password": "",
-      "button": "",
-      "forgotPassword": ""
+      "title": "سیسټم ته ننوتل",
+      "email": "برېښنالیک",
+      "password": "پټ نوم",
+      "button": "ننوتل",
+      "forgotPassword": "پټ نوم مو هېر کړی؟"
     },
     "register": {
-      "title": "",
-      "name": "",
-      "email": "",
-      "password": "",
-      "confirmPassword": "",
-      "button": ""
+      "title": "ثبت نام",
+      "name": "نوم",
+      "email": "برېښنالیک",
+      "password": "پټ نوم",
+      "confirmPassword": "پټ نوم تصدیق کړئ",
+      "button": "ثبت نام"
     },
     "errors": {
-      "invalidEmail": "",
-      "requiredField": "",
-      "wrongPassword": "",
-      "passwordMismatch": ""
+      "invalidEmail": "برېښنالیک سم نه دی",
+      "requiredField": "دا ځای اړین دی",
+      "wrongPassword": "پټ نوم غلط دی",
+      "passwordMismatch": "پټ نوم سره سم نه دی"
     }
   }
 }

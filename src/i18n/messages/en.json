@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "General Store Management",
+    "appName": "General Store Management System",
     "loading": "Loading...",
     "navigation": {
       "dashboard": "Dashboard",
@@ -24,14 +24,14 @@
         "all-inventory": "All Inventory",
         "inventory-transfers": "Inventory Transfers"
       },
-      "reports": "Reports"
-    },
-    "navUser": {
-      "settings": "Settings",
-      "notifications": "Notifications",
-      "logout": "Logout",
-      "fallbackName": "User",
-      "fallbackEmail": "user@example.com"
+      "reports": "Reports",
+      "navUser": {
+        "settings": "Settings",
+        "notifications": "Notifications",
+        "logout": "Logout",
+        "fallbackName": "User",
+        "fallbackEmail": "user@example.com"
+      }
     }
   },
   "dashboard": {
@@ -137,105 +137,972 @@
       "loadError": "Error loading inventory"
     }
   },
-  "reports": {
-    "common": {
-      "dateRange": "Date Range",
-      "location": "Location",
-      "export": "Export",
-      "print": "Print",
-      "filter": "Filter",
-      "noData": "No data available for selected criteria",
-      "loadError": "Error loading report data"
+  "customers": {
+    "title": "Customers",
+    "description": "Customer list",
+    "addCustomer": "New Customer",
+    "walkInCustomer": "Walk-in Customer",
+    "currentLocation": "Current Location",
+    "searchPlaceholder": "Search customers by name, email or phone...",
+    "loading": "Loading customers...",
+    "error": {
+      "title": "Error Loading Customers",
+      "description": "Please try again later or check your connection.",
+      "technicalDetails": "Technical Details",
+      "retry": "Retry"
     },
-    "sales": {
-      "title": "Sales Report",
-      "description": "Analyze sales performance over time",
-      "filters": {
-        "customer": "Customer",
-        "product": "Product",
-        "paymentType": "Payment Type"
-      },
-      "columns": {
-        "date": "Date",
-        "invoice": "Invoice No",
-        "customer": "Customer",
-        "items": "Items",
-        "total": "Total",
-        "payment": "Payment Type",
-        "status": "Status"
-      },
-      "summary": {
-        "totalSales": "Total Sales",
-        "averageSale": "Average Sale",
-        "topProducts": "Top Products",
-        "topCustomers": "Top Customers"
+    "noLocation": {
+      "title": "No Location Assigned",
+      "description": "Your account is not connected to any location. Please contact the system administrator."
+    },
+    "header": {
+      "title": "Customer Management ({count})",
+      "locationContext": "Showing customers for: {location}",
+      "buttons": {
+        "walkInCustomer": {
+          "title": "Walk-in Customer",
+          "label": "View Walk-in Customer"
+        },
+        "addCustomer": {
+          "title": "Add Customer",
+          "label": "Add New Customer"
+        }
       }
     },
-    "inventory": {
-      "title": "Inventory Report",
-      "description": "Current inventory status and history",
-      "filters": {
-        "category": "Category",
-        "status": "Status"
+    "filters": {
+      "search": {
+        "placeholder": "Search customers by name, email or phone..."
       },
-      "columns": {
-        "sku": "SKU",
-        "product": "Product",
-        "category": "Category",
-        "quantity": "Quantity",
-        "value": "Value",
-        "lastUpdated": "Last Updated"
+      "location": {
+        "title": "Location",
+        "currentLocation": "Current Location ({name})",
+        "allLocations": "All Locations"
       },
-      "summary": {
-        "totalItems": "Total Items",
-        "totalValue": "Total Value",
-        "lowStock": "Low Stock Items",
-        "outOfStock": "Out of Stock Items"
+      "status": {
+        "title": "Status",
+        "allCustomers": "All Customers",
+        "withLoans": "With Loans",
+        "noLoans": "Without Loans"
       }
     },
-    "customers": {
-      "title": "Customer Report",
-      "description": "Customer activity and balances",
-      "filters": {
-        "status": "Status",
-        "type": "Customer Type"
-      },
+    "table": {
       "columns": {
-        "id": "ID",
         "name": "Name",
-        "type": "Type",
-        "balance": "Balance",
-        "lastPurchase": "Last Purchase",
-        "totalPurchases": "Total Purchases"
+        "location": "Location",
+        "contact": "Contact Information",
+        "address": "Address",
+        "loans": "Loans",
+        "joined": "Join Date",
+        "actions": "Actions"
       },
-      "summary": {
-        "totalCustomers": "Total Customers",
-        "activeCustomers": "Active Customers",
-        "totalDue": "Total Due Amount",
-        "averageBalance": "Average Balance"
+      "cells": {
+        "id": "ID",
+        "noAddress": "No Address",
+        "activeLoans": "Active Loans",
+        "contact": {
+          "email": "Email",
+          "phone": "Phone"
+        }
+      },
+      "noResults": {
+        "title": "No Customers Found",
+        "withFilters": "Adjust your search filters",
+        "noCustomers": "Start by adding your first customer"
+      },
+      "pagination": {
+        "showing": "Showing",
+        "to": "to",
+        "of": "of",
+        "results": "results",
+        "previous": "Previous",
+        "next": "Next"
+      },
+      "actions": {
+        "view": "View Details",
+        "edit": "Edit Customer",
+        "delete": "Delete Customer"
       }
     },
-    "financial": {
-      "title": "Financial Report",
-      "description": "Financial performance analysis",
-      "filters": {
-        "type": "Transaction Type",
-        "category": "Category"
+    "addnewform": {
+      "title": "Add New Customer",
+      "description": "Enter customer information. Click save when done.",
+      "locationAssociation": "This customer will be associated with {location}.",
+      "form": {
+        "firstName": "First Name *",
+        "lastName": "Last Name *",
+        "email": "Email",
+        "phone": "Phone",
+        "address": "Address"
       },
+      "buttons": {
+        "cancel": "Cancel",
+        "create": "Create Customer",
+        "creating": "Creating..."
+      }
+    },
+    "updateform": {
+      "title": "Edit Customer",
+      "description": "Update customer information. Click save when done.",
+      "form": {
+        "firstName": "First Name *",
+        "lastName": "Last Name *",
+        "email": "Email",
+        "phone": "Phone",
+        "address": "Address"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "update": "Update Customer",
+        "updating": "Updating..."
+      }
+    },
+    "customerdetails": {
+      "dialog": {
+        "title": "Customer Details",
+        "description": "Customer information and loan history",
+        "info": {
+          "fullName": "Full Name",
+          "customerId": "Customer ID",
+          "email": "Email",
+          "phone": "Phone",
+          "address": "Address",
+          "location": "Location",
+          "memberSince": "Member Since",
+          "totalLoans": "Total Loans"
+        },
+        "loanHistory": {
+          "title": "Loan History",
+          "loanId": "Loan ID",
+          "noDueDate": "No Due Date",
+          "noHistory": {
+            "title": "No Loan History",
+            "message": "No loan history available"
+          }
+        }
+      }
+    }
+  },
+  "loans": {
+    "loading": "Loading loans...",
+    "error": {
+      "title": "Error Loading Loans",
+      "description": "Please try again later or check your connection.",
+      "technicalDetails": "Technical Details",
+      "retry": "Retry"
+    },
+    "noLocation": {
+      "title": "No Location Assigned",
+      "description": "Your account is not connected to any location. Please contact the system administrator."
+    },
+    "cards": {
+      "totalLoans": {
+        "title": "Total Loans",
+        "icon": "Credit Card"
+      },
+      "totalAmount": {
+        "title": "Total Amount",
+        "icon": "Dollar Sign"
+      },
+      "pending": {
+        "title": "Pending",
+        "icon": "Clock"
+      },
+      "paid": {
+        "title": "Paid",
+        "icon": "Check Mark"
+      }
+    },
+    "tabs": {
+      "all-loans": {
+        "title": "All Loans",
+        "icon": "Credit Card",
+        "search": {
+          "placeholder": "Search by customer name, email or loan number..."
+        },
+        "filters": {
+          "location": {
+            "title": "Location",
+            "current": "Current Location ({name})",
+            "all": "All Locations"
+          },
+          "status": {
+            "title": "Status",
+            "all": "All Statuses",
+            "pending": "Pending",
+            "paid": "Paid"
+          }
+        },
+        "table": {
+          "columns": {
+            "loanId": "Loan ID",
+            "customer": "Customer",
+            "location": "Location",
+            "amount": "Amount",
+            "loanDate": "Loan Date",
+            "dueDate": "Due Date",
+            "status": "Status",
+            "actions": "Actions"
+          },
+          "noDueDate": "No Due Date",
+          "completed": "Completed",
+          "noLoans": {
+            "title": "No Loans Found",
+            "withFilters": "Adjust your search filters",
+            "noLoansYet": "Start by adding your first loan"
+          },
+          "pagination": {
+            "showing": "Showing",
+            "to": "to",
+            "of": "of",
+            "results": "results",
+            "previous": "Previous",
+            "next": "Next"
+          },
+          "actions": {
+            "view": "View Details",
+            "edit": "Edit Loan",
+            "markAsPaid": "Mark as Paid",
+            "delete": "Delete Loan"
+          }
+        }
+      },
+      "customer-notebooks": {
+        "title": "Customer Loan Notebooks",
+        "icon": "Notebook",
+        "description": "Select a customer to view their loan notebook",
+        "noCustomers": {
+          "title": "No Customers Found",
+          "description": "Add customers to create loan notebooks"
+        },
+        "customerCard": {
+          "email": "Email",
+          "stats": {
+            "loans": "Loans",
+            "amount": "Amount",
+            "pending": "Pending",
+            "paid": "Paid"
+          },
+          "buttons": {
+            "view": "View",
+            "addLoan": "Add Loan"
+          }
+        }
+      },
+      "customer-notebook": {
+        "title": "Customer Notebook",
+        "icon": "User",
+        "loanTitle": "{name}'s Loan Notebook",
+        "filters": {
+          "searchPlaceholder": "Search by loan number...",
+          "allStatus": "All Statuses"
+        },
+        "table": {
+          "columns": {
+            "loanId": "Loan ID",
+            "amount": "Amount",
+            "loanDate": "Loan Date",
+            "dueDate": "Due Date",
+            "status": "Status",
+            "actions": "Actions"
+          },
+          "noDueDate": "No Due Date",
+          "completed": "Completed",
+          "noLoans": {
+            "title": "No Loans Found for This Customer",
+            "withFilters": "Adjust your search filters",
+            "noLoansYet": "Start by adding a loan"
+          }
+        },
+        "summary": {
+          "title": "Customer Summary",
+          "stats": {
+            "totalLoans": "Total Loans",
+            "totalAmount": "Total Amount",
+            "pending": "Pending",
+            "paid": "Paid"
+          }
+        },
+        "actions": {
+          "addLoan": "Add Loan",
+          "viewDetails": "View Details",
+          "editLoan": "Edit Loan",
+          "markAsPaid": "Mark as Paid",
+          "deleteLoan": "Delete Loan"
+        }
+      },
+      "actions": {
+        "addLoan": {
+          "title": "Add Loan",
+          "icon": "Plus Sign"
+        }
+      }
+    },
+    "addnewform": {
+      "title": "Add New Loan",
+      "description": {
+        "specificCustomer": "Adding loan for {name}",
+        "general": "Search for a customer and complete loan details."
+      },
+      "locationNotice": "This loan will be associated with {location}.",
+      "fields": {
+        "selectCustomer": "Select Customer",
+        "searchPlaceholder": "Search customers by name or email...",
+        "noCustomersFound": "No customers found",
+        "customer": "Customer",
+        "amount": "Loan Amount",
+        "dueDateOptional": "Due Date (Optional)",
+        "status": "Status"
+      },
+      "statusOptions": {
+        "pending": "Pending",
+        "paid": "Paid"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "create": "Create Loan",
+        "creating": "Creating..."
+      }
+    },
+    "updateform": {
+      "title": "Edit Loan",
+      "description": "Update loan details.",
+      "fields": {
+        "amount": "Loan Amount *",
+        "dueDateOptional": "Due Date (Optional)",
+        "status": "Status"
+      },
+      "statusOptions": {
+        "pending": "Pending",
+        "paid": "Paid"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "update": "Update Loan",
+        "updating": "Updating..."
+      }
+    },
+    "paymentDialog": {
+      "title": "Record Payment",
+      "description": "Mark this loan as paid.",
+      "loanAmount": "Loan Amount",
+      "customer": "Customer",
+      "location": "Location",
+      "actions": {
+        "cancel": "Cancel",
+        "markAsPaid": "Mark as Paid",
+        "processing": "Processing..."
+      }
+    },
+    "viewLoanDialog": {
+      "title": "Loan Details",
+      "description": "Complete loan information",
+      "fields": {
+        "loanId": "Loan ID",
+        "amount": "Amount",
+        "customer": "Customer",
+        "customerEmail": "Customer Email",
+        "location": "Location",
+        "loanDate": "Loan Date",
+        "dueDate": "Due Date",
+        "noDueDate": "No Due Date",
+        "status": "Status"
+      }
+    }
+  },
+  "expenses": {
+    "loading": "Loading expenses...",
+    "noLocation": {
+      "title": "No Location Assigned",
+      "description": "Your account is not connected to any location. Please contact the system administrator."
+    },
+    "error": {
+      "title": "Unable to Load Data",
+      "description": "An error occurred while retrieving expense information."
+    },
+    "header": {
+      "title": "Expense Management",
+      "description": "Track and manage your business expenses",
+      "locationSuffix": "for {location}"
+    },
+    "dialog": {
+      "addTitle": "Add New Expense",
+      "addDescription": "Complete expense details and then save.",
+      "editTitle": "Edit Expense",
+      "editDescription": "Update expense information."
+    },
+    "actions": {
+      "add": "Add Expense",
+      "edit": "Edit Expense",
+      "update": "Update Expense",
+      "saving": "Saving...",
+      "cancel": "Cancel"
+    },
+    "tabs": {
+      "basic": "Basic Information",
+      "details": "Details",
+      "status": "Status"
+    },
+    "form": {
+      "location": "Location",
+      "category": "Category",
+      "amount": "Amount *",
+      "date": "Date *",
+      "vendor": "Vendor Name",
+      "receipt": "Receipt Number",
+      "description": "Description",
+      "notes": "Notes",
+      "status": "Status"
+    },
+    "statusInfo": {
+      "title": "Status Information",
+      "pending": {
+        "label": "Pending",
+        "description": "Expense is awaiting approval"
+      },
+      "approved": {
+        "label": "Approved",
+        "description": "Expense has been approved and processed"
+      },
+      "rejected": {
+        "label": "Rejected",
+        "description": "Expense has been rejected"
+      }
+    },
+    "filters": {
+      "toggle": "Filters",
+      "location": "Location",
+      "allLocations": "All Locations",
+      "category": "Category",
+      "allCategories": "All Categories",
+      "status": "Status",
+      "allStatuses": "All Statuses",
+      "dateRange": "Date Range",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "clearAll": "Clear All Filters"
+    },
+    "search": {
+      "placeholder": "Search expenses, vendors and receipts..."
+    },
+    "table": {
       "columns": {
         "date": "Date",
-        "type": "Type",
+        "vendor": "Vendor",
         "category": "Category",
-        "description": "Description",
+        "location": "Location",
         "amount": "Amount",
-        "balance": "Balance"
+        "status": "Status",
+        "actions": "Actions"
       },
-      "summary": {
-        "totalRevenue": "Total Revenue",
-        "totalExpenses": "Total Expenses",
-        "netIncome": "Net Income",
-        "grossProfit": "Gross Profit"
+      "empty": "No expenses found"
+    }
+  },
+  "products": {
+    "table": {
+      "title": "Products",
+      "description": "List of all products",
+      "searchPlaceholder": "Search products...",
+      "noProductfound": "No products found",
+      "noProductsyet": "No products yet",
+      "adjustsearcfilters": "Adjust your search filters",
+      "addfirstproduct": "Add your first product",
+      "addProduct": "New Product",
+      "columns": {
+        "name": "Name",
+        "sku": "Product Code",
+        "category": "Category",
+        "status": "Status",
+        "price": "Price",
+        "stock": "Stock",
+        "attributes": "Attributes",
+        "actions": "Actions"
+      },
+      "rows": {
+        "attributes": {
+          "title": "Attributes",
+          "more": "More",
+          "none": "None"
+        }
+      },
+      "Pagination": {
+        "first": "First",
+        "last": "Last",
+        "showing": "Showing",
+        "product": "products",
+        "of": "of"
+      },
+      "noData": "No data available",
+      "loadError": "Error retrieving data"
+    },
+    "addForm": {
+      "title": "New Product",
+      "description": "Add information for new product",
+      "formFields": {
+        "name": "Product Name",
+        "sku": "Product Code (SKU)",
+        "category": "Category",
+        "price": "Price",
+        "stockQuantity": "Initial Stock",
+        "attributes": "Attributes (Optional)"
+      },
+      "tabs": {
+        "basicInfo": "Basic Information",
+        "inventory": "Inventory",
+        "attributes": "Attributes"
       }
+    },
+    "editForm": {
+      "title": "Edit Product",
+      "description": "Update product information",
+      "error": "Please fill in all fields",
+      "formFields": {
+        "name": "Product Name",
+        "sku": "Product Code (SKU)",
+        "category": "Category",
+        "price": "Price",
+        "stockQuantity": "Initial Stock",
+        "attributes": "Attributes (Optional)",
+        "nameplaceholder": "Enter product name",
+        "skuplaceholder": "Enter product code",
+        "categoryplaceholder": "Select a category",
+        "priceplaceholder": "Enter product price",
+        "stockQuantityPlaceholder": "Enter initial product stock",
+        "attributesPlaceholder": "Attributes (Optional)",
+        "attributetype": "Attribute Type",
+        "attributevalue": "Attribute Value",
+        "noattribute": "No attributes for this category"
+      },
+      "tabs": {
+        "basicInfo": "Basic Information",
+        "inventory": "Inventory",
+        "attributes": "Attributes"
+      }
+    }
+  },
+  "inventory": {
+    "alerts": {
+      "loadFailed": "Unable to load data"
+    },
+    "page": {
+      "title": "Inventory Management",
+      "description": "Monitor and manage your inventory levels",
+      "searchPlaceholder": "Search products, SKUs, locations...",
+      "filtersToggle": "Filters",
+      "clearFilters": "Clear All Filters"
+    },
+    "actions": {
+      "addStock": "Add Stock",
+      "cancel": "Cancel",
+      "adding": "Adding..."
+    },
+    "filters": {
+      "category": {
+        "label": "Category",
+        "all": "All Categories"
+      },
+      "locationType": {
+        "label": "Location Type",
+        "all": "All Types",
+        "warehouse": "Warehouse",
+        "store": "Store"
+      },
+      "stockLevel": {
+        "label": "Stock Level",
+        "all": "All Levels",
+        "low": "Low Stock (Less than 10)",
+        "medium": "Medium Stock (10 to 50)",
+        "high": "High Stock (More than 50)"
+      },
+      "priceRange": {
+        "label": "Price Range",
+        "min": "Minimum",
+        "max": "Maximum"
+      }
+    },
+    "dialog": {
+      "addTitle": "Add New Stock",
+      "description": "Add stock for a product in a specific location",
+      "fields": {
+        "product": "Product *",
+        "location": "Location *",
+        "quantity": "Quantity *"
+      },
+      "placeholders": {
+        "product": "Select Product",
+        "location": "Select Location",
+        "quantity": "Enter amount"
+      }
+    },
+    "table": {
+      "columns": {
+        "product": "Product",
+        "sku": "Product Code",
+        "location": "Location",
+        "type": "Type",
+        "stock": "Stock",
+        "price": "Price"
+      },
+      "unknownProduct": "Unknown Product",
+      "unknownLocation": "Unknown Location",
+      "unknownType": "Unknown"
+    }
+  },
+  "transfers": {
+    "loading": "Loading transfers...",
+    "noLocation": {
+      "title": "No Location Assigned",
+      "description": "Your account is not connected to any location. Please contact your administrator."
+    },
+    "error": {
+      "title": "Unable to Load Data",
+      "description": "Please try again later or check your connection."
+    },
+    "page": {
+      "title": "Inventory Transfer",
+      "description": "Manage inventory transfers between locations",
+      "descriptionSuffix": "for {location}"
+    },
+    "actions": {
+      "newTransfer": "New Transfer",
+      "cancel": "Cancel",
+      "create": "Create Transfer",
+      "creating": "Creating..."
+    },
+    "dialog": {
+      "title": "Create New Transfer",
+      "description": "Complete transfer details and save when done."
+    },
+    "tabs": {
+      "basic": "Basic Information",
+      "details": "Details"
+    },
+    "form": {
+      "product": "Product *",
+      "productPlaceholder": "Select Product",
+      "productSearch": "Search products...",
+      "noProducts": "No products found.",
+      "quantity": "Quantity *",
+      "fromLocation": "Source Location *",
+      "fromLocationPlaceholder": "Select Source Location",
+      "toLocation": "Destination Location *",
+      "toLocationPlaceholder": "Select Destination Location",
+      "staff": "Staff Member *",
+      "staffPlaceholder": "Select Staff Member",
+      "instructionsTitle": "Transfer Information",
+      "instructions": [
+        "Ensure sufficient stock is available at the source location.",
+        "Verify that the destination location has adequate storage space.",
+        "All transfers are recorded for inventory tracking."
+      ]
+    },
+    "filters": {
+      "toggle": "Filters",
+      "product": {
+        "label": "Product",
+        "all": "All Products"
+      },
+      "fromLocation": {
+        "label": "Source Location",
+        "all": "All Locations"
+      },
+      "toLocation": {
+        "label": "Destination Location",
+        "all": "All Locations"
+      },
+      "dateRange": {
+        "label": "Date Range",
+        "start": "Start Date",
+        "end": "End Date"
+      },
+      "clear": "Clear All Filters"
+    },
+    "search": {
+      "placeholder": "Search transfers, products, locations..."
+    },
+    "table": {
+      "columns": {
+        "date": "Date",
+        "product": "Product",
+        "from": "Source",
+        "to": "Destination",
+        "quantity": "Quantity",
+        "staff": "Staff",
+        "actions": "Actions"
+      },
+      "noTransfers": "No transfers found",
+      "unknown": {
+        "product": "Unknown Product",
+        "location": "Unknown",
+        "staff": "Unknown"
+      }
+    }
+  },
+  "categories": {
+    "title": "Categories",
+    "description": "List of all categories",
+    "addCategory": "Add New Category",
+    "editCategory": "Edit Category",
+    "UpdateCategory": "Update Category",
+    "saving": "Saving...",
+    "deleteCategory": "Delete Category",
+    "list": "Category List",
+    "searchPlaceholder": "Search categories...",
+    "noCategoryfound": "No categories found",
+    "nodescription": "No description",
+    "moreattributes": "More attributes",
+    "tabs": {
+      "basicInfo": "Basic Information",
+      "attributes": "Attributes"
+    },
+    "addForm": {
+      "title": "New Category",
+      "description": "Add information for new category",
+      "formFields": {
+        "name": "Category Name",
+        "description": "Category Description",
+        "addnewattribute": "Add New Attribute",
+        "attributename": "Attribute Name"
+      }
+    },
+    "editForm": {
+      "title": "Edit Category",
+      "description": "Update category information",
+      "formFields": {
+        "name": "Category Name",
+        "description": "Category Description",
+        "addnewattribute": "Add New Attribute",
+        "attributename": "Attribute Name",
+        "attributesPlaceholder": "Add Attributes",
+        "descriptionPlaceholder": "Enter category description",
+        "namePlaceholder": "Enter category name"
+      },
+      "error": "Please fill in all fields"
+    }
+  },
+  "sales": {
+    "loading": "Please wait...",
+    "tryAgain": "Try Again",
+    "somethingwentwrong": "An error occurred",
+    "nolocationselected": "No location selected",
+    "pleaseselectalocation": "Please select a location to view products",
+    "pointofsale": "Point of Sale",
+    "processtransactions": "Process transactions efficiently",
+    "products": "Products",
+    "customers": "Customers",
+    "searchplaceholder": "Search products",
+    "tabs": {
+      "terminal": "Terminal",
+      "history": "History",
+      "analytics": "Analytics"
+    },
+    "header": {
+      "title": "Sales",
+      "description": "List of all sales"
+    },
+    "availableProducts": {
+      "title": "Products",
+      "availableProducts": "products available",
+      "left": "left",
+      "searchPlaceholder": "Search products...",
+      "addtocart": "Add to Cart",
+      "allcategories": "All Categories",
+      "noproductsfound": "No products found",
+      "tryadjusting": "Adjust your search filters",
+      "addmore": "Add More",
+      "noData": "No data available",
+      "loadError": "Error retrieving data"
+    },
+    "customer": {
+      "label": "Customer",
+      "selectPlaceholder": "Select Customer",
+      "addNew": "Add New Customer",
+      "changeCustomer": "Change Customer",
+      "removeCustomer": "Remove Customer",
+      "addcustomerform": {
+        "title": "New Customer",
+        "description": "Add information for new customer",
+        "formFields": {
+          "firstname": "Customer First Name",
+          "lastname": "Customer Last Name",
+          "email": "Customer Email",
+          "phone": "Customer Phone",
+          "address": "Customer Address"
+        }
+      }
+    },
+    "staff": {
+      "title": "Staff"
+    },
+    "cart": {
+      "title": "Cart",
+      "empty": "Cart is empty",
+      "items": "items",
+      "addproductstostart": "Add products to get started",
+      "total": "Total",
+      "checkout": "Checkout",
+      "proceedpayment": "Proceed to Payment",
+      "completetransaction": "Complete Transaction",
+      "ordersummary": "Order Summary",
+      "confirmpayment": "Confirm Payment"
+    },
+    "saleshistory": {
+      "title": "Sales History",
+      "totalSales": "Total Sales",
+      "filters": "Filters",
+      "transactions": "Transactions",
+      "averagesale": "Average Sale",
+      "completed": "Completed",
+      "daterange": "Date Range",
+      "from": "From",
+      "to": "To",
+      "status": "Status",
+      "allstatuses": "All Statuses",
+      "canceled": "Canceled",
+      "pending": "Pending",
+      "apply": "Apply",
+      "reset": "Reset",
+      "export": "Export",
+      "notransactions": "No transactions found",
+      "tryadjusting": "Adjust your search filters",
+      "next": "Next",
+      "previous": "Previous",
+      "saledetails": {
+        "title": "Sale Details",
+        "invoice": "Invoice",
+        "date": "Date",
+        "customer": "Customer",
+        "status": "Status",
+        "totalamount": "Total Amount",
+        "items": "Items",
+        "printreciept": "Print Receipt",
+        "viewfulldetails": "View Full Details",
+        "emailreciept": "Email Receipt",
+        "notes": "Notes",
+        "saleId": "Sale ID",
+        "completed": "Completed"
+      }
+    },
+    "Analytics": {
+      "title": "Analytics",
+      "revenue": "Total Revenue",
+      "transactions": "Transactions",
+      "activeCustomers": "Active Customers",
+      "insights": "Quick Insights",
+      "avgTransaction": "Average Transaction",
+      "productsInStock": "Products in Stock",
+      "alltime": "All Time",
+      "completedSales": "Completed Sales",
+      "registeredUsers": "Registered Users"
+    }
+  },
+  "reports": {
+    "title": "Reports",
+    "generator": {
+      "page": {
+        "title": "Report Generator",
+        "description": "Select filters and generate accurate PDF reports"
+      },
+      "form": {
+        "card": {
+          "title": "Report Configuration",
+          "description": "Set report parameters and click generate"
+        },
+        "fields": {
+          "reportType": {
+            "label": "Report Type *",
+            "placeholder": "Select Report Type",
+            "helpText": "Select the type of report to generate",
+            "options": {
+              "sales": "Sales Report",
+              "inventory": "Inventory Report",
+              "expenses": "Expenses Report",
+              "loans": "Loans Report",
+              "transfers": "Inventory Transfer Report",
+              "customers": "Customers Report",
+              "financial": "Financial Summary Report",
+              "products": "Product Performance Report"
+            }
+          },
+          "startDate": {
+            "label": "Start Date *"
+          },
+          "endDate": {
+            "label": "End Date *"
+          },
+          "location": {
+            "label": "Location",
+            "placeholder": "All Locations"
+          },
+          "category": {
+            "label": "Product Category",
+            "placeholder": "All Categories"
+          },
+          "expenseCategory": {
+            "label": "Expense Category",
+            "placeholder": "All Expense Categories"
+          },
+          "staff": {
+            "label": "Staff Member",
+            "placeholder": "All Staff"
+          },
+          "status": {
+            "label": "Status",
+            "placeholder": "All Statuses",
+            "options": {
+              "sales": {
+                "completed": "Completed",
+                "pending": "Pending",
+                "cancelled": "Cancelled"
+              },
+              "loans": {
+                "pending": "Pending",
+                "paid": "Paid"
+              },
+              "expenses": {
+                "pending": "Pending",
+                "approved": "Approved",
+                "rejected": "Rejected"
+              }
+            }
+          }
+        }
+      },
+      "actions": {
+        "generate": "Generate and Download PDF",
+        "generating": "Generating and Downloading PDF..."
+      },
+      "infoCard": {
+        "title": "Report Generation Information:",
+        "items": [
+          "Reports are generated in PDF format for easy sharing and printing",
+          "Large reports may take a few moments to generate",
+          "Date range is required for all report types",
+          "Use filters to limit the data included in the report"
+        ]
+      }
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Login to System",
+      "email": "Email",
+      "password": "Password",
+      "button": "Login",
+      "forgotPassword": "Forgot your password?"
+    },
+    "register": {
+      "title": "Register",
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "button": "Register"
+    },
+    "errors": {
+      "invalidEmail": "Email is invalid",
+      "requiredField": "This field is required",
+      "wrongPassword": "Password is incorrect",
+      "passwordMismatch": "Password does not match"
     }
   }
 }

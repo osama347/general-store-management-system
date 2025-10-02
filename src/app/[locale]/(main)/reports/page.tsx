@@ -422,7 +422,7 @@ const ReportsModule = () => {
         </div>
 
         <Card className="border-gray-200">
-          <CardHeader className="bg-gray-50">
+          <CardHeader >
             <CardTitle className="text-xl">{t('generator.form.card.title')}</CardTitle>
             <CardDescription>{t('generator.form.card.description')}</CardDescription>
           </CardHeader>
