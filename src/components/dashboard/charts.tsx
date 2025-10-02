@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts'
 import { format } from 'date-fns'
@@ -105,6 +106,7 @@ async function fetchExpenseData(locationFilter: string | null): Promise<ExpenseC
 }
 
 export function SalesChart({ userRole, locationFilter, dashboardType }: ChartsProps) {
+  const t = useTranslations('dashboard')
   const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse-manager'
   
   const { data: salesData, isLoading, error } = useQuery({
@@ -122,8 +124,8 @@ export function SalesChart({ userRole, locationFilter, dashboardType }: ChartsPr
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Sales Overview</CardTitle>
-          <CardDescription>Failed to load sales data</CardDescription>
+          <CardTitle>{t('charts.sales.title')}</CardTitle>
+          <CardDescription>{t('loadError')}</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -132,8 +134,8 @@ export function SalesChart({ userRole, locationFilter, dashboardType }: ChartsPr
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sales Overview</CardTitle>
-        <CardDescription>Monthly sales for the current year</CardDescription>
+        <CardTitle>{t('charts.sales.title')}</CardTitle>
+        <CardDescription>{t('charts.sales.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
@@ -142,7 +144,7 @@ export function SalesChart({ userRole, locationFilter, dashboardType }: ChartsPr
             <YAxis />
             <Tooltip formatter={(value) => [`$${value}`, 'Total']} />
             <Legend />
-            <Bar dataKey="total" fill="#8884d8" name="Total Sales" />
+            <Bar dataKey="total" fill="#8884d8" name={t('charts.sales.totalSales')} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
@@ -151,6 +153,7 @@ export function SalesChart({ userRole, locationFilter, dashboardType }: ChartsPr
 }
 
 export function ExpenseChart({ userRole, locationFilter, dashboardType }: ChartsProps) {
+  const t = useTranslations('dashboard')
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
   const showWarehouseData = dashboardType === 'warehouse' || userRole === 'warehouse-manager'
 
@@ -169,8 +172,8 @@ export function ExpenseChart({ userRole, locationFilter, dashboardType }: Charts
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Expense Breakdown</CardTitle>
-          <CardDescription>Failed to load expense data</CardDescription>
+          <CardTitle>{t('charts.expenses.title')}</CardTitle>
+          <CardDescription>{t('loadError')}</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -179,8 +182,8 @@ export function ExpenseChart({ userRole, locationFilter, dashboardType }: Charts
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Expense Breakdown</CardTitle>
-        <CardDescription>Expenses by category</CardDescription>
+        <CardTitle>{t('charts.expenses.title')}</CardTitle>
+        <CardDescription>{t('charts.expenses.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
@@ -200,7 +203,7 @@ export function ExpenseChart({ userRole, locationFilter, dashboardType }: Charts
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(value) => [`$${value}`, 'Amount']} />
+            <Tooltip formatter={(value) => [`$${value}`, t('charts.expenses.amount')]} />
           </PieChart>
         </ResponsiveContainer>
       </CardContent>

@@ -1,58 +1,446 @@
 {
   "common": {
+    "appName": "سیستم مدیریت فروشگاه",
+    "loading": "در حال بارگذاری...",
     "navigation": {
-      "home": "",
-      "dashboard": "",
-      "customers": "",
-      "products": "",
-      "sales": "",
-      "reports": "",
-      "logout": ""
-    },
-    "buttons": {
-      "save": "",
-      "cancel": "",
-      "delete": "",
-      "edit": "",
-      "view": ""
-    },
-    "messages": {
-      "loading": "",
-      "error": "",
-      "success": ""
+      "dashboard": "داشبورد",
+      "products": {
+        "title": "محصولات",
+        "all-products": "همه محصولات",
+        "categories": "دسته‌بندی‌ها"
+      },
+      "sales": "فروش",
+      "customers": {
+        "title": "مشتریان",
+        "all-customers": "همه مشتریان",
+        "customers-loans": "وام‌های مشتریان"
+      },
+      "expenses": {
+        "title": "هزینه‌ها",
+        "all-expenses": "همه هزینه‌ها"
+      },
+      "inventory": {
+        "title": "موجودی",
+        "all-inventory": "کل موجودی",
+        "inventory-transfers": "انتقال موجودی"
+      },
+      "reports": "گزارش‌ها",
+      "navUser": {
+        "settings": "تنظیمات",
+        "notifications": "اعلان‌ها",
+        "logout": "خروج",
+        "fallbackName": "کاربر",
+        "fallbackEmail": "user@example.com"
+      }
     }
   },
   "dashboard": {
-    "title": "",
-    "welcomeMessage": "",
-    "stats": {
-      "totalCustomers": "",
-      "totalSales": "",
-      "totalExpenses": ""
+    "common": {
+      "currentMonth": "خلاصه برای {date}",
+      "locationLabel": "مکان",
+      "locationType": {
+        "warehouse": "انبار",
+        "store": "فروشگاه"
+      },
+      "tabs": {
+        "overview": {
+          "title": "خلاصه",
+          "description": "خلاصه کلی سیستم",
+          "placeholder": "جایگزین برای خلاصه"
+        },
+        "detailed": {
+          "title": "جزئیات",
+          "description": "اطلاعات جزئی سیستم",
+          "placeholder": "جایگزین برای جزئیات"
+        }
+      }
     },
-    "cards": {
-      "inventoryStatus": "",
-      "lowStock": "",
-      "recentActivity": ""
+    "header": {
+      "title": {
+        "warehouse": "داشبورد انبار",
+        "store": "داشبورد فروشگاه",
+        "overall": "داشبورد کلی",
+        "default": "داشبورد"
+      },
+      "description": {
+        "warehouse": "اطلاعات و آمار مربوط به انبار",
+        "store": "اطلاعات و آمار مربوط به فروشگاه",
+        "overall": "اطلاعات و آمار کل سیستم",
+        "default": "خلاصه کلی سیستم"
+      }
+    },
+    "kpiCards": {
+      "revenue": {
+        "title": "درآمد کل",
+        "comparison": "نسبت به ماه گذشته"
+      },
+      "expenses": {
+        "title": "هزینه‌های کل",
+        "comparison": "نسبت به ماه گذشته"
+      },
+      "customers": {
+        "title": "مشتریان فعال",
+        "subtitle": "کل مشتریان ثبت شده"
+      },
+      "inventory": {
+        "title": "ارزش موجودی",
+        "lowStock": "موجودی کم",
+        "pendingTransfers": "انتقال‌های در انتظار",
+        "totalValue": "ارزش کل",
+        "totalProducts": "کل محصولات"
+      },
+      "states": {
+        "loading": "در حال بارگذاری اطلاعات...",
+        "error": "خطا در دریافت اطلاعات",
+        "noData": "اطلاعاتی موجود نیست"
+      }
+    },
+    "charts": {
+      "sales": {
+        "title": "خلاصه فروش",
+        "description": "فروش ماهانه سال جاری",
+        "totalSales": "کل فروش"
+      },
+      "expenses": {
+        "title": "تفکیک هزینه‌ها",
+        "description": "هزینه‌ها بر اساس دسته‌بندی",
+        "amount": "مقدار"
+      }
+    },
+    "activityFeed": {
+      "title": "فعالیت‌های اخیر",
+      "description": {
+        "warehouse": "فعالیت‌های اخیر انبار",
+        "store": "فعالیت‌های اخیر فروشگاه"
+      },
+      "noActivities": "فعالیت اخیری وجود ندارد",
+      "loadError": "خطا در بارگذاری فعالیت‌ها"
+    },
+    "inventoryTable": {
+      "title": {
+        "warehouse": "موجودی انبار",
+        "store": "موجودی فروشگاه"
+      },
+      "description": {
+        "warehouse": "وضعیت موجودی انبار",
+        "store": "وضعیت موجودی فروشگاه"
+      },
+      "columns": {
+        "product": "محصول",
+        "sku": "کد محصول",
+        "location": "مکان",
+        "stock": "موجودی",
+        "reserved": "رزرو شده",
+        "value": "ارزش"
+      },
+      "noData": "محصولی با موجودی کم وجود ندارد",
+      "loadError": "خطا در بارگذاری موجودی"
     }
   },
   "customers": {
-    "title": "",
-    "list": "",
-    "details": "",
-    "addCustomer": "",
-    "editCustomer": "",
-    "searchPlaceholder": ""
+    "title": "مشتریان",
+    "description": "لیست مشتریان",
+    "addCustomer": "مشتری جدید",
+    "walkInCustomer": "مشتری عادی",
+    "currentLocation": "مکان فعلی",
+    "searchPlaceholder": "جستجوی مشتریان بر اساس نام، ایمیل یا تلفن...",
+    "loading": "در حال بارگذاری مشتریان...",
+    "error": {
+      "title": "خطا در بارگذاری مشتریان",
+      "description": "لطفاً بعداً دوباره تلاش کنید یا اتصال خود را بررسی کنید.",
+      "technicalDetails": "جزئیات فنی",
+      "retry": "تلاش مجدد"
+    },
+    "noLocation": {
+      "title": "مکانی تخصیص داده نشده",
+      "description": "حساب کاربری شما به هیچ مکانی متصل نیست. لطفاً با مدیر سیستم تماس بگیرید."
+    },
+    "header": {
+      "title": "مدیریت مشتریان ({count})",
+      "locationContext": "نمایش مشتریان برای: {location}",
+      "buttons": {
+        "walkInCustomer": {
+          "title": "مشتری عادی",
+          "label": "مشاهده مشتری عادی"
+        },
+        "addCustomer": {
+          "title": "افزودن مشتری",
+          "label": "افزودن مشتری جدید"
+        }
+      }
+    },
+    "filters": {
+      "search": {
+        "placeholder": "جستجوی مشتریان بر اساس نام، ایمیل یا تلفن..."
+      },
+      "location": {
+        "title": "مکان",
+        "currentLocation": "مکان فعلی ({name})",
+        "allLocations": "همه مکان‌ها"
+      },
+      "status": {
+        "title": "وضعیت",
+        "allCustomers": "همه مشتریان",
+        "withLoans": "دارای وام",
+        "noLoans": "بدون وام"
+      }
+    },
+    "table": {
+      "columns": {
+        "name": "نام",
+        "location": "مکان",
+        "contact": "اطلاعات تماس",
+        "address": "آدرس",
+        "loans": "وام‌ها",
+        "joined": "تاریخ عضویت",
+        "actions": "عملیات"
+      },
+      "cells": {
+        "id": "شناسه",
+        "noAddress": "بدون آدرس",
+        "activeLoans": "وام فعال",
+        "contact": {
+          "email": "ایمیل",
+          "phone": "تلفن"
+        }
+      },
+      "noResults": {
+        "title": "مشتری‌ای پیدا نشد",
+        "withFilters": "فیلترهای جستجو را تنظیم کنید",
+        "noCustomers": "با افزودن اولین مشتری شروع کنید"
+      },
+      "pagination": {
+        "showing": "نمایش",
+        "to": "تا",
+        "of": "از",
+        "results": "نتیجه",
+        "previous": "قبلی", 
+        "next": "بعدی"
+      },
+      "actions": {
+        "view": "مشاهده جزئیات",
+        "edit": "ویرایش مشتری",
+        "delete": "حذف مشتری"
+      }
+    },
+    "addnewform": {
+      "title": "افزودن مشتری جدید",
+      "description": "اطلاعات مشتری را وارد کنید. پس از اتمام روی ذخیره کلیک کنید.",
+      "locationAssociation": "این مشتری با {location} مرتبط خواهد شد.",
+      "form": {
+        "firstName": "نام *",
+        "lastName": "نام خانوادگی *", 
+        "email": "ایمیل",
+        "phone": "تلفن",
+        "address": "آدرس"
+      },
+      "buttons": {
+        "cancel": "انصراف",
+        "create": "ایجاد مشتری",
+        "creating": "در حال ایجاد..."
+      }
+    },
+    "updateform": {
+      "title": "ویرایش مشتری", 
+      "description": "اطلاعات مشتری را به‌روز کنید. پس از اتمام روی ذخیره کلیک کنید.",
+      "form": {
+        "firstName": "نام *",
+        "lastName": "تخلص *",
+        "email": "ایمیل",
+        "phone": "تلفن",
+        "address": "آدرس"
+      },
+      "buttons": {
+        "cancel": "انصراف",
+        "update": "به‌روزرسانی مشتری",
+        "updating": "در حال به‌روزرسانی..."
+      }
+    },
+    "customerdetails": {
+      "dialog": {
+        "title": "جزئیات مشتری",
+        "description": "اطلاعات مشتری و تاریخچه وام",
+        "info": {
+          "fullName": "نام کامل",
+          "customerId": "شماره مشتری",
+          "email": "ایمیل",
+          "phone": "تلفن",
+          "address": "آدرس",
+          "location": "مکان",
+          "memberSince": "عضو از",
+          "totalLoans": "مجموع وام‌ها"
+        },
+        "loanHistory": {
+          "title": "تاریخچه وام",
+          "loanId": "شماره وام",
+          "noDueDate": "بدون تاریخ سررسید",
+          "noHistory": {
+            "title": "بدون تاریخچه وام",
+            "message": "تاریخچه وامی وجود ندارد"
+          }
+        }
+      }
+    }
   },
   "loans": {
-    "title": "",
-    "loanAmount": "",
-    "loanDate": "",
-    "status": {
-      "active": "",
-      "closed": "",
-      "pending": ""
-    }
+    
+      "loading": "در حال بارگذاری وام‌ها...",
+      "error": {
+        "title": "خطا در بارگذاری وام‌ها",
+        "description": "لطفاً بعداً دوباره تلاش کنید یا اتصال خود را بررسی کنید.",
+        "technicalDetails": "جزئیات فنی",
+        "retry": "تلاش مجدد"
+      },
+      "noLocation": {
+        "title": "مکانی تخصیص داده نشده",
+        "description": "حساب کاربری شما به هیچ مکانی متصل نیست. لطفاً با مدیر سیستم تماس بگیرید."
+      },
+      "cards": {
+        "totalLoans": {
+          "title": "کل وام‌ها",
+          "icon": "کردیت کارت"
+        },
+        "totalAmount": {
+          "title": "مبلغ کل",
+          "icon": "علامت دلار"
+        },
+        "pending": {
+          "title": "در انتظار",
+          "icon": "ساعت"
+        },
+        "paid": {
+          "title": "پرداخت شده",
+          "icon": "علامت تیک"
+        }
+      },
+      
+        "tabs": {
+          "all-loans": {
+            "title": "همه وام‌ها",
+            "icon": "کردیت کارت",
+            "search": {
+          "placeholder": "جستجو بر اساس نام مشتری، ایمیل یا شماره وام..."
+            },
+            "filters": {
+          "location": {
+            "title": "مکان",
+            "current": "مکان فعلی ({name})",
+            "all": "همه مکان‌ها"
+          },
+          "status": {
+            "title": "وضعیت", 
+            "all": "همه وضعیت‌ها",
+            "pending": "در انتظار",
+            "paid": "پرداخت شده"
+          }
+            },
+            "table": {
+          "columns": {
+            "loanId": "شماره وام",
+            "customer": "مشتری",
+            "location": "مکان",
+            "amount": "مبلغ",
+            "loanDate": "تاریخ وام",
+            "dueDate": "تاریخ سررسید",
+            "status": "وضعیت",
+            "actions": "عملیات"
+          },
+          "noDueDate": "بدون تاریخ سررسید",
+          "completed": "تکمیل شده",
+          "noLoans": {
+            "title": "وامی پیدا نشد",
+            "withFilters": "فیلترهای جستجو را تنظیم کنید", 
+            "noLoansYet": "با افزودن اولین وام شروع کنید"
+          },
+          "pagination": {
+            "showing": "نمایش",
+            "to": "تا",
+            "of": "از",
+            "results": "نتیجه",
+            "previous": "قبلی",
+            "next": "بعدی"
+          },
+          "actions": {
+            "view": "مشاهده جزئیات",
+            "edit": "ویرایش وام",
+            "markAsPaid": "علامت‌گذاری به عنوان پرداخت شده",
+            "delete": "حذف وام"
+          }
+            }
+          },
+          "customer-notebooks": {
+            "title": "دفترچه‌های وام مشتریان",
+            "icon": "دفترچه", 
+            "description": "برای مشاهده دفترچه وام یک مشتری را انتخاب کنید",
+            "noCustomers": {
+          "title": "مشتری‌ای پیدا نشد",
+          "description": "برای ایجاد دفترچه وام مشتریان را اضافه کنید"
+            },
+            "customerCard": {
+          "email": "ایمیل",
+          "stats": {
+            "loans": "وام‌ها",
+            "amount": "مبلغ",
+            "pending": "معلق", 
+            "paid": "پرداخت شده"
+          },
+          "buttons": {
+            "view": "مشاهده",
+            "addLoan": "افزودن وام"
+          }
+            }
+          },
+          "customer-notebook": {
+            "title": "دفترچه مشتری",
+            "icon": "کاربر",
+            "loanTitle": "دفترچه وام {name}",
+            "filters": {
+          "searchPlaceholder": "جستجو بر اساس شماره وام...",
+          "allStatus": "همه وضعیت‌ها"
+            },
+            "table": {
+          "columns": {
+            "loanId": "شماره وام",
+            "amount": "مبلغ",
+            "loanDate": "تاریخ وام", 
+            "dueDate": "تاریخ سررسید",
+            "status": "وضعیت",
+            "actions": "عملیات"
+          },
+          "noDueDate": "بدون تاریخ سررسید",
+          "completed": "تکمیل شده",
+          "noLoans": {
+            "title": "وامی برای این مشتری پیدا نشد",
+            "withFilters": "فیلترهای جستجو را تنظیم کنید",
+            "noLoansYet": "با افزودن وام شروع کنید"
+          }
+            },
+            "summary": {
+          "title": "خلاصه مشتری",
+          "stats": {
+            "totalLoans": "کل وام‌ها",
+            "totalAmount": "مبلغ کل",
+            "pending": "در انتظار",
+            "paid": "پرداخت شده"
+          }
+            },
+            "actions": {
+          "addLoan": "افزودن وام",
+          "viewDetails": "مشاهده جزئیات",
+          "editLoan": "ویرایش وام", 
+          "markAsPaid": "علامت‌گذاری به عنوان پرداخت شده",
+          "deleteLoan": "حذف وام"
+            }
+          },
+          "actions": {
+            "addLoan": {
+          "title": "افزودن وام",
+          "icon": "علامت به‌علاوه"
+            }
+          }
+        }
+      
+    
   },
   "expenses": {
     "title": "",
@@ -63,12 +451,86 @@
     "notes": ""
   },
   "products": {
-    "title": "",
-    "addProduct": "",
-    "editProduct": "",
-    "price": "",
-    "stock": "",
-    "sku": ""
+    "table": {
+      "title": "محصولات",
+      "description": "لیست تمام محصولات",
+      "searchPlaceholder": "جستجوی محصولات...",
+      "noProductfound": "محصولی پیدا نشد",
+      "noProductsyet": "هنوز محصولی وجود ندارد",
+      "adjustsearcfilters": "فیلترهای جستجو را تنظیم کنید",
+      "addfirstproduct": "اولین محصول خود را اضافه کنید",
+      "addProduct": "محصول جدید",
+      "columns": {
+        "name": "نام",
+        "sku": "کد محصول",
+        "category": "دسته‌بندی",
+        "status": "وضعیت",
+        "price": "قیمت",
+        "stock": "موجودی",
+        "attributes": "ویژگی‌ها",
+        "actions": "عملیات"
+      },
+      "rows": {
+        "attributes": {
+          "title": "ویژگی‌ها",
+          "more": "بیشتر",
+          "none": "ندارد"
+        }
+      },
+      "Pagination": {
+        "first": "اول",
+        "last": "آخر",
+        "showing": "نمایش",
+        "product": "محصول",
+        "of": "از"
+      },
+      "noData": "اطلاعاتی موجود نیست",
+      "loadError": "خطا در دریافت اطلاعات"
+    },
+    "addForm": {
+      "title": "محصول جدید",
+      "description": "افزودن اطلاعات برای محصول جدید",
+      "formFields": {
+        "name": "نام محصول",
+        "sku": "کد محصول (SKU)",
+        "category": "دسته‌بندی",
+        "price": "قیمت",
+        "stockQuantity": "موجودی اولیه",
+        "attributes": "ویژگی‌ها (اختیاری)"
+      },
+      "tabs": {
+        "basicInfo": "اطلاعات اصلی",
+        "inventory": "موجودی",
+        "attributes": "ویژگی‌ها"
+      }
+    },
+    "editForm": {
+      "title": "ویرایش محصول",
+      "description": "به‌روزرسانی اطلاعات محصول",
+      "error": "لطفاً تمام فیلدها را پر کنید",
+      "formFields": {
+        "name": "نام محصول",
+        "sku": "کد محصول (SKU)",
+        "category": "دسته‌بندی",
+        "price": "قیمت",
+        "stockQuantity": "موجودی اولیه",
+        "attributes": "ویژگی‌ها (اختیاری)",
+        "nameplaceholder": "نام محصول را وارد کنید",
+        "skuplaceholder": "کد محصول را وارد کنید",
+        "categoryplaceholder": "یک دسته‌بندی انتخاب کنید",
+        "priceplaceholder": "قیمت محصول را وارد کنید",
+        "stockQuantityPlaceholder": "موجودی اولیه محصول را وارد کنید",
+        "attributesPlaceholder": "ویژگی‌ها (اختیاری)",
+        "attributetype": "نوع ویژگی",
+        "attributevalue": "مقدار ویژگی",
+        "noattribute": "هیچ ویژگی برای این دسته‌بندی وجود ندارد"
+      },
+      "tabs": {
+        "basicInfo": "اطلاعات اصلی",
+        "inventory": "موجودی",
+        "attributes": "ویژگی‌ها"
+      }
+    }
   },
   "inventory": {
     "title": "",
@@ -86,19 +548,162 @@
     "transferDate": ""
   },
   "categories": {
-    "title": "",
-    "addCategory": "",
-    "editCategory": "",
-    "deleteCategory": "",
-    "list": ""
+    "title": "دسته‌بندی‌ها",
+    "description": "لیست تمام دسته‌بندی‌ها",
+    "addCategory": "افزودن دسته‌بندی جدید",
+    "editCategory": "ویرایش دسته‌بندی",
+    "UpdateCategory": "به‌روزرسانی دسته‌بندی",
+    "saving": "در حال ذخیره...",
+    "deleteCategory": "حذف دسته‌بندی",
+    "list": "لیست دسته‌بندی‌ها",
+    "searchPlaceholder": "جستجوی دسته‌بندی‌ها...",
+    "noCategoryfound": "دسته‌بندی پیدا نشد",
+    "nodescription": "توضیحاتی وجود ندارد",
+    "moreattributes": "ویژگی‌های بیشتر",
+    "tabs": {
+      "basicInfo": "اطلاعات اصلی",
+      "attributes": "ویژگی‌ها"
+    },
+    "addForm": {
+      "title": "دسته‌بندی جدید",
+      "description": "افزودن اطلاعات برای دسته‌بندی جدید",
+      "formFields": {
+        "name": "نام دسته‌بندی",
+        "description": "توضیحات دسته‌بندی",
+        "addnewattribute": "افزودن ویژگی جدید",
+        "attributename": "نام ویژگی"
+      }
+    },
+    "editForm": {
+      "title": "ویرایش دسته‌بندی",
+      "description": "به‌روزرسانی اطلاعات دسته‌بندی",
+      "formFields": {
+        "name": "نام دسته‌بندی",
+        "description": "توضیحات دسته‌بندی",
+        "addnewattribute": "افزودن ویژگی جدید",
+        "attributename": "نام ویژگی",
+        "attributesPlaceholder": "افزودن ویژگی‌ها",
+        "descriptionPlaceholder": "توضیحات دسته‌بندی را وارد کنید",
+        "namePlaceholder": "نام دسته‌بندی را وارد کنید"
+      },
+      "error": "لطفاً تمام فیلدها را پر کنید"
+    }
   },
   "sales": {
-    "title": "",
-    "newSale": "",
-    "invoice": "",
-    "total": "",
-    "discount": "",
-    "paymentStatus": ""
+    "loading": "لطفاً صبر کنید...",
+    "tryAgain": "تلاش مجدد",
+    "somethingwentwrong": "خطایی رخ داد",
+    "nolocationselected": "هیچ مکانی انتخاب نشده",
+    "pleaseselectalocation": "لطفاً برای مشاهده محصولات یک مکان را انتخاب کنید",
+    "pointofsale": "نقطه فروش",
+    "processtransactions": "پردازش معاملات به صورت مؤثر",
+    "products": "محصولات",
+    "customers": "مشتریان",
+    "searchplaceholder": "جستجوی محصولات",
+    "tabs": {
+      "terminal": "ترمینال",
+      "history": "تاریخچه",
+      "analytics": "تحلیل‌ها"
+    },
+    "header": {
+      "title": "فروش",
+      "description": "لیست تمام فروش‌ها"
+    },
+    "availableProducts": {
+      "title": "محصولات",
+      "availableProducts": "محصول موجود است",
+      "left": "باقی مانده",
+      "searchPlaceholder": "جستجوی محصولات...",
+      "addtocart": "افزودن به سبد",
+      "allcategories": "همه دسته‌بندی‌ها",
+      "noproductsfound": "هیچ محصولی پیدا نشد",
+      "tryadjusting": "فیلترهای جستجو را تنظیم کنید",
+      "addmore": "افزودن بیشتر",
+      "noData": "اطلاعاتی موجود نیست",
+      "loadError": "خطا در دریافت اطلاعات"
+    },
+    "customer": {
+      "label": "مشتری",
+      "selectPlaceholder": "انتخاب مشتری",
+      "addNew": "افزودن مشتری جدید",
+      "changeCustomer": "تغییر مشتری",
+      "removeCustomer": "حذف مشتری",
+      "addcustomerform": {
+        "title": "مشتری جدید",
+        "description": "افزودن اطلاعات برای مشتری جدید",
+        "formFields": {
+          "firstname": "نام مشتری",
+          "lastname": "نام خانوادگی مشتری",
+          "email": "ایمیل مشتری",
+          "phone": "تلفن مشتری",
+          "address": "آدرس مشتری"
+        }
+      }
+    },
+    "staff": {
+      "title": "کارکنان"
+    },
+    "cart": {
+      "title": "سبد خرید",
+      "empty": "سبد خرید خالی است",
+      "items": "اقلام",
+      "addproductstostart": "محصولات را اضافه کنید تا شروع کنید",
+      "total": "جمع کل",
+      "checkout": "تسویه حساب",
+      "proceedpayment": "ادامه به پرداخت",
+      "completetransaction": "تکمیل معامله",
+      "ordersummary": "خلاصه سفارش",
+      "confirmpayment": "تأیید پرداخت"
+    },
+    "saleshistory": {
+      "title": "تاریخچه فروش",
+      "totalSales": "کل فروش",
+      "filters": "فیلترها",
+      "transactions": "معاملات",
+      "averagesale": "میانگین فروش",
+      "completed": "تکمیل شده",
+      "daterange": "بازه زمانی",
+      "from": "از",
+      "to": "تا",
+      "status": "وضعیت",
+      "allstatuses": "همه وضعیت‌ها",
+      "canceled": "لغو شده",
+      "pending": "در انتظار",
+      "apply": "اعمال",
+      "reset": "بازنشانی",
+      "export": "خروجی",
+      "notransactions": "هیچ معامله‌ای پیدا نشد",
+      "tryadjusting": "فیلترهای جستجو را تنظیم کنید",
+      "next": "بعدی",
+      "previous": "قبلی",
+      "saledetails": {
+        "title": "جزئیات فروش",
+        "invoice": "فاکتور",
+        "date": "تاریخ",
+        "customer": "مشتری",
+        "status": "وضعیت",
+        "totalamount": "مبلغ کل",
+        "items": "اقلام",
+        "printreciept": "چاپ رسید",
+        "viewfulldetails": "مشاهده جزئیات کامل",
+        "emailreciept": "ارسال رسید به ایمیل",
+        "notes": "یادداشت‌ها",
+        "saleId": "شماره فروش",
+        "completed": "تکمیل شده"
+      }
+    },
+    "Analytics": {
+      "title": "تحلیل‌ها",
+      "revenue": "درآمد کل",
+      "transactions": "معاملات",
+      "activeCustomers": "مشتریان فعال",
+      "insights": "بینش‌های سریع",
+      "avgTransaction": "میانگین معامله",
+      "productsInStock": "محصولات موجود",
+      "alltime": "کل زمان",
+      "completedSales": "فروش‌های تکمیل شده",
+      "registeredUsers": "کاربران ثبت شده"
+    }
   },
   "reports": {
     "title": "",
@@ -109,25 +714,25 @@
   },
   "auth": {
     "login": {
-      "title": "",
-      "email": "",
-      "password": "",
-      "button": "",
-      "forgotPassword": ""
+      "title": "ورود به سیستم",
+      "email": "ایمیل",
+      "password": "رمز عبور",
+      "button": "ورود",
+      "forgotPassword": "رمز عبور را فراموش کرده‌اید؟"
     },
     "register": {
-      "title": "",
-      "name": "",
-      "email": "",
-      "password": "",
-      "confirmPassword": "",
-      "button": ""
+      "title": "ثبت نام",
+      "name": "نام",
+      "email": "ایمیل",
+      "password": "رمز عبور",
+      "confirmPassword": "تأیید رمز عبور",
+      "button": "ثبت نام"
     },
     "errors": {
-      "invalidEmail": "",
-      "requiredField": "",
-      "wrongPassword": "",
-      "passwordMismatch": ""
+      "invalidEmail": "ایمیل نامعتبر است",
+      "requiredField": "این فیلد الزامی است",
+      "wrongPassword": "رمز عبور اشتباه است",
+      "passwordMismatch": "رمز عبور مطابقت ندارد"
     }
   }
 }

@@ -27,25 +27,28 @@ import { useFormatter, useTranslations } from 'next-intl'
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
 
-   const t = useTranslations('common.navigation')
+  const t = useTranslations('common.navigation')
   const formatter = useFormatter()
   const { isLoading, hasLocations } = useLocation()
   const { profile, loading: authLoading } = useAuth()
 
-  const base = [{ title: "Dashboard", url: "/dashboard", icon: BarChart3 }]
+  // Get translated titles for comparison
+  const productsTitle = t("products.title")
+  
+  const base = [{ title: t('dashboard'), url: "/dashboard", icon: BarChart3 }]
   
   const storeItems = [
     {
-      title: t("Products"),
+      title: productsTitle,
       url: "/products",
       icon: Package,
       items: [
-        { title: "All Products", url: "/products" },
-        { title: "Categories", url: "/products/categories" },
+        { title: t('products.all-products'), url: "/products" },
+        { title: t('products.categories'), url: "/products/categories" },
       ],
     },
     {
-      title: "Sales",
+      title: t("sales"),
       url: "/sales",
       icon: ShoppingCart,
       items: [
@@ -53,43 +56,43 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       ],
     },
     { 
-      title: "Customers", 
+      title: t('customers.title'), 
       url: "/customers", 
       icon: Users,
       items: [
-        { title: "All Customers", url: "/customers" },
-        { title: "Customers Loans", url: "/customers/loans" },
+        { title: t('customers.all-customers'), url: "/customers" },
+        { title: t('customers.customers-loans'), url: "/customers/loans" },
       ],
     },
     { 
-      title: "Expenses", 
+      title: t('expenses.title'), 
       url: "/expenses", 
       icon: DollarSign,
       items: [
-        { title: "All Expenses", url: "/expenses" },
+        { title: t('expenses.all-expenses'), url: "/expenses" },
       ],
     },
   ]
 
   const warehouseItems = [
     {
-      title: "Inventory",
+      title: t('inventory.title'),
       url: "/inventory",
       icon: WarehouseIcon,
       items: [
-        { title: "All Inventory", url: "/inventory" },
-        { title: "Inventory Transfers", url: "/inventory/transfers" },
+        { title: t('inventory.all-inventory'), url: "/inventory" },
+        { title: t('inventory.inventory-transfers'), url: "/inventory/transfers" },
       ],
     },
   ]
 
   const reports = [
     {
-      title: "Reports",
+      title: t('reports'),
       url: "/reports",
       icon: FileText,
       items: [
-        { title: "All Reports", url: "/reports" },
+        { title: 'all reports', url: "/reports" },
       ],
     },
   ]
@@ -110,7 +113,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         
       case 'warehouse-manager':
         // Warehouse manager sees only inventory, products, and reports
-        return [...base, ...storeItems.filter(item => item.title === "Products"), ...warehouseItems, ...reports]
+        return [...base, ...storeItems.filter(item => item.title === productsTitle), ...warehouseItems, ...reports]
         
       case 'store-manager':
         // Store manager sees everything except inventory
@@ -185,7 +188,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           <LocationSwitcher />
         ) : (
           <div className="text-sm text-muted-foreground px-2 py-1">
-            No locations found
+            {t('no-locations-found')}
           </div>
         )}
       </SidebarHeader>

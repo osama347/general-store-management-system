@@ -48,7 +48,9 @@ import {
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/hooks/use-auth"
- import { useLocation } from "@/contexts/LocationContext"
+import { useLocation } from "@/contexts/LocationContext"
+import { useTranslations } from "next-intl"
+
 
 // Define types
 interface Category {
@@ -110,6 +112,7 @@ interface CartItem {
 // }
 
 export default function MinimalistPOSPage() {
+  const t = useTranslations("sales")
   const { currentLocation } = useLocation()
   const [products, setProducts] = useState<Product[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -135,7 +138,7 @@ const [salesSearchTerm, setSalesSearchTerm] = useState("")
 const [dateFilter, setDateFilter] = useState({ from: "", to: "" })
 const [statusFilter, setStatusFilter] = useState("all")
 const WALK_IN_CUSTOMER_ID = 1;
-  const {profile} = useAuth()
+const { profile } = useAuth()
 
  
   
@@ -223,7 +226,7 @@ const WALK_IN_CUSTOMER_ID = 1;
     }
 
     // Fetch categories
-    const { data: categoriesData, error: categoriesError } = await supabase
+const { data: categoriesData, error: categoriesError } = await supabase
       .from("categories")
       .select("name")
 
@@ -438,7 +441,7 @@ const handleCheckout = async () => {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin text-slate-600 mx-auto" />
-          <p className="text-slate-600 font-medium">Loading...</p>
+          <p className="text-slate-600 font-medium">{t("loading")}</p>
         </div>
       </div>
     )
@@ -451,10 +454,10 @@ const handleCheckout = async () => {
           <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto">
             <X className="h-6 w-6 text-red-600" />
           </div>
-          <p className="text-slate-800 font-medium">Something went wrong</p>
+          <p className="text-slate-800 font-medium">{t("somethingwentwrong")}</p>
           <p className="text-slate-600 text-sm">{error}</p>
           <Button onClick={fetchData} variant="outline" className="bg-white">
-            Try Again
+            {t('tryAgain')}
           </Button>
         </div>
       </div>
@@ -464,8 +467,8 @@ const handleCheckout = async () => {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="text-center space-y-4">
-        <p className="text-slate-600 font-medium">No location selected</p>
-        <p className="text-slate-600">Please select a location to view products</p>
+        <p className="text-slate-600 font-medium">{t("nolocationselected")}</p>
+        <p className="text-slate-600">{t("pleaseselectalocation")}</p>
       </div>
     </div>
   )
@@ -478,15 +481,15 @@ const handleCheckout = async () => {
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Point of Sale</h1>
-              <p className="text-slate-600 text-sm mt-1">Process transactions efficiently</p>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('pointofsale')}</h1>
+              <p className="text-slate-600 text-sm mt-1">{t('processtransactions')}</p>
             </div>
             <div className="flex items-center space-x-2">
               <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0">
-                {products.length} Products
+                {products.length} {t('products')}
               </Badge>
               <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0">
-                {customers.length} Customers
+                {customers.length} {t('customers')}
               </Badge>
             </div>
           </div>
@@ -501,19 +504,19 @@ const handleCheckout = async () => {
               value="pos" 
               className="px-6 py-3 text-sm font-medium data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg transition-all"
             >
-              Terminal
+              {t('tabs.terminal')}
             </TabsTrigger>
             <TabsTrigger 
               value="sales" 
               className="px-6 py-3 text-sm font-medium data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg transition-all"
             >
-              History
+              {t('tabs.history')}
             </TabsTrigger>
             <TabsTrigger 
               value="analytics" 
               className="px-6 py-3 text-sm font-medium data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg transition-all"
             >
-              Analytics
+              {t('tabs.analytics')}
             </TabsTrigger>
           </TabsList>
 
@@ -527,7 +530,7 @@ const handleCheckout = async () => {
                     <div className="flex-1 relative">
                       <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
                       <Input
-                        placeholder="Search products or SKU..."
+                        placeholder={t("searchplaceholder") }
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-12 py-3 bg-slate-50 border-0 text-base focus:bg-white focus:ring-2 focus:ring-slate-900"
@@ -540,7 +543,7 @@ const handleCheckout = async () => {
                           <SelectValue placeholder="All Categories" />
                         </SelectTrigger>
                         <SelectContent className="border-0 shadow-lg">
-                          <SelectItem value="all">All Categories</SelectItem>
+                          <SelectItem value="all">{t('availableProducts.allcategories')}</SelectItem>
                           {categories.map((category) => (
                             <SelectItem key={category} value={category}>
                               {category}
@@ -555,8 +558,8 @@ const handleCheckout = async () => {
                 {/* Product Grid - Minimalist Cards */}
                 <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                   <div className="p-6 border-b border-slate-100">
-                    <h3 className="font-semibold text-slate-900">Products</h3>
-                    <p className="text-slate-600 text-sm mt-1">{filteredProducts.length} items available</p>
+                    <h3 className="font-semibold text-slate-900">{t('products')}</h3>
+                    <p className="text-slate-600 text-sm mt-1">{filteredProducts.length} {t('availableProducts.availableProducts')}</p>
                   </div>
                   
                   <ScrollArea className="h-[600px]">
@@ -564,8 +567,8 @@ const handleCheckout = async () => {
                       {filteredProducts.length === 0 ? (
                         <div className="text-center py-16">
                           <Package className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                          <p className="text-slate-600 font-medium">No products found</p>
-                          <p className="text-slate-500 text-sm mt-1">Try adjusting your search or filters</p>
+                          <p className="text-slate-600 font-medium">{t('availableProducts.noproductsfound')}</p>
+                          <p className="text-slate-500 text-sm mt-1">{t('availableProducts.tryadjusting')}</p>
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -597,7 +600,7 @@ const handleCheckout = async () => {
                                       variant={totalStock > 10 ? "secondary" : totalStock > 0 ? "outline" : "destructive"} 
                                       className="text-xs border-0"
                                     >
-                                      {totalStock} left
+                                      {totalStock} {t('availableProducts.left')}
                                     </Badge>
                                   </div>
                                 </div>
@@ -611,12 +614,12 @@ const handleCheckout = async () => {
                                   {inCart ? (
                                     <>
                                       <CheckCircle className="h-4 w-4 mr-2" />
-                                      Add More
+                                      {t('availableProducts.addmore')}
                                     </>
                                   ) : (
                                     <>
                                       <Plus className="h-4 w-4 mr-2" />
-                                      Add to Cart
+                                      {t('availableProducts.addtocart')}
                                     </>
                                   )}
                                 </Button>
@@ -639,7 +642,7 @@ const handleCheckout = async () => {
     <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
       <User className="h-4 w-4 text-slate-600" />
     </div>
-    <h3 className="font-semibold text-slate-900">Customer</h3>
+    <h3 className="font-semibold text-slate-900">{t('customer.label')}</h3>
   </div>
 
   {selectedCustomer ? (
@@ -661,7 +664,7 @@ const handleCheckout = async () => {
           onClick={() => setSelectedCustomer(null)}
           className="flex-1 border-slate-200 hover:bg-slate-50"
         >
-          Change Customer
+         {t('customer.changeCustomer')}
         </Button>
         <Button
           variant="outline"
@@ -685,7 +688,7 @@ const handleCheckout = async () => {
         }}
       >
         <SelectTrigger className="bg-slate-50 border-0 focus:bg-white focus:ring-2 focus:ring-slate-900">
-          <SelectValue placeholder="Select customer" />
+          <SelectValue placeholder={t('customer.selectPlaceholder')} />
         </SelectTrigger>
         <SelectContent className="border-0 shadow-lg">
           <SelectItem value="walkin">🚶 Walk-in Customer</SelectItem>
@@ -701,17 +704,17 @@ const handleCheckout = async () => {
         <DialogTrigger asChild>
           <Button variant="outline" className="w-full border-slate-200 hover:bg-slate-50">
             <Plus className="h-4 w-4 mr-2" />
-            Add New Customer
+            {t('customer.addNew')}
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-md border-0 shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">Add Customer</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">{t('customer.addNew')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName" className="text-sm font-medium text-slate-700">First Name</Label>
+                <Label htmlFor="firstName" className="text-sm font-medium text-slate-700">{t('customer.addcustomerform.formFields.firstname')}</Label>
                 <Input
                   id="firstName"
                   value={newCustomer.first_name}
@@ -722,7 +725,7 @@ const handleCheckout = async () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName" className="text-sm font-medium text-slate-700">Last Name</Label>
+                <Label htmlFor="lastName" className="text-sm font-medium text-slate-700">{t('customer.addcustomerform.formFields.lastname')}</Label>
                 <Input
                   id="lastName"
                   value={newCustomer.last_name}
@@ -732,7 +735,7 @@ const handleCheckout = async () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium text-slate-700">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium text-slate-700">{t('customer.addcustomerform.formFields.email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -742,7 +745,7 @@ const handleCheckout = async () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone" className="text-sm font-medium text-slate-700">Phone</Label>
+              <Label htmlFor="phone" className="text-sm font-medium text-slate-700">{t('customer.addcustomerform.formFields.phone')}</Label>
               <Input
                 id="phone"
                 value={newCustomer.phone}
@@ -751,7 +754,7 @@ const handleCheckout = async () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="address" className="text-sm font-medium text-slate-700">Address</Label>
+              <Label htmlFor="address" className="text-sm font-medium text-slate-700">{t('customer.addcustomerform.formFields.address')}</Label>
               <Input
                 id="address"
                 value={newCustomer.address || ""}
@@ -760,7 +763,7 @@ const handleCheckout = async () => {
               />
             </div>
             <Button onClick={handleCreateCustomer} className="w-full bg-slate-900 hover:bg-slate-800">
-              Create Customer
+              {t('customer.addNew')}
             </Button>
           </div>
         </DialogContent>
@@ -775,7 +778,7 @@ const handleCheckout = async () => {
     <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
       <Users className="h-4 w-4 text-slate-600" />
     </div>
-    <h3 className="font-semibold text-slate-900">Staff</h3>
+    <h3 className="font-semibold text-slate-900">{t('staff.title')}</h3>
   </div>
 
   {profile && profile.id && (
@@ -800,8 +803,8 @@ const handleCheckout = async () => {
                           <ShoppingCart className="h-4 w-4 text-slate-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-slate-900">Cart</h3>
-                          <p className="text-sm text-slate-600">{cartItemCount} items</p>
+                          <h3 className="font-semibold text-slate-900">{t('cart.title')}</h3>
+                          <p className="text-sm text-slate-600">{cartItemCount} {t('cart.items')}</p>
                         </div>
                       </div>
                       {cartItems.length > 0 && (
@@ -816,8 +819,8 @@ const handleCheckout = async () => {
                     {cartItems.length === 0 ? (
                       <div className="p-8 text-center">
                         <ShoppingCart className="h-8 w-8 text-slate-300 mx-auto mb-3" />
-                        <p className="text-slate-600 font-medium">Cart is empty</p>
-                        <p className="text-slate-500 text-sm mt-1">Add products to get started</p>
+                        <p className="text-slate-600 font-medium">{t('cart.empty')}</p>
+                        <p className="text-slate-500 text-sm mt-1">{t('cart.addproductstostart')}</p>
                       </div>
                     ) : (
                       <div className="p-4 space-y-3">
@@ -866,7 +869,7 @@ const handleCheckout = async () => {
                     <div className="p-6 border-t border-slate-100 bg-slate-50">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <span className="text-lg font-semibold text-slate-900">Total</span>
+                          <span className="text-lg font-semibold text-slate-900">{t('cart.total')}</span>
                           <span className="text-xl font-bold text-slate-900">{formatCurrency(cartTotal)}</span>
                         </div>
 
@@ -877,17 +880,17 @@ const handleCheckout = async () => {
                               disabled={cartItems.length === 0 || !selectedCustomer || !profile?.id}
                             >
                               <CreditCard className="h-5 w-5 mr-2" />
-                              Process Payment
+                              {t('cart.proceedpayment')}
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="sm:max-w-lg border-0 shadow-xl">
                             <DialogHeader>
-                              <DialogTitle className="text-xl font-semibold">Complete Transaction</DialogTitle>
+                              <DialogTitle className="text-xl font-semibold">{t('cart.completetransaction')}</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-6">
                               <div className="space-y-4">
                                 <div className="p-4 bg-slate-50 rounded-lg">
-                                  <h4 className="font-semibold text-slate-900 mb-3">Order Summary</h4>
+                                  <h4 className="font-semibold text-slate-900 mb-3">{t('cart.ordersummary')}</h4>
                                   <div className="space-y-2">
                                     {cartItems.map((item) => (
                                       <div key={item.product_id} className="flex justify-between text-sm">
@@ -902,7 +905,7 @@ const handleCheckout = async () => {
                                   </div>
                                   <Separator className="my-3" />
                                   <div className="flex justify-between">
-                                    <span className="font-semibold text-slate-900">Total</span>
+                                    <span className="font-semibold text-slate-900">{t('cart.total')}</span>
                                     <span className="text-lg font-bold text-slate-900">{formatCurrency(cartTotal)}</span>
                                   </div>
                                 </div>
@@ -910,7 +913,7 @@ const handleCheckout = async () => {
                                 {/* In the checkout dialog */}
 <div className="grid grid-cols-2 gap-4">
   <div className="p-3 bg-slate-50 rounded-lg">
-    <p className="text-xs text-slate-600 mb-1">Customer</p>
+    <p className="text-xs text-slate-600 mb-1">{t('cart.customer')}</p>
     <p className="font-medium text-slate-900">
       {selectedCustomer 
         ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` 
@@ -918,7 +921,7 @@ const handleCheckout = async () => {
     </p>
   </div>
   <div className="p-3 bg-slate-50 rounded-lg">
-    <p className="text-xs text-slate-600 mb-1">Staff</p>
+    <p className="text-xs text-slate-600 mb-1">{t('cart.staff')}</p>
     <p className="font-medium text-slate-900">
       {profile?.full_name} 
     </p>
@@ -927,7 +930,7 @@ const handleCheckout = async () => {
                               </div>
 
                               <Button onClick={handleCheckout} className="w-full bg-slate-900 hover:bg-slate-800 py-3 text-base">
-                                Confirm Payment
+                                {t('cart.confirmpayment')}
                               </Button>
                             </div>
                           </DialogContent>
@@ -946,8 +949,8 @@ const handleCheckout = async () => {
     <div className="p-6 border-b border-slate-100">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h3 className="font-semibold text-slate-900">Sales History</h3>
-          <p className="text-slate-600 text-sm mt-1">{sales.length} total sales</p>
+          <h3 className="font-semibold text-slate-900">{t('saleshistory.title')}</h3>
+          <p className="text-slate-600 text-sm mt-1">{sales.length} {t('saleshistory.totalSales')}</p>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3">
@@ -965,16 +968,16 @@ const handleCheckout = async () => {
             <PopoverTrigger asChild>
               <Button variant="outline" className="gap-2">
                 <Filter className="h-4 w-4" />
-                Filters
+                {t('saleshistory.filters')}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Date Range</h4>
+                  <h4 className="font-medium text-sm">{t('saleshistory.daterange')}</h4>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <Label htmlFor="from-date" className="text-xs">From</Label>
+                      <Label htmlFor="from-date" className="text-xs">{t('saleshistory.from')}</Label>
                       <Input 
                         id="from-date" 
                         type="date" 
@@ -984,7 +987,7 @@ const handleCheckout = async () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="to-date" className="text-xs">To</Label>
+                      <Label htmlFor="to-date" className="text-xs">{t('saleshistory.to')}</Label>
                       <Input 
                         id="to-date" 
                         type="date" 
@@ -997,16 +1000,16 @@ const handleCheckout = async () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Status</h4>
+                  <h4 className="font-medium text-sm">{t('saleshistory.status')}</h4>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="All statuses" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="Completed">Completed</SelectItem>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Cancelled">Cancelled</SelectItem>
+                      <SelectItem value="all">{t('saleshistory.allstatuses')}</SelectItem>
+                      <SelectItem value="Completed">{t('saleshistory.completed')}</SelectItem>
+                      <SelectItem value="Pending">{t('saleshistory.pending')}</SelectItem>
+                      <SelectItem value="Cancelled">{t('saleshistory.canceled')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1021,10 +1024,10 @@ const handleCheckout = async () => {
                       setStatusFilter("all")
                     }}
                   >
-                    Reset
+                    {t('saleshistory.reset')}
                   </Button>
                   <Button size="sm" onClick={() => document.body.click()}>
-                    Apply
+                    {t('saleshistory.apply')}
                   </Button>
                 </div>
               </div>
@@ -1033,7 +1036,7 @@ const handleCheckout = async () => {
           
           <Button variant="outline" className="gap-2">
             <Download className="h-4 w-4" />
-            Export
+            {t('saleshistory.export')}  
           </Button>
         </div>
       </div>
@@ -1043,15 +1046,15 @@ const handleCheckout = async () => {
       {filteredSales.length === 0 ? (
         <div className="p-12 text-center">
           <DollarSign className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-600 font-medium">No sales found</p>
-          <p className="text-slate-500 text-sm mt-1">Try adjusting your search or filters</p>
+          <p className="text-slate-600 font-medium">{t('saleshistory.notransactions')}</p>
+          <p className="text-slate-500 text-sm mt-1">{t('saleshistory.tryadjusting')}</p>
         </div>
       ) : (
         <>
           {/* Sales Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6 bg-slate-50">
             <div className="bg-white p-4 rounded-lg border">
-              <p className="text-sm text-slate-600">Total Sales</p>
+              <p className="text-sm text-slate-600">{t('saleshistory.totalSales')}</p>
               <p className="text-xl font-bold text-slate-900">
                 {formatCurrency(
                   filteredSales.reduce((sum: number, sale: any) => sum + Number(sale.total_amount), 0)
@@ -1059,11 +1062,11 @@ const handleCheckout = async () => {
               </p>
             </div>
             <div className="bg-white p-4 rounded-lg border">
-              <p className="text-sm text-slate-600">Transactions</p>
+              <p className="text-sm text-slate-600">{t('saleshistory.transactions')}</p>
               <p className="text-xl font-bold text-slate-900">{filteredSales.length}</p>
             </div>
             <div className="bg-white p-4 rounded-lg border">
-              <p className="text-sm text-slate-600">Average Sale</p>
+              <p className="text-sm text-slate-600">{t('saleshistory.averagesale')}</p>
               <p className="text-xl font-bold text-slate-900">
                 {formatCurrency(
                   filteredSales.length > 0 
@@ -1073,7 +1076,7 @@ const handleCheckout = async () => {
               </p>
             </div>
             <div className="bg-white p-4 rounded-lg border">
-              <p className="text-sm text-slate-600">Completed</p>
+              <p className="text-sm text-slate-600">{t('saleshistory.completed')}</p>
               <p className="text-xl font-bold text-slate-900">
                 {filteredSales.filter(sale => sale.status === "Completed").length}
               </p>
@@ -1136,16 +1139,16 @@ const handleCheckout = async () => {
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-md border-0 shadow-xl">
                         <DialogHeader>
-                          <DialogTitle className="text-xl font-semibold">Sale Details</DialogTitle>
+                          <DialogTitle className="text-xl font-semibold">{t("saleshistory.saledetails.title")}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <p className="text-xs text-slate-500">Sale ID</p>
+                              <p className="text-xs text-slate-500">{t("saleshistory.saledetails.saleId")}</p>
                               <p className="font-medium">#{sale.sale_id}</p>
                             </div>
                             <div className="space-y-2">
-                              <p className="text-xs text-slate-500">Date</p>
+                              <p className="text-xs text-slate-500">{t("saleshistory.saledetails.date")}</p>
                               <p className="font-medium">
                                 {new Date(sale.sale_date).toLocaleDateString("en-US", {
                                   year: "numeric",
@@ -1159,7 +1162,7 @@ const handleCheckout = async () => {
                           </div>
                           
                           <div className="space-y-2">
-                            <p className="text-xs text-slate-500">Customer</p>
+                            <p className="text-xs text-slate-500">{t("saleshistory.saledetails.customer")}</p>
                             <p className="font-medium">
                               {sale.customer?.first_name} {sale.customer?.last_name}
                             </p>
@@ -1172,7 +1175,7 @@ const handleCheckout = async () => {
                           </div>
                           
                           <div className="space-y-2">
-                            <p className="text-xs text-slate-500">Status</p>
+                            <p className="text-xs text-slate-500">{t("saleshistory.saledetails.status")}</p>
                             <Badge 
                               variant={sale.status === "Completed" ? "secondary" : "outline"}
                               className={`text-xs ${
@@ -1189,17 +1192,17 @@ const handleCheckout = async () => {
                           
                           <div className="space-y-3 pt-2">
                             <div className="flex justify-between">
-                              <span className="font-medium">Total Amount</span>
+                              <span className="font-medium">{t("saleshistory.saledetails.totalamount")}</span>
                               <span className="font-bold text-lg">{formatCurrency(Number(sale.total_amount))}</span>
                             </div>
                           </div>
                           
                           <div className="flex justify-end gap-2 pt-4">
                             <Button variant="outline" size="sm">
-                              Print Receipt
+                              {t("saleshistory.saledetails.printreciept")}
                             </Button>
                             <Button size="sm">
-                              View Full Details
+                              {t("saleshistory.saledetails.viewfulldetails")}
                             </Button>
                           </div>
                         </div>
@@ -1215,16 +1218,17 @@ const handleCheckout = async () => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem>
                           <Receipt className="mr-2 h-4 w-4" />
-                          Print Receipt
+                          {t("saleshistory.saledetails.printreciept")}
+
                         </DropdownMenuItem>
                         <DropdownMenuItem>
                           <Mail className="mr-2 h-4 w-4" />
-                          Email Receipt
+                          {t("saleshistory.saledetails.emailreciept")}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem>
                           <FileText className="mr-2 h-4 w-4" />
-                          View Details
+                          {t("saleshistory.saledetails.viewfulldetails")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1243,10 +1247,10 @@ const handleCheckout = async () => {
                 </p>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" disabled>
-                    Previous
+                    {t('saleshistory.previous')}
                   </Button>
                   <Button variant="outline" size="sm">
-                    Next
+                   {t('saleshistory.next')}
                   </Button>
                 </div>
               </div>
@@ -1265,13 +1269,13 @@ const handleCheckout = async () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-slate-600">Total Revenue</p>
+                      <p className="text-sm font-medium text-slate-600">{t("Analytics.revenue")}</p>
                       <p className="text-2xl font-bold text-slate-900">
                         {formatCurrency(
                           sales.reduce((sum: number, sale: any) => sum + Number(sale.total_amount), 0)
                         )}
                       </p>
-                      <p className="text-xs text-slate-500">All time</p>
+                      <p className="text-xs text-slate-500">{t("Analytics.alltime")}</p>
                     </div>
                     <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
                       <DollarSign className="h-6 w-6 text-slate-600" />
@@ -1284,9 +1288,9 @@ const handleCheckout = async () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-slate-600">Transactions</p>
+                      <p className="text-sm font-medium text-slate-600">{t("Analytics.transactions")}</p>
                       <p className="text-2xl font-bold text-slate-900">{sales.length}</p>
-                      <p className="text-xs text-slate-500">Completed sales</p>
+                      <p className="text-xs text-slate-500">{t("Analytics.completedSales")}</p>
                     </div>
                     <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
                       <TrendingUp className="h-6 w-6 text-slate-600" />
@@ -1299,9 +1303,9 @@ const handleCheckout = async () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-slate-600">Active Customers</p>
+                      <p className="text-sm font-medium text-slate-600">{t("Analytics.activeCustomers")}</p>
                       <p className="text-2xl font-bold text-slate-900">{customers.length}</p>
-                      <p className="text-xs text-slate-500">Registered users</p>
+                      <p className="text-xs text-slate-500">{t("Analytics.registeredUsers")}</p>
                     </div>
                     <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
                       <Users className="h-6 w-6 text-slate-600" />
@@ -1313,10 +1317,10 @@ const handleCheckout = async () => {
 
             {/* Additional Analytics */}
             <div className="bg-white rounded-xl shadow-sm border p-6">
-              <h3 className="font-semibold text-slate-900 mb-4">Quick Insights</h3>
+              <h3 className="font-semibold text-slate-900 mb-4">{t("Analytics.insights")}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-slate-700">Average Transaction</p>
+                  <p className="text-sm font-medium text-slate-700">{t("Analytics.avgTransaction")}</p>
                   <p className="text-xl font-bold text-slate-900">
                     {sales.length > 0 
                       ? formatCurrency(
@@ -1327,7 +1331,7 @@ const handleCheckout = async () => {
                   </p>
                 </div>
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-slate-700">Products in Stock</p>
+                  <p className="text-sm font-medium text-slate-700">{t("Analytics.productsInStock")}</p>
                   <p className="text-xl font-bold text-slate-900">
                     {products.reduce((sum, product) => {
                       const totalStock = product.inventory?.reduce((invSum, inv) => invSum + inv.quantity, 0) || 0

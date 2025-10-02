@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 // @ts-ignore
 import type { Category } from "@/types/category"
 import { useAuth } from "@/hooks/use-auth"
+import { useTranslations } from "next-intl"
 
 // UI Components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -37,6 +38,8 @@ import {
 } from "lucide-react"
 
 export default function CategoriesPage() {
+
+  const t = useTranslations("categories")
   const {profile} = useAuth()
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -228,18 +231,18 @@ export default function CategoriesPage() {
             <div className="flex flex-col md:flex-row md:items-center gap-4 w-full">
               <div>
                 <CardTitle className="flex items-center gap-2 text-2xl">
-                  <FolderOpen className="h-6 w-6" />
-                  Categories
+                  
+                  {t('title')}
                 </CardTitle>
                 <CardDescription className="mt-1">
-                  Manage all categories and their attributes
+                  {t('description')}
                 </CardDescription>
               </div>
               
               <div className="relative w-full md:w-[300px] flex items-center">
                 <Search className="h-4 w-4 text-muted-foreground absolute left-3" />
                 <Input
-                  placeholder="Search categories..."
+                  placeholder={t("searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-9 pr-4"
@@ -251,14 +254,14 @@ export default function CategoriesPage() {
               <DialogTrigger asChild>
                 <Button className="bg-gray-900 hover:bg-gray-800 text-white whitespace-nowrap">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Category
+                  {t('addCategory')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>Add New Category</DialogTitle>
+                  <DialogTitle>{t("addForm.title")}</DialogTitle>
                   <DialogDescription>
-                    Create a new category with all necessary details
+                    {t("addForm.description")}
                   </DialogDescription>
                 </DialogHeader>
                 <CategoryForm 
@@ -318,14 +321,14 @@ export default function CategoriesPage() {
                   <DialogTrigger asChild>
                     <Button>
                       <Plus className="mr-2 h-4 w-4" />
-                      Add Category
+                      {t('addCategory')}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                      <DialogTitle>Add New Category</DialogTitle>
+                      <DialogTitle>{t("addForm.title")}</DialogTitle>
                       <DialogDescription>
-                        Create a new category with all necessary details
+                        {t("addForm.description")}
                       </DialogDescription>
                     </DialogHeader>
                     <CategoryForm 
@@ -360,6 +363,8 @@ interface CategoryCardProps {
 }
 
 function CategoryCard({ category, updateCategory }: CategoryCardProps) {
+
+  const t = useTranslations("categories")
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   
   const handleEdit = () => {
@@ -373,7 +378,7 @@ function CategoryCard({ category, updateCategory }: CategoryCardProps) {
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-gray-900 mb-1 truncate">{category.name}</h3>
-              <p className="text-sm text-gray-500 line-clamp-2">{category.description || "No description"}</p>
+              <p className="text-sm text-gray-500 line-clamp-2">{category.description || t("nodescription")}</p>
             </div>
             <Button
               variant="ghost"
@@ -387,7 +392,7 @@ function CategoryCard({ category, updateCategory }: CategoryCardProps) {
           
           <div className="mt-auto space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">Attributes</span>
+              <span className="text-sm text-gray-500">{t('tabs.attributes')}</span>
               <Badge variant="secondary" className="text-xs rounded-full px-3 py-1">
                 {category.attributes.length}
               </Badge>
@@ -406,7 +411,7 @@ function CategoryCard({ category, updateCategory }: CategoryCardProps) {
                   ))}
                   {category.attributes.length > 3 && (
                     <div className="text-xs text-gray-400 pt-1">
-                      +{category.attributes.length - 3} more attributes
+                      +{category.attributes.length - 3} {t("moreattributes")}
                     </div>
                   )}
                 </div>
@@ -420,9 +425,9 @@ function CategoryCard({ category, updateCategory }: CategoryCardProps) {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
+            <DialogTitle>{t("editForm.title")}</DialogTitle>
             <DialogDescription>
-              Update the category's information.
+              {t("editForm.description")}
             </DialogDescription>
           </DialogHeader>
           <CategoryForm 
@@ -444,6 +449,7 @@ interface CategoryFormProps {
 }
 
 function CategoryForm({ category, onSubmit, isLoading }: CategoryFormProps) {
+  const t = useTranslations("categories")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     name: category?.name || "",
@@ -503,30 +509,30 @@ function CategoryForm({ category, onSubmit, isLoading }: CategoryFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <Tabs defaultValue="basic" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="basic">Basic Info</TabsTrigger>
-          <TabsTrigger value="attributes">Attributes</TabsTrigger>
+          <TabsTrigger value="basic">{t("tabs.basicInfo")}</TabsTrigger>
+          <TabsTrigger value="attributes">{t("tabs.attributes")}</TabsTrigger>
         </TabsList>
         
         <TabsContent value="basic" className="space-y-4">
           <div className="space-y-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="name" className="font-medium">Category Name *</Label>
+              <Label htmlFor="name" className="font-medium">{t('editForm.formFields.name')}</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter category name"
+                placeholder={t('editForm.formFields.namePlaceholder')}
                 required
               />
             </div>
             
             <div className="flex flex-col gap-2">
-              <Label htmlFor="description" className="font-medium">Description</Label>
+              <Label htmlFor="description" className="font-medium">{t('editForm.formFields.description')}</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Enter category description"
+                placeholder={t('editForm.formFields.descriptionPlaceholder')}
                 className="min-h-[100px]"
               />
             </div>
@@ -537,7 +543,7 @@ function CategoryForm({ category, onSubmit, isLoading }: CategoryFormProps) {
           {/* Existing Attributes */}
           {formData.attributes.length > 0 && (
             <div className="space-y-3">
-              <Label className="font-medium">Current Attributes</Label>
+              <Label className="font-medium">{t("")}</Label>
               {formData.attributes.map((attr:any, index:any) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-md border">
                   <div className="flex items-center gap-2">
@@ -561,10 +567,10 @@ function CategoryForm({ category, onSubmit, isLoading }: CategoryFormProps) {
           
           {/* Add New Attribute */}
           <div className="space-y-3 pt-2">
-            <Label className="font-medium">Add New Attribute</Label>
+            <Label className="font-medium">{t('editForm.formFields.addnewattribute')}</Label>
             <div className="flex gap-2">
               <Input
-                placeholder="Attribute name"
+                placeholder={t('editForm.formFields.attributesPlaceholder')}
                 value={newAttribute.attribute_name}
                 onChange={(e) => setNewAttribute({ ...newAttribute, attribute_name: e.target.value })}
                 className="flex-1"
@@ -604,7 +610,7 @@ function CategoryForm({ category, onSubmit, isLoading }: CategoryFormProps) {
           disabled={isSubmitting || !formData.name}
           className="mt-4"
         >
-          {isSubmitting ? "Saving..." : category ? "Update Category" : "Add Category"}
+          {isSubmitting ? t("saving")+"..." : category ? t("UpdateCategory") : t('addCategory')}
         </Button>
       </DialogFooter>
     </form>

@@ -7,6 +7,7 @@ import { Building, Truck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { TableSkeleton } from './skeletons'
 import { validateInventoryItem, ValidatedInventoryItem } from '@/lib/data-validation'
+import { useTranslations } from 'next-intl'
 
 interface InventoryTableProps {
   userRole: string
@@ -51,6 +52,7 @@ async function fetchInventoryData(userRole: string, locationFilter: string | nul
 }
 
 export function InventoryTable({ userRole, locationFilter, dashboardType }: InventoryTableProps) {
+  const t = useTranslations('dashboard.inventoryTable')
   const { data: inventory, isLoading, error } = useQuery({
     queryKey: ['inventory', userRole, locationFilter, dashboardType],
     queryFn: () => fetchInventoryData(userRole, locationFilter, dashboardType),
@@ -73,12 +75,12 @@ export function InventoryTable({ userRole, locationFilter, dashboardType }: Inve
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Product</TableHead>
-          <TableHead>SKU</TableHead>
-          <TableHead>Location</TableHead>
-          <TableHead>Stock</TableHead>
-          <TableHead>Reserved</TableHead>
-          <TableHead>Value</TableHead>
+          <TableHead>{t('columns.product')}</TableHead>
+          <TableHead>{t('columns.sku')}</TableHead>
+          <TableHead>{t('columns.location')}</TableHead>
+          <TableHead>{t('columns.stock')}</TableHead>
+          <TableHead>{t('columns.reserved')}</TableHead>
+          <TableHead>{t('columns.value')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -109,7 +111,7 @@ export function InventoryTable({ userRole, locationFilter, dashboardType }: Inve
         ) : (
           <TableRow>
             <TableCell colSpan={6} className="text-center py-4">
-              No low stock items found
+              {t('noData')}
             </TableCell>
           </TableRow>
         )}

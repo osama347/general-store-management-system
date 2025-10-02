@@ -3,36 +3,195 @@
     "appName": "General Store Management",
     "loading": "Loading...",
     "navigation":{
-        "dashboard": "Dashboard",
-        "products": "توکی",
-        "sales": "Sales",
-        "customers": "Customers",
-        "expenses": "Expenses",
-        "inventory": "Inventory",
-        "reports": "Reports"
+        "dashboard": "ډېشبورډ",
+        "products":{
+          "title":"محصولات",
+          "all-products":"ټول محصولات",
+          "categories":"کتګورۍ"
+        } ,
+        "sales": "خرڅلاوی",
+        "customers": {
+          "title":"پېرودونکي",
+          "all-customers":"ټول پېرودونکي",
+          "customers-loans":"پېرودونکي قرضې"
+        },
+        "expenses": {
+          "title":"لګښتونه",
+          "all-expenses":"ټول لګښتونه"
+          
+        },
+        "inventory": {
+          "title":"انوینټري",
+          "all-inventory":"ټوله انوینټري",
+          "inventory-transfers":"د انوینټري لېږدونه"
+        },
+        "reports": "راپورونه",
+        "navUser": {
+      "settings": "تنظیمات",
+      "notifications": "اطلاعات",
+      "logout": "وتل",
+      "fallbackName": "کارن",
+      "fallbackEmail": "کارن@example.com"
+    }
+
+        
     }
   },
   "dashboard": {
-    "title": "",
-    "welcomeMessage": "",
-    "stats": {
-      "totalCustomers": "",
-      "totalSales": "",
-      "totalExpenses": ""
+    "common": {
+      "currentMonth": "{date} لپاره لنډیز",
+      "locationLabel": "ځای",
+      "locationType": {
+        "warehouse": "ګدام",
+        "store": "پلورنځی"
+      },
+      "tabs": {
+        "overview": {
+          "title": "لنډیز",
+          "description": "د سیسټم عمومي لنډیز",
+          "placeholder": "د لنډیز لپاره ځای ناستی"
+        },
+        "detailed": {
+          "title": "تفصيلي",
+          "description": "د سیسټم تفصيلي معلومات",
+          "placeholder": "د تفصيلي معلوماتو لپاره ځای ناستی"
+        }
+      }
     },
-    "cards": {
-      "inventoryStatus": "",
-      "lowStock": "",
-      "recentActivity": ""
+    "header": {
+      "title": {
+        "warehouse": "د ګدام ډېشبورډ",
+        "store": "د پلورنځي ډېشبورډ",
+        "overall": "عمومي ډېشبورډ",
+        "default": "ډېشبورډ"
+      },
+      "description": {
+        "warehouse": "د ګدام اړوند معلومات او شمېرې",
+        "store": "د پلورنځي اړوند معلومات او شمېرې",
+        "overall": "د ټولې سیسټم معلومات او شمېرې",
+        "default": "د سیسټم عمومي لنډیز"
+      }
+    },
+    "kpiCards": {
+      "revenue": {
+        "title": "ټول عایدات",
+        "comparison": "د تېر میاشت په پرتله"
+      },
+      "expenses": {
+        "title": "ټول لګښتونه",
+        "comparison": "د تېر میاشت په پرتله"
+      },
+      "customers": {
+        "title": "فعال پېرودونکي",
+        "subtitle": "ټول راجستر شوي پېرودونکي"
+      },
+      "inventory": {
+        "title": "د انوینټري ارزښت",
+        "lowStock": "لږ موجودي",
+        "pendingTransfers": "معطل لېږدونه",
+        "totalValue": "ټول ارزښت",
+        "totalProducts": "ټول محصولات"
+
+      },
+      "states": {
+        "loading": "د معلوماتو په بارولو کې...",
+        "error": "د معلوماتو په ترلاسه کولو کې ستونزه",
+        "noData": "هیڅ معلومات نشته"
+      }
+    },
+    "charts": {
+      "sales": {
+        "title": "د خرڅلاو لنډیز",
+        "description": "د روان کال میاشتني خرڅلاو",
+        "totalSales": "ټول خرڅلاو"
+      },
+      "expenses": {
+        "title": "د لګښتونو وېش",
+        "description": "د کټګورۍ په اساس لګښتونه",
+        "amount": "مقدار"
+      }
+    },
+    "activityFeed": {
+      "title": "وروستي فعالیتونه",
+      "description": {
+        "warehouse": "د ګدام وروستي فعالیتونه",
+        "store": "د پلورنځي وروستي فعالیتونه"
+      },
+      "noActivities": "کوم وروستی فعالیت نشته",
+      "loadError": "د فعالیتونو په لوډولو کې ستونزه"
+    },
+    "inventoryTable": {
+      "title": {
+        "warehouse": "د ګدام موجودي",
+        "store": "د پلورنځي موجودي"
+      },
+      "description": {
+        "warehouse": "د ګدام د موجودۍ حالت",
+        "store": "د پلورنځي د موجودۍ حالت"
+      },
+      "columns": {
+        "product": "محصول",
+        "sku": "د محصول کوډ",
+        "location": "ځای",
+        "stock": "موجودي",
+        "reserved": "ریزرف شوي",
+        "value": "ارزښت"
+      },
+      "noData": "لږ موجودي لرونکي محصولات نشته",
+      "loadError": "د موجودۍ په لوډولو کې ستونزه"
     }
   },
   "customers": {
-    "title": "",
-    "list": "",
-    "details": "",
-    "addCustomer": "",
-    "editCustomer": "",
-    "searchPlaceholder": ""
+      "title": "پېرودونکي",
+      "description": "د پېرودونکو لیست",
+      "loading": "په لوډ کولو کې...",
+      "error": "یوه تېروتنه رامنځته شوه",
+      "addCustomer": "نوی پېرودونکی",
+      "walkInCustomer": "عادي پېرودونکی",
+      "currentLocation": "اوسنی ځای",
+      "searchPlaceholder": "د نوم، برېښنالیک یا تلیفون په اساس پېرودونکي ولټوئ...",
+      "viewCustomer": "د پېرودونکي معلومات وګورئ",
+      "editCustomer": "د پېرودونکي معلومات سم کړئ",
+      "deleteCustomer": "پېرودونکی له منځه یوسئ",
+      "confirmDelete": "آیا تاسو ډاډه یاست چې دا پېرودونکی له منځه وړل غواړئ؟",
+      "table": {
+        "columns": {
+          "name": "نوم",
+          "email": "برېښنالیک",
+          "phone": "تلیفون",
+          "location": "ځای",
+          "address": "پته",
+          "loans": "قرضې",
+          "joined": "نېټه",
+          "actions": "عملیات"
+        },
+        "noData": "هیڅ پېرودونکی نشته",
+        "loadError": "د پېرودونکو په ترلاسه کولو کې ستونزه"
+      },
+      "form": {
+        "firstName": "لومړی نوم",
+        "lastName": "تخلص",
+        "email": "برېښنالیک",
+        "phone": "تلیفون شمېره",
+        "address": "پته",
+        "required": "دا ځای باید ډک شي",
+        "submit": "ثبت کړئ",
+        "cancel": "لغوه کړئ"
+      },
+      "status": {
+        "active": "فعال",
+        "inactive": "غیر فعال",
+        "all": "ټول"
+      },
+      "location": {
+        "all": "ټول ځایونه",
+        "current": "اوسنی ځای"
+      },
+      "pagination": {
+        "page": "پاڼه",
+        "of": "له",
+        "items": "توکي"
+      }
   },
   "loans": {
     "title": "",
@@ -53,12 +212,97 @@
     "notes": ""
   },
   "products": {
-    "title": "",
-    "addProduct": "",
-    "editProduct": "",
-    "price": "",
-    "stock": "",
-    "sku": ""
+    "table": {
+      "title": "محصولات",
+      "description": "د ټولو محصولاتو لیست",
+      "searchPlaceholder": "محصولات ولټوه...",
+      "noProductfound":"محصول و نه موندل شو",
+      "noProductsyet":"تراوسه کوم محصول نشته",
+      "adjustsearcfilters":" د پلتولو معلومات مو سم کری",
+      "addfirstproduct":"د خپل لومړنی محصول اضافه کړئ",
+      "addProduct": "نوی محصول",
+      "columns": {
+        "name": "نوم",
+        "sku": "د محصول کوډ",
+        "category": "کټګوري",
+        "status":"حالت",
+        "price": "بیه",
+        "stock": "موجودي",
+        "attributes": "ځانګړتیاوې",
+        "actions": "عملیات"
+            },
+          "rows":{
+            "attributes":{
+              "title":"ځانګړتیاوې",
+              "more":"نور",
+              "none":"نشته"
+            }
+
+          },
+          "Pagination":{
+            "first":"اول",
+            "last":"آخر",
+            "showing":"شکاری",
+            "product":"محصولات",
+            "of":"له"
+            
+            
+          },
+        
+        "noData": "هیڅ معلومات نشته",
+        "loadError": "د معلوماتو په ترلاسه کولو کې ستونزه"
+    },
+  "addForm":{
+          "title":"نوی محصول",
+          "description":"د نوی محصول لپاره معلومات اضافه کړئ",
+          
+          "formFields":{
+            "name":"د محصول نوم",
+            "sku":"د محصول کوډ (SKU)",
+            "category":"کټګوري",
+            "price":"بیه",
+            "stockQuantity":"لومړنۍ موجودي",
+            "attributes":"ځانګړتیاوې (اختیاري)"
+            
+          },
+          "tabs":{
+            "basicInfo":"اساسي معلومات",
+            "inventory":"انوینټري",
+            "attributes":"ځانګړتیاوې"
+
+          }
+
+        },
+  "editForm":{
+    "title":" محصول تازه کړی",
+    "description":"د محصول تازه کولو لپاره معلومات اضافه کړئ",
+    "error":"مهربانی وکری تولی خانی دکی کری",
+    "formFields":{
+      "name":"د محصول نوم",
+      "sku":"د محصول کوډ (SKU)",
+      "category":"کټګوري",
+      "price":"بیه",
+      "stockQuantity":"لومړنۍ موجودي",
+      "attributes":"ځانګړتیاوې (اختیاري)",
+      "nameplaceholder":"د محصول نوم دننه کړی",
+      "skuplaceholder":"د محصول کوډ دننه کړی",
+      "categoryplaceholder":"یوه کټګوري وټاکئ",
+      "priceplaceholder":"د محصول بیه دننه کړی",
+      "stockQuantityPlaceholder":"د محصول لومړنۍ موجودي دننه کړی",
+      "attributesPlaceholder":"ځانګړتیاوې (اختیاري)",
+      "attributetype":"د ځانګړتیا ډول",
+      "attributevalue":"د ځانګړتیا ارزښت",
+      "noattribute":"د دې کټګورۍ لپاره کوم ځانګړتیاوې نشته"
+    },
+    "tabs":{
+      "basicInfo":"اساسي معلومات",
+      "inventory":"انوینټري",
+      "attributes":"ځانګړتیاوې"
+
+    }
+
+  }
+      
   },
   "inventory": {
     "title": "",
@@ -76,19 +320,181 @@
     "transferDate": ""
   },
   "categories": {
-    "title": "",
-    "addCategory": "",
-    "editCategory": "",
-    "deleteCategory": "",
-    "list": ""
+    "title": "گتګورۍ",
+    "description": "د ټولو کټګوریو لیست",
+    "addCategory": "نوې کټګوري اضافه کړئ",
+    "editCategory": "کټګوري سمول",
+    "UpdateCategory": "کټګوري تازه کول",
+    "saving": "په خوندي کولو کې...",
+    "deleteCategory": "کټګوري حذف کول",
+    "list": "کټګورۍ لیست",
+    "searchPlaceholder": "کټګورۍ ولټوه...",
+    "noCategoryfound":"کټګورۍ و نه موندل شو",
+    "nodescription":"هیڅ تفصیل نشته",
+    "moreattributes":"نور ځانګړتیاوې",
+    "tabs":{
+     "basicInfo":"اساسي معلومات",
+     "attributes":"ځانګړتیاوې"
+    },
+    "addForm":{
+      "title":"نوې کټګوري",
+      "description":"د نوې کټګورۍ لپاره معلومات اضافه کړئ",
+      "formFields":{
+        "name":"د کټګورۍ نوم",
+        "description":"د کټګورۍ تفصیل",
+        "addnewattribute":"نوې ځانګړتیا اضافه کړئ",
+        "attributename":"د ځانګړتیا نوم"
+      }
+
+
+    },
+    "editForm":{
+      "title":"کټګوري سمول",
+      "description":"د کټګورۍ د سمولو لپاره معلومات اضافه کړئ",
+      
+      "formFields":{
+        "name":"د کټګورۍ نوم",
+        "description":"د کټګورۍ تفصیل",
+        "addnewattribute":"نوې ځانګړتیا اضافه کړئ",
+        "attributename":"د ځانګړتیا نوم",
+        "attributesPlaceholder":" ځانګړتیاوې اضافه کړئ )",
+        "descriptionPlaceholder":"د کټګورۍ تفصیل دننه کړئ",
+        "namePlaceholder":"د کټګورۍ نوم دننه کړئ"
+      },
+      "error":"مهربانی وکری تولی خانی دکی کری"
+    }
   },
   "sales": {
-    "title": "",
-    "newSale": "",
-    "invoice": "",
-    "total": "",
-    "discount": "",
-    "paymentStatus": ""
+    "loading": "صبر وکړئ...",
+    "tryAgain": "بیا هڅه وکړئ",
+    "somethingwentwrong": "یو څه غلط شول",
+    "nolocationselected":"هیڅ ځای نه دی ټاکل شوی",
+    "pleaseselectalocation":"مهرباني وکړئ د محصولاتو د لیدو لپاره یو ځای وټاکئ",
+    "pointofsale": "د خرڅلاو ټکی",
+    "processtransactions": "راکړه ورکړه په مؤثره توګه پروسس کړئ",
+    "products": "محصولات",
+    "customers": "پېرودونکي", 
+    "searchplaceholder": "محصولات ولټوه",
+
+
+
+
+    "tabs":{
+      "terminal":"ترمینل",
+      "history":"تاریخچه",
+      "analytics":"تحلیلونه"
+    },
+    "header": {
+      "title": "خرڅلاوی",
+      "description": "د ټولو خرڅلاو لیست"
+    },
+    "availableProducts": {
+      "title": " محصولات",
+      "availableProducts":" محصولات موجود دی",
+      "left": "پاتی دی",
+      "searchPlaceholder": "محصولات ولټوه...",
+      "addtocart": "کراچی ته اضافه کول",
+      "allcategories":"ټولې کټګورۍ",
+      "noproductsfound":"هیڅ محصول ونه موندل شو",
+      "tryadjusting":"د لټون یا پلتولو معلوماتو سم کری",
+      "addmore":"نور اضافه کری",
+
+      
+      "noData": "هیڅ معلومات نشته",
+      "loadError": "د معلوماتو په ترلاسه کولو کې ستونزه"
+    },
+    "customer":{
+        "label":"پېرودونکی",
+        "selectPlaceholder":"پېرودونکی وټاکئ",
+        "addNew":"نوی پېرودونکی اضافه کړئ",
+        "changeCustomer":"پېرودونکی بدل کړئ",
+        "removeCustomer":"پېرودونکی لرې کړئ",
+        "addcustomerform":{
+          "title":"نوی پېرودونکی",
+          "description":"د نوي پېرودونکي لپاره معلومات اضافه کړئ",
+          
+          "formFields":{
+            "firstname":"د پېرودونکي نوم",
+            "lastname":"د پېرودونکي تخلص",
+            "email":"د پېرودونکي ایمیل",
+            "phone":"د پېرودونکي تلیفون",
+            "address":"د پېرودونکي پته"
+          }
+        }
+      },
+      "staff":{
+        "title":"کارکوونکی"
+
+      },
+    "cart": {
+      "title": "کراچۍ",
+      "empty": "کراچۍ خالي ده",
+      "items": "توکي",
+      "addproductstostart": "پروډکټونه اضافه کړئ ترڅو پیل کړئ",
+      "total": "ټول",
+      "checkout": "چیک آوټ",
+      "proceedpayment": "تادیې ته دوام ورکړئ",
+      "completetransaction": "راکړه ورکړه بشپړه کړئ",
+      "ordersummary": "د فرمایش لنډیز",
+      "confirmpayment": "تادیه تایید کړئ"
+    },
+    "saleshistory":{
+      "title":"د خرڅلاو تاریخچه",
+      "totalSales":"ټول خرڅلاو",
+      "filters":"پلتونه",
+      "transactions":"راکړه ورکړه",
+      "averagesale":"اوسط خرڅلاو",
+      "completed":"بشپړ شوی",
+      "daterange":"د نیټې حد",
+      "from": "له ",
+      "to": "تر ",
+      "status":"حالت",
+      "allstatuses":"ټول حالتونه",
+      "canceled":"لغوه شوی",
+      "pending":"په تمه",
+      "apply":"پلي کول",
+      "reset":"ختمول",
+      "export":"صادرات",
+      "notransactions":"هیڅ راکړه ورکړه ونه موندل شوه",
+      "tryadjusting":"د لټون یا پلتولو معلوماتو سم کری",
+      "next":"بل",
+      "previous":"تېر",
+      "saledetails":{
+        "title":"د خرڅلاو تفصیل",
+        
+        "invoice":"رسید",
+        "date":"نیټه",
+        "customer":"پېرودونکی",
+        
+        "status":"حالت",
+        "totalamount":"ټول مقدار",
+        "items":"توکي",
+        "printreciept":"رسید چاپ کړئ",
+        "viewfulldetails":"بشپړ تفصیل وګورئ",
+        "emailreciept":"د رسید ایمیل",
+
+        
+        "notes":"یادښتونه",
+        "saleId": "د خرڅلاو نمبر",
+        "completed": "بشپړ شوی"
+      }
+
+
+      
+  },
+  "Analytics": {
+    "title": "تحلیلونه",
+    "revenue": "ټول عایدات",
+    "transactions": "راکړې ورکړې",
+    "activeCustomers": "فعال پېرودونکي",
+    "insights": "چټک لیدنه",
+    "avgTransaction": "اوسط راکړه ورکړه",
+    "productsInStock": "موجود محصولات",
+    "alltime": "ټول وخت",
+    "completedSales": "بشپړ شوي خرڅلاو",
+    "registeredUsers": "راجستر شوي پېرودونکی"
+   
+  }
   },
   "reports": {
     "title": "",

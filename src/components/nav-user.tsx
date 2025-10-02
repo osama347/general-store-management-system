@@ -29,12 +29,14 @@ import {
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from '@/hooks/use-auth'
+import { useTranslations } from 'next-intl'
 
 const supabase = createClient()
 
 export function NavUser() {
   const { user, profile, loading } = useAuth()
   const { isMobile } = useSidebar()
+  const t = useTranslations('common.navigation.navUser')
 
   const getInitials = (name: string | null) => {
     if (!name) return "UN"
@@ -75,12 +77,12 @@ export function NavUser() {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={profile?.avatar_url ?? undefined} alt={profile?.full_name ?? 'User'} />
+                <AvatarImage src={profile?.avatar_url ?? undefined} alt={profile?.full_name ?? t('fallbackName')} />
                 <AvatarFallback className="rounded-lg">{getInitials(profile?.full_name ?? null)}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{profile?.full_name || 'User'}</span>
-                <span className="truncate text-xs">{profile?.email || 'user@example.com'}</span>
+                <span className="truncate font-medium">{profile?.full_name || t('fallbackName')}</span>
+                <span className="truncate text-xs">{profile?.email || t('fallbackEmail')}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -94,12 +96,12 @@ export function NavUser() {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={profile?.avatar_url ?? undefined} alt={profile?.full_name ?? 'User'} />
+                  <AvatarImage src={profile?.avatar_url ?? undefined} alt={profile?.full_name ?? t('fallbackName')} />
                   <AvatarFallback className="rounded-lg">{getInitials(profile?.full_name ?? null)}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{profile?.full_name || 'User'}</span>
-                  <span className="truncate text-xs">{profile?.email || 'user@example.com'}</span>
+                  <span className="truncate font-medium">{profile?.full_name || t('fallbackName')}</span>
+                  <span className="truncate text-xs">{profile?.email || t('fallbackEmail')}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -107,17 +109,17 @@ export function NavUser() {
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <Settings />
-                Settings
+                {t('settings')}
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Bell />
-                Notifications
+                {t('notifications')}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={signOut} className="cursor-pointer">
               <LogOut />
-              Log out
+              {t('logout')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

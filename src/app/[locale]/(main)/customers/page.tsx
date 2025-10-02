@@ -31,6 +31,7 @@ import {
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
 import { useLocation } from "@/contexts/LocationContext"
+import {useTranslations} from 'next-intl'  
 
 interface Customer {
   id: string
@@ -86,6 +87,7 @@ export default function CustomersPage() {
 
   const supabase = createClient()
   const { profile, loading: authLoading } = useAuth()
+  const t = useTranslations('customers')
   const { locations, currentLocation, isLoading: locationLoading } = useLocation()
 
   // Get the user's location from their profile
@@ -313,7 +315,7 @@ export default function CustomersPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency: "AFN",
     }).format(amount)
   }
 
@@ -487,7 +489,7 @@ export default function CustomersPage() {
         <div className="flex items-center justify-center h-64">
           <div className="flex items-center gap-2">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span>Loading customers...</span>
+            <span>{t('loading')}</span>
           </div>
         </div>
       </main>
@@ -498,10 +500,10 @@ export default function CustomersPage() {
     return (
       <main className="container mx-auto p-6 space-y-4">
         <div className="p-6 bg-red-50 text-red-700 rounded-lg">
-          <h2 className="font-bold">Error Loading Customers</h2>
-          <p>Please try again later or check your connection.</p>
+          <h2 className="font-bold">{t('error.title')}</h2>
+          <p>{t('error.description')}</p>
           <details className="mt-4 text-sm">
-            <summary>Technical Details</summary>
+            <summary>{t('error.technicalDetails')}</summary>
             <pre className="bg-white p-2 rounded mt-2">{error}</pre>
           </details>
           <Button 
@@ -509,7 +511,7 @@ export default function CustomersPage() {
             className="mt-4"
             variant="outline"
           >
-            Retry
+            {t('error.retry')}
           </Button>
         </div>
       </main>
@@ -522,11 +524,11 @@ export default function CustomersPage() {
       <main className="container mx-auto p-6 space-y-4">
         <Card className="w-full">
           <CardContent className="p-8 text-center">
-            <Building className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h2 className="text-xl font-bold mb-2">No Location Assigned</h2>
-            <p className="text-muted-foreground mb-6">
-              Your account is not associated with any location. Please contact your administrator.
-            </p>
+        <Building className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+        <h2 className="text-xl font-bold mb-2">{t('noLocation.title')}</h2>
+        <p className="text-muted-foreground mb-6">
+          {t('noLocation.description')}
+        </p>
           </CardContent>
         </Card>
       </main>
@@ -539,97 +541,103 @@ export default function CustomersPage() {
     <main className="container mx-auto p-6 space-y-4">
       <Card className="w-full">
         <CardHeader className="p-6">
-          <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-xl flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                Customers Management ({customers.length})
+              <Users className="h-5 w-5 text-primary" />
+              {t('header.title', { count: customers.length })}
               </CardTitle>
               {profile?.role !== 'admin' && profile?.location && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Showing customers for: {profile.location.name}
-                </p>
+              <p className="text-sm text-muted-foreground mt-1">
+          {t('header.locationContext', { location: profile.location.name })}
+              </p>
               )}
             </div>
 
             <div className="flex gap-2">
               {/* Walk-in Customer Button */}
               {walkInCustomer && (
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => handleViewCustomer(walkInCustomer)}
-                  className="gap-2"
-                >
-                  <User className="h-4 w-4" />
-                  Walk-in Customer
-                </Button>
+              <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={() => handleViewCustomer(walkInCustomer)}
+          className="gap-2"
+          title={t('header.buttons.walkInCustomer.title')}
+              >
+          <User className="h-4 w-4" />
+          {t('header.buttons.walkInCustomer.label')}
+              </Button>
               )}
               
-              <Button size="sm" onClick={() => setIsNewCustomerDialogOpen(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Customer
+              <Button 
+              size="sm" 
+              onClick={() => setIsNewCustomerDialogOpen(true)} 
+              className="gap-2"
+              title={t('header.buttons.addCustomer.title')}
+              >
+              <Plus className="h-4 w-4" />
+              {t('header.buttons.addCustomer.label')}
               </Button>
             </div>
-          </div>
+            </div>
 
           <div className="flex flex-col sm:flex-row gap-3 mt-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder="Search customers by name, email, or phone..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value)
-                  setCurrentPage(1)
-                }}
-                className="pl-10"
+          placeholder={t('filters.search.placeholder')}
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value)
+            setCurrentPage(1)
+          }}
+          className="pl-10"
               />
             </div>
 
             <div className="flex gap-3">
               {/* Location Filter for Admin Users */}
               {profile?.role === 'admin' && (
-                <Select
-                  value={selectedLocation}
-                  onValueChange={(value) => {
-                    setSelectedLocation(value)
-                    setCurrentPage(1)
-                  }}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="current">
-                      Current Location ({currentLocation?.name || "None"})
-                    </SelectItem>
-                    <SelectItem value="all">All Locations</SelectItem>
-                    {locations.map((location) => (
-                      <SelectItem key={location.location_id} value={location.location_id.toString()}>
-                        {location.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <Select
+            value={selectedLocation}
+            onValueChange={(value) => {
+              setSelectedLocation(value)
+              setCurrentPage(1)
+            }}
+          >
+            <SelectTrigger className="w-[200px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder={t('filters.location.title')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="current">
+                {t('filters.location.currentLocation', { name: currentLocation?.name || "None" })}
+              </SelectItem>
+              <SelectItem value="all">{t('filters.location.allLocations')}</SelectItem>
+              {locations.map((location) => (
+                <SelectItem key={location.location_id} value={location.location_id.toString()}>
+            {location.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
               )}
 
               <Select
-                value={selectedStatus}
-                onValueChange={(value) => {
-                  setSelectedStatus(value)
-                  setCurrentPage(1)
-                }}
+          value={selectedStatus}
+          onValueChange={(value) => {
+            setSelectedStatus(value)
+            setCurrentPage(1)
+          }}
               >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="All Customers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Customers</SelectItem>
-                  <SelectItem value="with_loans">With Loans</SelectItem>
-                  <SelectItem value="no_loans">No Loans</SelectItem>
-                </SelectContent>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder={t('filters.status.title')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('filters.status.allCustomers')}</SelectItem>
+            <SelectItem value="with_loans">{t('filters.status.withLoans')}</SelectItem>
+            <SelectItem value="no_loans">{t('filters.status.noLoans')}</SelectItem>
+          </SelectContent>
               </Select>
             </div>
           </div>
@@ -639,124 +647,125 @@ export default function CustomersPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left p-4 font-medium">Name</th>
-                  {profile?.role === 'admin' && <th className="text-left p-4 font-medium">Location</th>}
-                  <th className="text-left p-4 font-medium">Contact</th>
-                  <th className="text-left p-4 font-medium">Address</th>
-                  <th className="text-left p-4 font-medium">Loans</th>
-                  <th className="text-left p-4 font-medium">Joined</th>
-                  <th className="text-left p-4 font-medium">Actions</th>
-                </tr>
+          <tr className="border-b">
+            <th className="text-left p-4 font-medium">{t('table.columns.name')}</th>
+            {profile?.role === 'admin' && <th className="text-left p-4 font-medium">{t('table.columns.location')}</th>}
+            <th className="text-left p-4 font-medium">{t('table.columns.contact')}</th>
+            <th className="text-left p-4 font-medium">{t('table.columns.address')}</th>
+            <th className="text-left p-4 font-medium">{t('table.columns.loans')}</th>
+            <th className="text-left p-4 font-medium">{t('table.columns.joined')}</th>
+            <th className="text-left p-4 font-medium">{t('table.columns.actions')}</th>
+          </tr>
               </thead>
               <tbody>
-                {paginatedCustomers.map((customer) => (
-                  <tr key={customer.id} className="border-b hover:bg-gray-50">
-                    <td className="p-4">
-                      <div>
-                        <div className="font-medium">{customer.firstName} {customer.lastName}</div>
-                        <div className="text-sm text-muted-foreground">ID: #{customer.id}</div>
-                      </div>
-                    </td>
-                    {profile?.role === 'admin' && (
-                      <td className="p-4">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Building className="h-3 w-3" />
-                          {customer.locationName}
-                        </div>
-                      </td>
-                    )}
-                    <td className="p-4">
-                      <div className="space-y-1">
-                        {customer.email !== "N/A" && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Mail className="h-3 w-3" />
-                            {customer.email}
-                          </div>
-                        )}
-                        {customer.phone !== "N/A" && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Phone className="h-3 w-3" />
-                            {customer.phone}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      {customer.address !== "N/A" ? (
-                        <div className="flex items-center gap-2 text-sm">
-                          <MapPin className="h-3 w-3" />
-                          <span className="max-w-[200px] truncate">{customer.address}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">No address</span>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-3 w-3" />
-                          <span className="font-medium">{formatCurrency(getTotalLoans(customer))}</span>
-                        </div>
-                        {getActiveLoans(customer) > 0 && (
-                          <Badge variant="destructive" className="text-xs">
-                            {getActiveLoans(customer)} active loans
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(customer.createdAt)}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewCustomer(customer)}
-                          title="View Details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditCustomer(customer)}
-                          title="Edit Customer"
-                          disabled={customer.firstName === "Walk-in" && customer.lastName === "Customer"}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteCustomer(customer.id)}
-                          title="Delete Customer"
-                          disabled={customer.firstName === "Walk-in" && customer.lastName === "Customer"}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+          {paginatedCustomers.map((customer) => (
+            <tr key={customer.id} className="border-b hover:bg-gray-50">
+              <td className="p-4">
+                <div>
+            <div className="font-medium">{customer.firstName} {customer.lastName}</div>
+            <div className="text-sm text-muted-foreground">{t('table.cells.id')}: #{customer.id}</div>
+                </div>
+              </td>
+              {profile?.role === 'admin' && (
+                <td className="p-4">
+            <div className="flex items-center gap-2 text-sm">
+              <Building className="h-3 w-3" />
+              {customer.locationName}
+            </div>
+                </td>
+              )}
+              <td className="p-4">
+                <div className="space-y-1">
+            {customer.email !== "N/A" && (
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="h-3 w-3" />
+                <span title={t('table.cells.contact.email')}>{customer.email}</span>
+              </div>
+            )}
+            {customer.phone !== "N/A" && (
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="h-3 w-3" />
+                <span title={t('table.cells.contact.phone')}>{customer.phone}</span>
+              </div>
+            )}
+                </div>
+              </td>
+              <td className="p-4">
+                {customer.address !== "N/A" ? (
+            <div className="flex items-center gap-2 text-sm">
+              <MapPin className="h-3 w-3" />
+              <span className="max-w-[200px] truncate">{customer.address}</span>
+            </div>
+                ) : (
+            <span className="text-muted-foreground">{t('table.cells.noAddress')}</span>
+                )}
+              </td>
+              <td className="p-4">
+                <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-3 w-3" />
+              <span className="font-medium">{formatCurrency(getTotalLoans(customer))}</span>
+            </div>
+            {getActiveLoans(customer) > 0 && (
+              <Badge variant="destructive" className="text-xs">
+                {getActiveLoans(customer)} {t('table.cells.activeLoans')}
+              </Badge>
+            )}
+                </div>
+              </td>
+              <td className="p-4">
+                <div className="flex items-center gap-2 text-sm">
+            <Calendar className="h-3 w-3" />
+            {formatDate(customer.createdAt)}
+                </div>
+              </td>
+              <td className="p-4">
+                <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleViewCustomer(customer)}
+              title={t('table.actions.view')}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleEditCustomer(customer)}
+              title={t('table.actions.edit')}
+              disabled={customer.firstName === "Walk-in" && customer.lastName === "Customer"}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDeleteCustomer(customer.id)}
+              title={t('table.actions.delete')}
+              disabled={customer.firstName === "Walk-in" && customer.lastName === "Customer"}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+                </div>
+              </td>
+            </tr>
+          ))}
               </tbody>
             </table>
           </div>
+        
 
           {filteredCustomers.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="font-medium mb-2">No customers found</h3>
+              <h3 className="font-medium mb-2">{t('table.noResults.title')}</h3>
               <p className="text-sm">
-                {searchTerm || selectedStatus !== "all" || (profile?.role === 'admin' && selectedLocation !== "all")
-                  ? "Try adjusting your search or filters"
-                  : "Get started by adding your first customer"
-                }
+          {searchTerm || selectedStatus !== "all" || (profile?.role === 'admin' && selectedLocation !== "all")
+            ? t('table.noResults.withFilters')
+            : t('table.noResults.noCustomers')
+          }
               </p>
             </div>
           )}
@@ -765,260 +774,259 @@ export default function CustomersPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-muted-foreground">
-                Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredCustomers.length)} of {filteredCustomers.length} results
+          {t('table.pagination.showing')} {startIndex + 1} {t('table.pagination.to')} {Math.min(startIndex + itemsPerPage, filteredCustomers.length)} {t('table.pagination.of')} {filteredCustomers.length} {t('table.pagination.results')}
               </div>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            {t('table.pagination.previous')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+          >
+            {t('table.pagination.next')}
+          </Button>
               </div>
             </div>
           )}
         </CardContent>
       </Card>
-
       {/* New Customer Dialog */}
       <Dialog open={isNewCustomerDialogOpen} onOpenChange={setIsNewCustomerDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Add New Customer</DialogTitle>
-            <DialogDescription>
-              Fill in the customer details. Click save when you're done.
-              {profile?.location && (
-                <p className="mt-1 text-sm text-blue-600">
-                  This customer will be associated with {profile.location.name}.
-                </p>
-              )}
-            </DialogDescription>
+        <DialogTitle>{t('addnewform.title')}</DialogTitle>
+        <DialogDescription>
+          {t('addnewform.description')}
+          {profile?.location && (
+            <p className="mt-1 text-sm text-blue-600">
+          {t('addnewform.locationAssociation', { location: profile.location.name })}
+            </p>
+          )}
+        </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name *</Label>
-                <Input
-                  id="firstName"
-                  value={newCustomer.firstName}
-                  onChange={(e) => setNewCustomer({...newCustomer, firstName: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name *</Label>
-                <Input
-                  id="lastName"
-                  value={newCustomer.lastName}
-                  onChange={(e) => setNewCustomer({...newCustomer, lastName: e.target.value})}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={newCustomer.email}
-                onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                value={newCustomer.phone}
-                onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Textarea
-                id="address"
-                value={newCustomer.address}
-                onChange={(e) => setNewCustomer({...newCustomer, address: e.target.value})}
-                rows={3}
-              />
-            </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="firstName">{t('addnewform.form.firstName')}</Label>
+            <Input
+          id="firstName"
+          value={newCustomer.firstName}
+          onChange={(e) => setNewCustomer({...newCustomer, firstName: e.target.value})}
+            />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">{t('addnewform.form.lastName')}</Label>
+            <Input
+          id="lastName"
+          value={newCustomer.lastName}
+          onChange={(e) => setNewCustomer({...newCustomer, lastName: e.target.value})}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2"></div>
+          <Label htmlFor="email">{t('addnewform.form.email')}</Label>
+          <Input
+            id="email"
+            type="email"
+            value={newCustomer.email}
+            onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">{t('addnewform.form.phone')}</Label>
+          <Input
+            id="phone"
+            value={newCustomer.phone}
+            onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="address">{t('addnewform.form.address')}</Label>
+          <Textarea
+            id="address"
+            value={newCustomer.address}
+            onChange={(e) => setNewCustomer({...newCustomer, address: e.target.value})}
+            rows={3}
+          />
+        </div>
+          
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsNewCustomerDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateCustomer} disabled={isSubmitting || !newCustomer.firstName || !newCustomer.lastName}>
-              {isSubmitting ? "Creating..." : "Create Customer"}
-            </Button>
+        <Button variant="outline" onClick={() => setIsNewCustomerDialogOpen(false)}>
+          {t('addnewform.buttons.cancel')}
+        </Button>
+        <Button onClick={handleCreateCustomer} disabled={isSubmitting || !newCustomer.firstName || !newCustomer.lastName}>
+          {isSubmitting ? t('addnewform.buttons.creating') : t('addnewform.buttons.create')}
+        </Button>
           </div>
         </DialogContent>
-      </Dialog>
+        </Dialog>
 
       {/* Edit Customer Dialog */}
       <Dialog open={isEditCustomerDialogOpen} onOpenChange={setIsEditCustomerDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Edit Customer</DialogTitle>
-            <DialogDescription>
-              Update the customer details. Click save when you're done.
-            </DialogDescription>
+        <DialogTitle>{t('updateform.title')}</DialogTitle>
+        <DialogDescription>
+          {t('updateform.description')}
+        </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="editFirstName">First Name *</Label>
-                <Input
-                  id="editFirstName"
-                  value={editCustomer.firstName}
-                  onChange={(e) => setEditCustomer({...editCustomer, firstName: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editLastName">Last Name *</Label>
-                <Input
-                  id="editLastName"
-                  value={editCustomer.lastName}
-                  onChange={(e) => setEditCustomer({...editCustomer, lastName: e.target.value})}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="editEmail">Email</Label>
-              <Input
-                id="editEmail"
-                type="email"
-                value={editCustomer.email}
-                onChange={(e) => setEditCustomer({...editCustomer, email: e.target.value})}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="editPhone">Phone</Label>
-              <Input
-                id="editPhone"
-                value={editCustomer.phone}
-                onChange={(e) => setEditCustomer({...editCustomer, phone: e.target.value})}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="editAddress">Address</Label>
-              <Textarea
-                id="editAddress"
-                value={editCustomer.address}
-                onChange={(e) => setEditCustomer({...editCustomer, address: e.target.value})}
-                rows={3}
-              />
-            </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2"></div>
+            <Label htmlFor="editFirstName">{t('updateform.form.firstName')}</Label>
+            <Input
+          id="editFirstName"
+          value={editCustomer.firstName}
+          onChange={(e) => setEditCustomer({...editCustomer, firstName: e.target.value})}
+            />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="editLastName">{t('updateform.form.lastName')}</Label>
+            <Input
+          id="editLastName"
+          value={editCustomer.lastName}
+          onChange={(e) => setEditCustomer({...editCustomer, lastName: e.target.value})}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="editEmail">{t('updateform.form.email')}</Label>
+          <Input
+            id="editEmail"
+            type="email"
+            value={editCustomer.email}
+            onChange={(e) => setEditCustomer({...editCustomer, email: e.target.value})}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="editPhone">{t('updateform.form.phone')}</Label>
+          <Input
+            id="editPhone"
+            value={editCustomer.phone}
+            onChange={(e) => setEditCustomer({...editCustomer, phone: e.target.value})}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="editAddress">{t('updateform.form.address')}</Label>
+          <Textarea
+            id="editAddress"
+            value={editCustomer.address}
+            onChange={(e) => setEditCustomer({...editCustomer, address: e.target.value})}
+            rows={3}
+          />
+        </div>
+          
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsEditCustomerDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateCustomer} disabled={isSubmitting || !editCustomer.firstName || !editCustomer.lastName}>
-              {isSubmitting ? "Updating..." : "Update Customer"}
-            </Button>
+        <Button variant="outline" onClick={() => setIsEditCustomerDialogOpen(false)}>
+          {t('updateform.buttons.cancel')}
+        </Button>
+        <Button onClick={handleUpdateCustomer} disabled={isSubmitting || !editCustomer.firstName || !editCustomer.lastName}>
+          {isSubmitting ? t('updateform.buttons.updating') : t('updateform.buttons.update')}
+        </Button>
           </div>
         </DialogContent>
-      </Dialog>
 
+      </Dialog>
       {/* View Customer Dialog */}
       <Dialog open={isViewCustomerDialogOpen} onOpenChange={setIsViewCustomerDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Customer Details</DialogTitle>
-            <DialogDescription>
-              Customer information and loan history
-            </DialogDescription>
+        <DialogTitle>{t('customerdetails.dialog.title')}</DialogTitle>
+        <DialogDescription>
+          {t('customerdetails.dialog.description')}
+        </DialogDescription>
           </DialogHeader>
 
           {selectedCustomer && (
-            <div className="space-y-6">
-              {/* Customer Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Full Name</Label>
-                  <p className="text-sm">{selectedCustomer.firstName} {selectedCustomer.lastName}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Customer ID</Label>
-                  <p className="text-sm">#{selectedCustomer.id}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Email</Label>
-                  <p className="text-sm">{selectedCustomer.email}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Phone</Label>
-                  <p className="text-sm">{selectedCustomer.phone}</p>
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-sm font-medium">Address</Label>
-                  <p className="text-sm">{selectedCustomer.address}</p>
-                </div>
-                {profile?.role === 'admin' && selectedCustomer.locationName && (
-                  <div>
-                    <Label className="text-sm font-medium">Location</Label>
-                    <p className="text-sm">{selectedCustomer.locationName}</p>
-                  </div>
-                )}
-                <div>
-                  <Label className="text-sm font-medium">Member Since</Label>
-                  <p className="text-sm">{formatDate(selectedCustomer.createdAt)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Total Loans</Label>
-                  <p className="text-sm font-bold">{formatCurrency(getTotalLoans(selectedCustomer))}</p>
-                </div>
-              </div>
-
-              {/* Loan History */}
-              {selectedCustomer.loans.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Loan History</Label>
-                  <div className="space-y-2">
-                    {selectedCustomer.loans.map((loan) => (
-                      <div key={loan.loan_id} className="flex justify-between items-center p-3 border rounded">
-                        <div>
-                          <div className="font-medium">Loan #{loan.loan_id}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {formatDate(loan.loan_date)} - {loan.due_date ? formatDate(loan.due_date) : 'No due date'}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium">{formatCurrency(loan.loan_amount)}</div>
-                          <Badge variant={getLoanStatus(loan.status).variant}>
-                            {getLoanStatus(loan.status).text}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedCustomer.loans.length === 0 && (
-                <div className="text-center py-4 text-muted-foreground">
-                  <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
-                  <p>No loan history</p>
-                </div>
-              )}
+        <div className="space-y-6">
+          {/* Customer Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+          <Label className="text-sm font-medium">{t('customerdetails.dialog.info.fullName')}</Label>
+          <p className="text-sm">{selectedCustomer.firstName} {selectedCustomer.lastName}</p>
             </div>
+            <div>
+          <Label className="text-sm font-medium">{t('customerdetails.dialog.info.customerId')}</Label>
+          <p className="text-sm">#{selectedCustomer.id}</p>
+            </div>
+            <div>
+          <Label className="text-sm font-medium">{t('customerdetails.dialog.info.email')}</Label>
+          <p className="text-sm">{selectedCustomer.email}</p>
+            </div>
+            <div>
+          <Label className="text-sm font-medium">{t('customerdetails.dialog.info.phone')}</Label>
+          <p className="text-sm">{selectedCustomer.phone}</p>
+            </div>
+            <div className="col-span-2">
+          <Label className="text-sm font-medium">{t('customerdetails.dialog.info.address')}</Label>
+          <p className="text-sm">{selectedCustomer.address}</p>
+            </div>
+            {profile?.role === 'admin' && selectedCustomer.locationName && (
+          <div>
+            <Label className="text-sm font-medium">{t('customerdetails.dialog.info.location')}</Label>
+            <p className="text-sm">{selectedCustomer.locationName}</p>
+          </div>
+            )}
+            <div>
+          <Label className="text-sm font-medium">{t('customerdetails.dialog.info.memberSince')}</Label>
+          <p className="text-sm">{formatDate(selectedCustomer.createdAt)}</p>
+            </div>
+            <div>
+          <Label className="text-sm font-medium">{t('customerdetails.dialog.info.totalLoans')}</Label>
+          <p className="text-sm font-bold">{formatCurrency(getTotalLoans(selectedCustomer))}</p>
+            </div>
+          </div>
+
+          {/* Loan History */}
+          {selectedCustomer.loans.length > 0 && (
+            <div className="space-y-2">
+          <Label className="text-sm font-medium">{t('customerdetails.dialog.loanHistory.title')}</Label>
+          <div className="space-y-2">
+            {selectedCustomer.loans.map((loan) => (
+              <div key={loan.loan_id} className="flex justify-between items-center p-3 border rounded">
+            <div>
+              <div className="font-medium">{t('customerdetails.dialog.loanHistory.loanId')} #{loan.loan_id}</div>
+              <div className="text-sm text-muted-foreground">
+                {formatDate(loan.loan_date)} - {loan.due_date ? formatDate(loan.due_date) : t('customerdetails.dialog.loanHistory.noDueDate')}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="font-medium">{formatCurrency(loan.loan_amount)}</div>
+              <Badge variant={getLoanStatus(loan.status).variant}>
+                {getLoanStatus(loan.status).text}
+              </Badge>
+            </div>
+              </div>
+            ))}
+          </div>
+            </div>
+          )}
+
+          {selectedCustomer.loans.length === 0 && (
+            <div className="text-center py-4 text-muted-foreground">
+          <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+          <p>{t('customerdetails.dialog.loanHistory.noHistory.message')}</p>
+            </div>
+          )}
+        </div>
           )}
         </DialogContent>
       </Dialog>

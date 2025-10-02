@@ -2,60 +2,239 @@
   "common": {
     "appName": "General Store Management",
     "loading": "Loading...",
-    "navigation":{
-        "dashboard": "Dashboard",
-        "products": "Products",
-        "sales": "Sales",
-        "customers": "Customers",
-        "expenses": "Expenses",
-        "inventory": "Inventory",
-        "reports": "Reports"
+    "navigation": {
+      "dashboard": "Dashboard",
+      "products": {
+        "title": "Products",
+        "all-products": "All Products",
+        "categories": "Categories"
+      },
+      "sales": "Sales",
+      "customers": {
+        "title": "Customers",
+        "all-customers": "All Customers",
+        "customers-loans": "Customer Loans"
+      },
+      "expenses": {
+        "title": "Expenses",
+        "all-expenses": "All Expenses"
+      },
+      "inventory": {
+        "title": "Inventory",
+        "all-inventory": "All Inventory",
+        "inventory-transfers": "Inventory Transfers"
+      },
+      "reports": "Reports"
+    },
+    "navUser": {
+      "settings": "Settings",
+      "notifications": "Notifications",
+      "logout": "Logout",
+      "fallbackName": "User",
+      "fallbackEmail": "user@example.com"
     }
   },
   "dashboard": {
-    "title": {
-      "warehouse": "Warehouse Dashboard",
-      "store": "Store Dashboard",
-      "overall": "Business Overview",
-      "default": "Dashboard"
+    "common": {
+      "currentMonth": "Summary for {date}",
+      "locationLabel": "Location",
+      "locationType": {
+        "warehouse": "Warehouse",
+        "store": "Store"
+      },
+      "tabs": {
+        "overview": {
+          "title": "Overview",
+          "description": "System general overview",
+          "placeholder": "Overview placeholder"
+        },
+        "detailed": {
+          "title": "Detailed",
+          "description": "System detailed information",
+          "placeholder": "Detailed information placeholder"
+        }
+      }
     },
-    "description": {
-      "warehouse": "Inventory and transfer management",
-      "store": "Sales and store performance",
-      "overall": "Overall business operations",
-      "default": "Business operations overview"
+    "header": {
+      "title": {
+        "warehouse": "Warehouse Dashboard",
+        "store": "Store Dashboard",
+        "overall": "Overall Dashboard",
+        "default": "Dashboard"
+      },
+      "description": {
+        "warehouse": "Warehouse information and metrics",
+        "store": "Store information and metrics",
+        "overall": "System-wide information and metrics",
+        "default": "System general overview"
+      }
     },
-    "currentMonth": "{date} (Current Month)",
-    "locationLabel": "Location:",
-    "locationType": {
-      "warehouse": "warehouse",
-      "store": "store"
+    "kpiCards": {
+      "revenue": {
+        "title": "Total Revenue",
+        "comparison": "Compared to last month"
+      },
+      "expenses": {
+        "title": "Total Expenses",
+        "comparison": "Compared to last month"
+      },
+      "customers": {
+        "title": "Active Customers",
+        "subtitle": "Total registered customers"
+      },
+      "inventory": {
+        "title": "Inventory Value",
+        "lowStock": "Low Stock",
+        "pendingTransfers": "Pending Transfers",
+        "totalValue": "Total Value",
+        "totalProducts": "Total Products"
+      },
+      "states": {
+        "loading": "Loading data...",
+        "error": "Error retrieving data",
+        "noData": "No data available"
+      }
+    },
+    "charts": {
+      "sales": {
+        "title": "Sales Overview",
+        "description": "Monthly sales for current year",
+        "totalSales": "Total Sales"
+      },
+      "expenses": {
+        "title": "Expense Distribution",
+        "description": "Expenses by category",
+        "amount": "Amount"
+      }
+    },
+    "activityFeed": {
+      "title": "Recent Activities",
+      "description": {
+        "warehouse": "Recent warehouse activities",
+        "store": "Recent store activities"
+      },
+      "noActivities": "No recent activities",
+      "loadError": "Error loading activities"
+    },
+    "inventoryTable": {
+      "title": {
+        "warehouse": "Warehouse Inventory",
+        "store": "Store Inventory"
+      },
+      "description": {
+        "warehouse": "Warehouse inventory status",
+        "store": "Store inventory status"
+      },
+      "columns": {
+        "product": "Product",
+        "sku": "Product Code",
+        "location": "Location",
+        "stock": "Stock",
+        "reserved": "Reserved",
+        "value": "Value"
+      },
+      "noData": "No products with low stock",
+      "loadError": "Error loading inventory"
+    }
+  },
+  "reports": {
+    "common": {
+      "dateRange": "Date Range",
+      "location": "Location",
+      "export": "Export",
+      "print": "Print",
+      "filter": "Filter",
+      "noData": "No data available for selected criteria",
+      "loadError": "Error loading report data"
+    },
+    "sales": {
+      "title": "Sales Report",
+      "description": "Analyze sales performance over time",
+      "filters": {
+        "customer": "Customer",
+        "product": "Product",
+        "paymentType": "Payment Type"
+      },
+      "columns": {
+        "date": "Date",
+        "invoice": "Invoice No",
+        "customer": "Customer",
+        "items": "Items",
+        "total": "Total",
+        "payment": "Payment Type",
+        "status": "Status"
+      },
+      "summary": {
+        "totalSales": "Total Sales",
+        "averageSale": "Average Sale",
+        "topProducts": "Top Products",
+        "topCustomers": "Top Customers"
+      }
     },
     "inventory": {
-      "titleWarehouse": "Inventory Status",
-      "titleStore": "Low Stock Items",
-      "descWarehouse": "Current stock levels in warehouse",
-      "descStore": "Products that need restocking"
-    },
-    "activity": {
-      "title": "Recent Activities",
-      "descWarehouse": "Latest inventory transfers",
-      "descStore": "Latest transactions and updates"
-    },
-    "tabs": {
-      "overview": "Overview",
-      "detailed": "Detailed Reports"
-    },
-    "cards": {
-      "overview": {
-        "title": "Overview",
-        "description": "Key metrics and performance indicators",
-        "placeholder": "Overview content will be displayed here"
+      "title": "Inventory Report",
+      "description": "Current inventory status and history",
+      "filters": {
+        "category": "Category",
+        "status": "Status"
       },
-      "detailed": {
-        "title": "Detailed Reports",
-        "description": "Comprehensive business reports and analytics",
-        "placeholder": "Detailed reports will be displayed here"
+      "columns": {
+        "sku": "SKU",
+        "product": "Product",
+        "category": "Category",
+        "quantity": "Quantity",
+        "value": "Value",
+        "lastUpdated": "Last Updated"
+      },
+      "summary": {
+        "totalItems": "Total Items",
+        "totalValue": "Total Value",
+        "lowStock": "Low Stock Items",
+        "outOfStock": "Out of Stock Items"
+      }
+    },
+    "customers": {
+      "title": "Customer Report",
+      "description": "Customer activity and balances",
+      "filters": {
+        "status": "Status",
+        "type": "Customer Type"
+      },
+      "columns": {
+        "id": "ID",
+        "name": "Name",
+        "type": "Type",
+        "balance": "Balance",
+        "lastPurchase": "Last Purchase",
+        "totalPurchases": "Total Purchases"
+      },
+      "summary": {
+        "totalCustomers": "Total Customers",
+        "activeCustomers": "Active Customers",
+        "totalDue": "Total Due Amount",
+        "averageBalance": "Average Balance"
+      }
+    },
+    "financial": {
+      "title": "Financial Report",
+      "description": "Financial performance analysis",
+      "filters": {
+        "type": "Transaction Type",
+        "category": "Category"
+      },
+      "columns": {
+        "date": "Date",
+        "type": "Type",
+        "category": "Category",
+        "description": "Description",
+        "amount": "Amount",
+        "balance": "Balance"
+      },
+      "summary": {
+        "totalRevenue": "Total Revenue",
+        "totalExpenses": "Total Expenses",
+        "netIncome": "Net Income",
+        "grossProfit": "Gross Profit"
       }
     }
   }

@@ -32,6 +32,7 @@ import {
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
 import { useLocation } from "@/contexts/LocationContext"
+import { useTranslations } from 'next-intl'
 
 interface Loan {
   id: string
@@ -69,6 +70,7 @@ export default function LoansPage() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const t=useTranslations('loans')
   
   // Customer search for new loan
   const [customerSearch, setCustomerSearch] = useState("")
@@ -523,7 +525,7 @@ const fetchData = async () => {
         <div className="flex items-center justify-center h-64">
           <div className="flex items-center gap-2">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span>Loading loans...</span>
+            <span>{t('loading')}</span>
           </div>
         </div>
       </main>
@@ -534,10 +536,10 @@ const fetchData = async () => {
     return (
       <main className="container mx-auto p-6 space-y-4">
         <div className="p-6 bg-red-50 text-red-700 rounded-lg">
-          <h2 className="font-bold">Error Loading Loans</h2>
-          <p>Please try again later or check your connection.</p>
+          <h2 className="font-bold">{t('error.title')}</h2>
+          <p>{t('error.description')}</p>
           <details className="mt-4 text-sm">
-            <summary>Technical Details</summary>
+            <summary>{t('error.technicalDetails')}</summary>
             <pre className="bg-white p-2 rounded mt-2">{error}</pre>
           </details>
           <Button 
@@ -545,7 +547,7 @@ const fetchData = async () => {
             className="mt-4"
             variant="outline"
           >
-            Retry
+            {t('error.retry')}
           </Button>
         </div>
       </main>
@@ -559,9 +561,9 @@ const fetchData = async () => {
         <Card className="w-full">
           <CardContent className="p-8 text-center">
             <Building className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h2 className="text-xl font-bold mb-2">No Location Assigned</h2>
+            <h2 className="text-xl font-bold mb-2">{t('noLocation.title')}</h2>
             <p className="text-muted-foreground mb-6">
-              Your account is not associated with any location. Please contact your administrator.
+              {t('noLocation.description')}
             </p>
           </CardContent>
         </Card>
@@ -575,54 +577,54 @@ const fetchData = async () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <CreditCard className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Loans</p>
-                <p className="text-xl font-bold">{loans.length}</p>
-              </div>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <CreditCard className="h-5 w-5 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">{t('cards.totalLoans.title')}</p>
+            <p className="text-xl font-bold">{loans.length}</p>
+          </div>
+        </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="text-xl font-bold">{formatCurrency(getTotalLoanAmount())}</p>
-              </div>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-green-100 rounded-lg">
+            <DollarSign className="h-5 w-5 text-green-600" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">{t('cards.totalAmount.title')}</p>
+            <p className="text-xl font-bold">{formatCurrency(getTotalLoanAmount())}</p>
+          </div>
+        </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <Clock className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-xl font-bold">{getPendingLoansCount()}</p>
-              </div>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-red-100 rounded-lg">
+            <Clock className="h-5 w-5 text-red-600" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">{t('cards.pending.title')}</p>
+            <p className="text-xl font-bold">{getPendingLoansCount()}</p>
+          </div>
+        </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Paid</p>
-                <p className="text-xl font-bold">{getPaidLoansCount()}</p>
-              </div>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-green-100 rounded-lg">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">{t('cards.paid.title')}</p>
+            <p className="text-xl font-bold">{getPaidLoansCount()}</p>
+          </div>
+        </div>
           </CardContent>
         </Card>
       </div>
@@ -631,268 +633,279 @@ const fetchData = async () => {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex justify-between items-center mb-4">
           <TabsList>
-            <TabsTrigger value="all-loans" className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              All Loans
-            </TabsTrigger>
-            <TabsTrigger value="customer-notebooks" className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              Customer Notebooks
-            </TabsTrigger>
-            {selectedCustomerForNotebook && (
-              <TabsTrigger value="customer-notebook" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                {selectedCustomerForNotebook.first_name} {selectedCustomerForNotebook.last_name}
-              </TabsTrigger>
-            )}
+        <TabsTrigger value="all-loans" className="flex items-center gap-2">
+          <CreditCard className="h-4 w-4" />
+          {t('tabs.all-loans.title')}
+        </TabsTrigger>
+        <TabsTrigger value="customer-notebooks" className="flex items-center gap-2">
+          <BookOpen className="h-4 w-4" />
+          {t('tabs.customer-notebooks.title')}
+        </TabsTrigger>
+        {selectedCustomerForNotebook && (
+          <TabsTrigger value="customer-notebook" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            {selectedCustomerForNotebook.first_name} {selectedCustomerForNotebook.last_name}
+          </TabsTrigger>
+        )}
           </TabsList>
           
           {activeTab !== "customer-notebooks" && (
-            <Button size="sm" onClick={() => {
-              setSelectedCustomer(null)
-              setCustomerSearch("")
-              setIsAddingForSpecificCustomer(false)
-              setIsNewLoanDialogOpen(true)
-            }} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Loan
-            </Button>
+        <Button
+          size="sm"
+          onClick={() => {
+            setSelectedCustomer(null)
+            setCustomerSearch("")
+            setIsAddingForSpecificCustomer(false)
+            setIsNewLoanDialogOpen(true)
+          }}
+          className="gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          {t('actions.addLoan.title')}
+        </Button>
           )}
         </div>
 
         {/* All Loans Tab */}
         <TabsContent value="all-loans" className="space-y-4">
           <Card className="w-full">
-            <CardHeader className="p-6">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  All Loans
-                </CardTitle>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Search by customer name, email, or loan ID..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value)
-                      setCurrentPage(1)
-                    }}
-                    className="pl-10"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  {/* Location Filter for Admin Users */}
+        <CardHeader className="p-6">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl flex items-center gap-2">
+          <CreditCard className="h-5 w-5 text-primary" />
+          {t('tabs.all-loans.title')}
+            </CardTitle>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder={t('tabs.all-loans.search.placeholder')}
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value)
+              setCurrentPage(1)
+            }}
+            className="pl-10"
+          />
+            </div>
+            <div className="flex gap-3">
+          {/* Location Filter for Admin Users */}
+          {profile?.role === 'admin' && (
+            <Select
+              value={selectedLocation}
+              onValueChange={(value) => {
+            setSelectedLocation(value)
+            setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="w-[200px]">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder={t('tabs.all-loans.filters.location.title')} />
+              </SelectTrigger>
+              <SelectContent>
+            <SelectItem value="current">
+              {t('tabs.all-loans.filters.location.current', {
+                name: currentLocation?.name || '-'
+              })}
+            </SelectItem>
+            <SelectItem value="all">{t('tabs.all-loans.filters.location.all')}</SelectItem>
+            {locations.map((location) => (
+              <SelectItem key={location.location_id} value={location.location_id.toString()}>
+                {location.name}
+              </SelectItem>
+            ))}
+              </SelectContent>
+            </Select>
+          )}
+          
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value)
+              setCurrentPage(1)
+            }}
+          >
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder={t('tabs.all-loans.filters.status.title')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('tabs.all-loans.filters.status.all')}</SelectItem>
+              <SelectItem value="pending">{t('tabs.all-loans.filters.status.pending')}</SelectItem>
+              <SelectItem value="paid">{t('tabs.all-loans.filters.status.paid')}</SelectItem>
+            </SelectContent>
+          </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.loanId')}</th>
+              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.customer')}</th>
+              {profile?.role === 'admin' && (
+            <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.location')}</th>
+              )}
+              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.amount')}</th>
+              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.loanDate')}</th>
+              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.dueDate')}</th>
+              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.status')}</th>
+              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.actions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedLoans.map((loan) => {
+              const statusInfo = getLoanStatus(loan.status)
+              const StatusIcon = statusInfo.icon
+              const isPaid = loan.status === 'paid'
+              
+              return (
+                <tr 
+                  key={loan.id} 
+                  className={`border-b hover:bg-gray-50 ${isPaid ? 'opacity-50' : ''}`}
+                >
+                  <td className="p-4">
+                    <div className="font-medium">#{loan.id}</div>
+                  </td>
+                  <td className="p-4">
+                    <div>
+                      <div className="font-medium flex items-center gap-2">
+                        <User className="h-3 w-3" />
+                        {loan.customerName}
+                      </div>
+                      {loan.customerEmail !== "N/A" && (
+                        <div className="text-sm text-muted-foreground">{loan.customerEmail}</div>
+                      )}
+                    </div>
+                  </td>
                   {profile?.role === 'admin' && (
-                    <Select
-                      value={selectedLocation}
-                      onValueChange={(value) => {
-                        setSelectedLocation(value)
-                        setCurrentPage(1)
-                      }}
-                    >
-                      <SelectTrigger className="w-[200px]">
-                        <Filter className="h-4 w-4 mr-2" />
-                        <SelectValue placeholder="Location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="current">
-                          Current Location ({currentLocation?.name || "None"})
-                        </SelectItem>
-                        <SelectItem value="all">All Locations</SelectItem>
-                        {locations.map((location) => (
-                          <SelectItem key={location.location_id} value={location.location_id.toString()}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Building className="h-3 w-3" />
+                        {loan.locationName}
+                      </div>
+                    </td>
                   )}
-                  
-                  <Select
-                    value={statusFilter}
-                    onValueChange={(value) => {
-                      setStatusFilter(value)
-                      setCurrentPage(1)
-                    }}
-                  >
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-4 font-medium">Loan ID</th>
-                      <th className="text-left p-4 font-medium">Customer</th>
-                      {profile?.role === 'admin' && <th className="text-left p-4 font-medium">Location</th>}
-                      <th className="text-left p-4 font-medium">Amount</th>
-                      <th className="text-left p-4 font-medium">Loan Date</th>
-                      <th className="text-left p-4 font-medium">Due Date</th>
-                      <th className="text-left p-4 font-medium">Status</th>
-                      <th className="text-left p-4 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedLoans.map((loan) => {
-                      const statusInfo = getLoanStatus(loan.status)
-                      const StatusIcon = statusInfo.icon
-                      const isPaid = loan.status === 'paid'
-                      
-                      return (
-                        <tr 
-                          key={loan.id} 
-                          className={`border-b hover:bg-gray-50 ${isPaid ? 'opacity-50' : ''}`}
-                        >
-                          <td className="p-4">
-                            <div className="font-medium">#{loan.id}</div>
-                          </td>
-                          <td className="p-4">
-                            <div>
-                              <div className="font-medium flex items-center gap-2">
-                                <User className="h-3 w-3" />
-                                {loan.customerName}
-                              </div>
-                              {loan.customerEmail !== "N/A" && (
-                                <div className="text-sm text-muted-foreground">{loan.customerEmail}</div>
-                              )}
-                            </div>
-                          </td>
-                          {profile?.role === 'admin' && (
-                            <td className="p-4">
-                              <div className="flex items-center gap-2 text-sm">
-                                <Building className="h-3 w-3" />
-                                {loan.locationName}
-                              </div>
-                            </td>
-                          )}
-                          <td className="p-4">
-                            <div className="font-bold text-lg">{formatCurrency(loan.amount)}</div>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-2 text-sm">
-                              <Calendar className="h-3 w-3" />
-                              {formatDate(loan.loanDate)}
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            {loan.dueDate ? (
-                              <div className="flex items-center gap-2 text-sm">
-                                <Calendar className="h-3 w-3" />
-                                {formatDate(loan.dueDate)}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground">No due date</span>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${statusInfo.bgColor} ${statusInfo.textColor}`}>
-                              <StatusIcon className="h-3 w-3" />
-                              <span className="text-sm font-medium">{statusInfo.text}</span>
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleViewLoan(loan)}
-                                title="View Details"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              
-                              {!isPaid ? (
-                                <>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEditLoan(loan)}
-                                    title="Edit Loan"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handlePaymentLoan(loan)}
-                                    title="Mark as Paid"
-                                    className="text-green-600 hover:text-green-700"
-                                  >
-                                    <DollarSign className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteLoan(loan.id)}
-                                    title="Delete Loan"
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">Completed</span>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              {filteredLoans.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <h3 className="font-medium mb-2">No loans found</h3>
-                  <p className="text-sm">
-                    {searchTerm || statusFilter !== "all" || (profile?.role === 'admin' && selectedLocation !== "all")
-                      ? "Try adjusting your search or filters"
-                      : "Get started by adding your first loan"
-                    }
-                  </p>
-                </div>
-              )}
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-muted-foreground">
-                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredLoans.length)} of {filteredLoans.length} results
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
+                  <td className="p-4">
+                    <div className="font-bold text-lg">{formatCurrency(loan.amount)}</div>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-3 w-3" />
+                      {formatDate(loan.loanDate)}
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    {loan.dueDate ? (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-3 w-3" />
+                        {formatDate(loan.dueDate)}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {t('tabs.all-loans.table.noDueDate')}
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${statusInfo.bgColor} ${statusInfo.textColor}`}>
+                      <StatusIcon className="h-3 w-3" />
+                      <span className="text-sm font-medium">{statusInfo.text}</span>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewLoan(loan)}
+                        title={t('tabs.all-loans.table.actions.view')}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      {!isPaid ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditLoan(loan)}
+                            title={t('tabs.all-loans.table.actions.edit')}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePaymentLoan(loan)}
+                            title={t('tabs.all-loans.table.actions.markAsPaid')}
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            <DollarSign className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteLoan(loan.id)}
+                            title={t('tabs.all-loans.table.actions.delete')}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {t('tabs.all-loans.table.completed')}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+            </table>
+          </div>
+          {filteredLoans.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+          <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <h3 className="font-medium mb-2">{t('tabs.all-loans.table.noLoans.title')}</h3>
+          <p className="text-sm">
+            {searchTerm || statusFilter !== "all" || (profile?.role === 'admin' && selectedLocation !== "all")
+              ? t('tabs.all-loans.table.noLoans.withFilters')
+              : t('tabs.all-loans.table.noLoans.noLoansYet')
+            }
+          </p>
+            </div>
+          )}
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-muted-foreground">
+            {t('tabs.all-loans.table.pagination.showing')} {startIndex + 1} {t('tabs.all-loans.table.pagination.to')} {Math.min(startIndex + itemsPerPage, filteredLoans.length)} {t('tabs.all-loans.table.pagination.of')} {filteredLoans.length} {t('tabs.all-loans.table.pagination.results')}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              {t('tabs.all-loans.table.pagination.previous')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              {t('tabs.all-loans.table.pagination.next')}
+            </Button>
+          </div>
+            </div>
+          )}
+        </CardContent>
           </Card>
         </TabsContent>
 
@@ -902,26 +915,27 @@ const fetchData = async () => {
             <CardHeader className="p-6">
               <CardTitle className="text-xl flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-primary" />
-                Customer Loan Notebooks
+                {t('tabs.customer-notebooks.title')}
               </CardTitle>
               <p className="text-muted-foreground">
-                Select a customer to view their loan notebook
+                {t('tabs.customer-notebooks.description')}
               </p>
             </CardHeader>
             <CardContent className="p-6">
               {customers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <h3 className="font-medium mb-2">No customers found</h3>
-                  <p className="text-sm">Add customers to create loan notebooks</p>
+                  <h3 className="font-medium mb-2">{t('tabs.customer-notebooks.noCustomers.title')}</h3>
+                  <p className="text-sm">{t('tabs.customer-notebooks.noCustomers.description')}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {customers.map(customer => {
+                  {customers.map((customer) => {
                     const stats = getCustomerStats(customer.customer_id.toString())
+
                     return (
-                      <Card 
-                        key={customer.customer_id} 
+                      <Card
+                        key={customer.customer_id}
                         className="cursor-pointer hover:shadow-md transition-shadow"
                         onClick={() => handleSelectCustomerForNotebook(customer)}
                       >
@@ -931,46 +945,58 @@ const fetchData = async () => {
                               <User className="h-5 w-5 text-blue-600" />
                             </div>
                             <div>
-                              <h3 className="font-medium">{customer.first_name} {customer.last_name}</h3>
+                              <h3 className="font-medium">
+                                {customer.first_name} {customer.last_name}
+                              </h3>
                               {customer.email && (
-                                <p className="text-sm text-muted-foreground">{customer.email}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {t('tabs.customer-notebooks.customerCard.email')}: {customer.email}
+                                </p>
                               )}
                             </div>
                           </div>
-                          
+
                           <div className="grid grid-cols-2 gap-2 text-sm">
                             <div>
-                              <p className="text-muted-foreground">Loans</p>
+                              <p className="text-muted-foreground">
+                                {t('tabs.customer-notebooks.customerCard.stats.loans')}
+                              </p>
                               <p className="font-medium">{stats.totalLoans}</p>
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Amount</p>
+                              <p className="text-muted-foreground">
+                                {t('tabs.customer-notebooks.customerCard.stats.amount')}
+                              </p>
                               <p className="font-medium">{formatCurrency(stats.totalAmount)}</p>
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Pending</p>
+                              <p className="text-muted-foreground">
+                                {t('tabs.customer-notebooks.customerCard.stats.pending')}
+                              </p>
                               <p className="font-medium text-red-600">{stats.pendingCount}</p>
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Paid</p>
+                              <p className="text-muted-foreground">
+                                {t('tabs.customer-notebooks.customerCard.stats.paid')}
+                              </p>
                               <p className="font-medium text-green-600">{stats.paidCount}</p>
                             </div>
                           </div>
-                          
+
                           <div className="flex gap-2 mt-3">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                            <Button
+                              variant="outline"
+                              size="sm"
                               className="flex-1"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleSelectCustomerForNotebook(customer)
                               }}
                             >
-                              View
+                              {t('tabs.customer-notebooks.customerCard.buttons.view')}
                             </Button>
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               className="flex-1"
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -978,7 +1004,7 @@ const fetchData = async () => {
                               }}
                             >
                               <Plus className="h-3 w-3 mr-1" />
-                              Add Loan
+                              {t('tabs.customer-notebooks.customerCard.buttons.addLoan')}
                             </Button>
                           </div>
                         </CardContent>
@@ -993,7 +1019,7 @@ const fetchData = async () => {
 
         {/* Individual Customer Notebook Tab */}
         <TabsContent value="customer-notebook" className="space-y-4">
-          {selectedCustomerForNotebook && (
+          {selectedCustomerForNotebook ? (
             <>
               <Card className="w-full">
                 <CardHeader className="p-6">
@@ -1001,27 +1027,29 @@ const fetchData = async () => {
                     <div>
                       <CardTitle className="text-xl flex items-center gap-2">
                         <BookOpen className="h-5 w-5 text-primary" />
-                        {selectedCustomerForNotebook.first_name} {selectedCustomerForNotebook.last_name}'s Loan Notebook
+                        {t('tabs.customer-notebook.loanTitle', {
+                          name: `${selectedCustomerForNotebook.first_name} ${selectedCustomerForNotebook.last_name}`,
+                        })}
                       </CardTitle>
                       {selectedCustomerForNotebook.email && (
                         <p className="text-muted-foreground">{selectedCustomerForNotebook.email}</p>
                       )}
                     </div>
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       onClick={() => handleAddLoanForCustomer(selectedCustomerForNotebook)}
                       className="gap-2"
                     >
                       <Plus className="h-4 w-4" />
-                      Add Loan
+                      {t('tabs.customer-notebook.actions.addLoan')}
                     </Button>
                   </div>
-                  
+
                   <div className="flex flex-col sm:flex-row gap-3 mt-4">
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                       <Input
-                        placeholder="Search by loan ID..."
+                        placeholder={t('tabs.customer-notebook.filters.searchPlaceholder')}
                         value={searchTerm}
                         onChange={(e) => {
                           setSearchTerm(e.target.value)
@@ -1039,12 +1067,12 @@ const fetchData = async () => {
                         }}
                       >
                         <SelectTrigger className="w-[150px]">
-                          <SelectValue placeholder="All Status" />
+                          <SelectValue placeholder={t('tabs.customer-notebook.filters.allStatus')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Status</SelectItem>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="paid">Paid</SelectItem>
+                          <SelectItem value="all">{t('tabs.customer-notebook.filters.allStatus')}</SelectItem>
+                          <SelectItem value="pending">{t('tabs.all-loans.filters.status.pending')}</SelectItem>
+                          <SelectItem value="paid">{t('tabs.all-loans.filters.status.paid')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1055,12 +1083,12 @@ const fetchData = async () => {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left p-4 font-medium">Loan ID</th>
-                          <th className="text-left p-4 font-medium">Amount</th>
-                          <th className="text-left p-4 font-medium">Loan Date</th>
-                          <th className="text-left p-4 font-medium">Due Date</th>
-                          <th className="text-left p-4 font-medium">Status</th>
-                          <th className="text-left p-4 font-medium">Actions</th>
+                          <th className="text-left p-4 font-medium">{t('tabs.customer-notebook.table.columns.loanId')}</th>
+                          <th className="text-left p-4 font-medium">{t('tabs.customer-notebook.table.columns.amount')}</th>
+                          <th className="text-left p-4 font-medium">{t('tabs.customer-notebook.table.columns.loanDate')}</th>
+                          <th className="text-left p-4 font-medium">{t('tabs.customer-notebook.table.columns.dueDate')}</th>
+                          <th className="text-left p-4 font-medium">{t('tabs.customer-notebook.table.columns.status')}</th>
+                          <th className="text-left p-4 font-medium">{t('tabs.customer-notebook.table.columns.actions')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1068,10 +1096,10 @@ const fetchData = async () => {
                           const statusInfo = getLoanStatus(loan.status)
                           const StatusIcon = statusInfo.icon
                           const isPaid = loan.status === 'paid'
-                          
+
                           return (
-                            <tr 
-                              key={loan.id} 
+                            <tr
+                              key={loan.id}
                               className={`border-b hover:bg-gray-50 ${isPaid ? 'opacity-50' : ''}`}
                             >
                               <td className="p-4">
@@ -1093,7 +1121,9 @@ const fetchData = async () => {
                                     {formatDate(loan.dueDate)}
                                   </div>
                                 ) : (
-                                  <span className="text-muted-foreground">No due date</span>
+                                  <span className="text-muted-foreground">
+                                    {t('tabs.customer-notebook.table.noDueDate')}
+                                  </span>
                                 )}
                               </td>
                               <td className="p-4">
@@ -1108,18 +1138,18 @@ const fetchData = async () => {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => handleViewLoan(loan)}
-                                    title="View Details"
+                                    title={t('tabs.customer-notebook.actions.viewDetails')}
                                   >
                                     <Eye className="h-4 w-4" />
                                   </Button>
-                                  
+
                                   {!isPaid ? (
                                     <>
                                       <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => handleEditLoan(loan)}
-                                        title="Edit Loan"
+                                        title={t('tabs.customer-notebook.actions.editLoan')}
                                       >
                                         <Edit className="h-4 w-4" />
                                       </Button>
@@ -1127,7 +1157,7 @@ const fetchData = async () => {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => handlePaymentLoan(loan)}
-                                        title="Mark as Paid"
+                                        title={t('tabs.customer-notebook.actions.markAsPaid')}
                                         className="text-green-600 hover:text-green-700"
                                       >
                                         <DollarSign className="h-4 w-4" />
@@ -1136,14 +1166,16 @@ const fetchData = async () => {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => handleDeleteLoan(loan.id)}
-                                        title="Delete Loan"
+                                        title={t('tabs.customer-notebook.actions.deleteLoan')}
                                         className="text-red-600 hover:text-red-700"
                                       >
                                         <Trash2 className="h-4 w-4" />
                                       </Button>
                                     </>
                                   ) : (
-                                    <span className="text-xs text-muted-foreground">Completed</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {t('tabs.customer-notebook.table.completed')}
+                                    </span>
                                   )}
                                 </div>
                               </td>
@@ -1153,72 +1185,85 @@ const fetchData = async () => {
                       </tbody>
                     </table>
                   </div>
+
                   {filteredLoans.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <h3 className="font-medium mb-2">No loans found for this customer</h3>
+                      <h3 className="font-medium mb-2">{t('tabs.customer-notebook.table.noLoans.title')}</h3>
                       <p className="text-sm">
-                        {searchTerm || statusFilter !== "all" 
-                          ? "Try adjusting your search or filters"
-                          : "Add a loan to get started"
-                        }
+                        {searchTerm || statusFilter !== 'all'
+                          ? t('tabs.customer-notebook.table.noLoans.withFilters')
+                          : t('tabs.customer-notebook.table.noLoans.noLoansYet')}
                       </p>
                     </div>
                   )}
-                  {/* Pagination */}
+
                   {totalPages > 1 && (
                     <div className="flex items-center justify-between mt-4">
                       <div className="text-sm text-muted-foreground">
-                        Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredLoans.length)} of {filteredLoans.length} results
+                        {t('tabs.all-loans.table.pagination.showing')} {startIndex + 1}{' '}
+                        {t('tabs.all-loans.table.pagination.to')} {Math.min(startIndex + itemsPerPage, filteredLoans.length)}{' '}
+                        {t('tabs.all-loans.table.pagination.of')} {filteredLoans.length}{' '}
+                        {t('tabs.all-loans.table.pagination.results')}
                       </div>
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                           disabled={currentPage === 1}
                         >
-                          Previous
+                          {t('tabs.all-loans.table.pagination.previous')}
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                           disabled={currentPage === totalPages}
                         >
-                          Next
+                          {t('tabs.all-loans.table.pagination.next')}
                         </Button>
                       </div>
                     </div>
                   )}
                 </CardContent>
               </Card>
-              
-              {/* Customer Summary Card */}
+
               <Card>
                 <CardHeader className="p-4">
-                  <CardTitle className="text-lg">Customer Summary</CardTitle>
+                  <CardTitle className="text-lg">
+                    {t('tabs.customer-notebook.summary.title')}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                   {(() => {
                     const stats = getCustomerStats(selectedCustomerForNotebook.customer_id.toString())
+
                     return (
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="text-center p-4 bg-blue-50 rounded-lg">
-                          <p className="text-sm text-muted-foreground">Total Loans</p>
+                          <p className="text-sm text-muted-foreground">
+                            {t('tabs.customer-notebook.summary.stats.totalLoans')}
+                          </p>
                           <p className="text-2xl font-bold text-blue-600">{stats.totalLoans}</p>
                         </div>
                         <div className="text-center p-4 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-muted-foreground">Total Amount</p>
+                          <p className="text-sm text-muted-foreground">
+                            {t('tabs.customer-notebook.summary.stats.totalAmount')}
+                          </p>
                           <p className="text-2xl font-bold text-gray-700">{formatCurrency(stats.totalAmount)}</p>
                         </div>
                         <div className="text-center p-4 bg-red-50 rounded-lg">
-                          <p className="text-sm text-muted-foreground">Pending</p>
+                          <p className="text-sm text-muted-foreground">
+                            {t('tabs.customer-notebook.summary.stats.pending')}
+                          </p>
                           <p className="text-2xl font-bold text-red-600">{stats.pendingCount}</p>
                           <p className="text-sm font-medium text-red-600">{formatCurrency(stats.pendingAmount)}</p>
                         </div>
                         <div className="text-center p-4 bg-green-50 rounded-lg">
-                          <p className="text-sm text-muted-foreground">Paid</p>
+                          <p className="text-sm text-muted-foreground">
+                            {t('tabs.customer-notebook.summary.stats.paid')}
+                          </p>
                           <p className="text-2xl font-bold text-green-600">{stats.paidCount}</p>
                           <p className="text-sm font-medium text-green-600">{formatCurrency(stats.paidAmount)}</p>
                         </div>
@@ -1228,7 +1273,7 @@ const fetchData = async () => {
                 </CardContent>
               </Card>
             </>
-          )}
+          ) : null}
         </TabsContent>
       </Tabs>
 

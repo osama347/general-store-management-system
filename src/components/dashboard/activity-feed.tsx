@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import { DollarSign, TrendingDown, Package } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
@@ -126,6 +127,8 @@ export function ActivityFeed({ userRole, locationFilter, dashboardType }: Activi
     staleTime: 3 * 60 * 1000, // 3 minutes
   })
 
+  const t = useTranslations('dashboard.activityFeed')
+
   if (isLoading) {
     return <ActivityFeedSkeleton />
   }
@@ -133,7 +136,7 @@ export function ActivityFeed({ userRole, locationFilter, dashboardType }: Activi
   if (error || !activities) {
     return (
       <div className="flex justify-center items-center h-32">
-        <p className="text-sm text-muted-foreground">Failed to load activities</p>
+        <p className="text-sm text-muted-foreground">{t('loadError')}</p>
       </div>
     )
   }
@@ -153,7 +156,7 @@ export function ActivityFeed({ userRole, locationFilter, dashboardType }: Activi
           </div>
         ))
       ) : (
-        <p className="text-center text-muted-foreground py-4">No recent activities</p>
+        <p className="text-center text-muted-foreground py-4">{t('noActivities')}</p>
       )}
     </div>
   )

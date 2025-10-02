@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useTranslations } from "next-intl"
 
 // Icons
 import { 
@@ -32,6 +33,7 @@ import {
 
 export default function ProductsPage() {
   
+  const t = useTranslations("products")
 const { profile } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -405,10 +407,10 @@ const { profile } = useAuth()
               <div className="space-y-1">
                 <CardTitle className="text-lg md:text-xl flex items-center gap-2">
                   <Package className="h-5 w-5" />
-                  Products
+                  {t('table.title')}
                 </CardTitle>
                 <CardDescription>
-                  Manage all products and their information
+                  {t('table.description')}
                 </CardDescription>
               </div>
               
@@ -416,7 +418,7 @@ const { profile } = useAuth()
                 <div className="relative flex-1 min-w-[200px]">
                   <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
                   <Input
-                    placeholder="Search products..."
+                    placeholder={t('table.searchPlaceholder')}  
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-9 w-full"
@@ -428,15 +430,15 @@ const { profile } = useAuth()
                     {profile?.role === 'admin' ? (
                       <Button className="bg-gray-900 hover:bg-gray-800 text-white whitespace-nowrap">
                         <Plus className="h-4 w-4 mr-2" />
-                        Add Product
+                        {t('table.addProduct')}
                       </Button>
                     ) : null}
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                      <DialogTitle>Add New Product</DialogTitle>
+                      <DialogTitle>{t('addForm.title')}</DialogTitle>
                       <DialogDescription>
-                        Create a new product with all necessary details
+                        {t('addForm.description')}
                       </DialogDescription>
                     </DialogHeader>
                     <ProductForm 
@@ -482,19 +484,19 @@ const { profile } = useAuth()
               <div className="text-center py-12 rounded-lg border border-dashed border-gray-300 bg-gray-50">
                 <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                  {searchTerm ? "No products found" : "No products yet"}
+                  {searchTerm ? t('table.noProductfound') : t('table.noProductsyet')}
                 </h3>
                 <p className="text-gray-500 mb-6 max-w-md mx-auto">
                   {searchTerm 
-                    ? "Try adjusting your search or filters" 
-                    : "Get started by adding your first product"
+                    ? t('table.adjustsearcfilters')
+                    : t('table.addfirstproduct')
                   }
                 </p>
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button>
                       <Plus className="mr-2 h-4 w-4" />
-                      Add Product
+                     {t('table.addProduct')}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl">
@@ -536,6 +538,7 @@ interface ProductTableProps {
 }
 
 function ProductTable({ products, categories, updateProduct , profile }: ProductTableProps) {
+  const t= useTranslations('products')
   const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc' | 'desc'} | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize] = useState(10)
@@ -576,7 +579,7 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency: "AFN",
     }).format(price)
   }
   
@@ -640,14 +643,14 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="font-semibold">Product</TableHead>
-              <TableHead className="font-semibold">Category</TableHead>
-              <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="font-semibold">Price</TableHead>
-              <TableHead className="font-semibold">Stock</TableHead>
-              <TableHead className="font-semibold">Attributes</TableHead>
+              <TableHead className="font-semibold">{t('table.columns.name')}</TableHead>
+              <TableHead className="font-semibold">{t('table.columns.category')}</TableHead>
+              <TableHead className="font-semibold">{t('table.columns.status')}</TableHead>
+              <TableHead className="font-semibold">{t('table.columns.price')}</TableHead>
+              <TableHead className="font-semibold">{t('table.columns.stock')}</TableHead>
+              <TableHead className="font-semibold">{t('table.columns.attributes')}</TableHead>
               {profile?.role === "admin" && (
-  <TableHead className="font-semibold text-right">Actions</TableHead>
+  <TableHead className="font-semibold text-right">{t('table.columns.actions')}</TableHead>
 )}
             </TableRow>
           </TableHeader>
@@ -700,13 +703,13 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
                             <PopoverTrigger asChild>
                               <span>
                                 <Badge variant="outline" className="text-xs cursor-pointer bg-muted text-muted-foreground">
-                                  +{product.attributes.length - 2} more
+                                  +{product.attributes.length - 2} {t("table.rows.attributes.more")}
                                 </Badge>
                               </span>
                             </PopoverTrigger>
                             <PopoverContent className="w-64 max-h-60 overflow-y-auto">
                               <div className="font-semibold mb-2 text-sm">
-                                Product Attributes
+                                {t('table.rows.attributes.title')}
                               </div>
                               <div className="space-y-2">
                                 {product.attributes.map((attr:any, i:any) => (
@@ -735,7 +738,7 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
                         variant="outline"
                         className="text-xs text-muted-foreground bg-muted"
                       >
-                        None
+                       { t("table.rows.attributes.none")}
                       </Badge>
                     )}
                   </TableCell>
@@ -771,9 +774,9 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
       {products.length > 0 && (
         <div className="flex items-center justify-between space-x-2 py-4">
           <div className="text-sm text-muted-foreground">
-            Showing {Math.min((currentPage - 1) * pageSize + 1, products.length)} to{" "}
-            {Math.min(currentPage * pageSize, products.length)} of{" "}
-            {products.length} products
+             {t('table.Pagination.showing')} {Math.min((currentPage - 1) * pageSize + 1, products.length)} {" /"}
+            {Math.min(currentPage * pageSize, products.length)} {t('table.Pagination.of')}{" "}
+            {products.length}  {t("table.Pagination.product")}
           </div>
           <div className="flex items-center space-x-2">
             <Button
@@ -783,7 +786,7 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
               disabled={currentPage === 1}
               className="h-8 px-3"
             >
-              First
+              {t("table.Pagination.first")}
             </Button>
             <Button
               variant="outline"
@@ -822,7 +825,7 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
               disabled={currentPage === totalPages}
               className="h-8 px-3"
             >
-              Last
+               {t('table.Pagination.last')}
             </Button>
           </div>
         </div>
@@ -832,9 +835,9 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
+            <DialogTitle>{t('editForm.title')}</DialogTitle>
             <DialogDescription>
-              Update the product's information.
+              {t('editForm.description')}
             </DialogDescription>
           </DialogHeader>
           <ProductForm 
@@ -858,6 +861,7 @@ interface ProductFormProps {
 }
 
 function ProductForm({ categories, product, onSubmit, isLoading }: ProductFormProps) {
+  const t=useTranslations('products')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     name: product?.name || "",
@@ -866,6 +870,7 @@ function ProductForm({ categories, product, onSubmit, isLoading }: ProductFormPr
     category_id: product?.category_id || categories[0]?.category_id || 0,
     attributes: product?.attributes || [],
   })
+  
   
   const handleCategoryChange = (categoryId: number) => {
     const selectedCategory = categories.find((c) => c.category_id === categoryId)
@@ -897,7 +902,7 @@ function ProductForm({ categories, product, onSubmit, isLoading }: ProductFormPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name || !formData.category_id) {
-      toast.error("Please fill in all required fields")
+      toast.error(t("editForm.error"))
       return
     }
     
@@ -923,33 +928,33 @@ function ProductForm({ categories, product, onSubmit, isLoading }: ProductFormPr
     <form onSubmit={handleSubmit} className="space-y-6">
       <Tabs defaultValue="basic" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="basic">Basic Info</TabsTrigger>
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
-          <TabsTrigger value="attributes">Attributes</TabsTrigger>
+          <TabsTrigger value="basic">{t('editForm.tabs.basicInfo')}</TabsTrigger>
+          <TabsTrigger value="inventory">{t('editForm.tabs.inventory')}</TabsTrigger>
+          <TabsTrigger value="attributes">{t('editForm.tabs.attributes')}</TabsTrigger>
         </TabsList>
         
         <TabsContent value="basic" className="space-y-4 pt-4">
           <div className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="name" className="text-sm font-medium">Product Name *</Label>
+              <Label htmlFor="name" className="text-sm font-medium">{t('editForm.formFields.name')} *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter product name"
+                placeholder={ t('editForm.formFields.nameplaceholder')}
                 required
                 className="w-full"
               />
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
+              <Label htmlFor="category" className="text-sm font-medium">{t('editForm.formFields.category')} *</Label>
               <Select
                 value={formData.category_id.toString()}
                 onValueChange={(value) => handleCategoryChange(Number.parseInt(value))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
+                  <SelectValue placeholder={t('editForm.formFields.categoryplaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
@@ -962,7 +967,7 @@ function ProductForm({ categories, product, onSubmit, isLoading }: ProductFormPr
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="price" className="text-sm font-medium">Price ($) *</Label>
+              <Label htmlFor="price" className="text-sm font-medium">{t('editForm.formFields.price')} (AFN) *</Label>
               <Input
                 id="price"
                 type="number"
@@ -982,7 +987,7 @@ function ProductForm({ categories, product, onSubmit, isLoading }: ProductFormPr
         <TabsContent value="inventory" className="space-y-4 pt-4">
           <div className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="stock" className="text-sm font-medium">Stock Quantity</Label>
+              <Label htmlFor="stock" className="text-sm font-medium">{t('editForm.formFields.stockQuantity')} *</Label>
               <Input
                 id="stock"
                 type="number"
@@ -1003,17 +1008,17 @@ function ProductForm({ categories, product, onSubmit, isLoading }: ProductFormPr
               formData.attributes.map((attr:any, index:any) => (
                 <div key={index} className="grid gap-2">
                   <Label className="text-sm font-medium">{attr.name}</Label>
-                  <div className="text-xs text-muted-foreground mb-1">Type: {attr.type}</div>
+                  <div className="text-xs text-muted-foreground mb-1">{t('editForm.formFields.attributetype')}: {attr.type}</div>
                   <Input
                     value={attr.value}
                     onChange={(e) => handleAttributeChange(index, e.target.value)}
-                    placeholder={`Enter ${attr.name.toLowerCase()}`}
+                    placeholder={t('editForm.formFields.attributesPlaceholder')}
                   />
                 </div>
               ))
             ) : (
               <div className="text-center py-4 text-muted-foreground">
-                No attributes available for this category
+                {t('editForm.noAttributes')}
               </div>
             )}
           </div>

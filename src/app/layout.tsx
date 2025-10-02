@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Next.js Supabase Auth Template",
-  description: "A comprehensive authentication template with Next.js, Supabase, and shadcn/ui",
+  title: "General Store Management System",
+  description: "Designed and developed by Hiwad Dost Software Solutions",
 };
 
 export default async function RootLayout({

@@ -6,6 +6,8 @@ import { DollarSign, TrendingDown, Users, Package, ArrowUpRight, ArrowDownRight,
 import { createClient } from '@/lib/supabase/client'
 import { KPICardSkeleton } from './skeletons'
 import { safeNumericValue } from '@/lib/data-validation'
+import { useTranslations ,useFormatter} from 'next-intl'
+
 
 interface KPIData {
   totalRevenue: number
@@ -194,6 +196,7 @@ async function fetchKPIData(
 }
 
 export function KPICards({ userRole, locationFilter, dateRange, dashboardType }: KPICardsProps) {
+  const t = useTranslations('dashboard.kpiCards')
   const { data: kpiData, isLoading, error } = useQuery({
     queryKey: ['kpi-data', userRole, locationFilter, dateRange.from.toISOString(), dateRange.to.toISOString(), dashboardType],
     queryFn: () => fetchKPIData(userRole, locationFilter, dateRange, dashboardType),
@@ -217,7 +220,7 @@ export function KPICards({ userRole, locationFilter, dateRange, dashboardType }:
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Failed to load KPI data</p>
+            <p className="text-sm text-muted-foreground">{t('states.error')}</p>
           </CardContent>
         </Card>
       </div>
@@ -230,7 +233,7 @@ export function KPICards({ userRole, locationFilter, dateRange, dashboardType }:
         <>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("revenue.title")}</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -247,14 +250,14 @@ export function KPICards({ userRole, locationFilter, dateRange, dashboardType }:
                     <span className="text-red-500">{kpiData.revenueChange.toFixed(1)}%</span>
                   </>
                 )}{' '}
-                from last month
+                {t('revenue.comparison')}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Expenses</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('expenses.title')}</CardTitle>
               <TrendingDown className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -271,20 +274,20 @@ export function KPICards({ userRole, locationFilter, dateRange, dashboardType }:
                     <span className="text-green-500">{kpiData.expensesChange.toFixed(1)}%</span>
                   </>
                 )}{' '}
-                from last month
+                {t('expenses.comparison')}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('customers.title')}</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{kpiData.customerCount}</div>
               <p className="text-xs text-muted-foreground">
-                Total registered customers
+                {t('customers.subtitle')}
               </p>
             </CardContent>
           </Card>
@@ -295,13 +298,13 @@ export function KPICards({ userRole, locationFilter, dateRange, dashboardType }:
         <>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('inventory.title')}</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">${kpiData.inventoryValue.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">
-                Total warehouse value
+                {t('inventory.totalvalue')}
               </p>
             </CardContent>
           </Card>
@@ -337,7 +340,7 @@ export function KPICards({ userRole, locationFilter, dateRange, dashboardType }:
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
-            {showWarehouseData ? "Total Products" : "Inventory Value"}
+            {showWarehouseData ? t("inventory.totalProducts") : t("inventory.title")}
           </CardTitle>
           <Package className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
@@ -346,7 +349,7 @@ export function KPICards({ userRole, locationFilter, dateRange, dashboardType }:
             {showWarehouseData ? "1,248" : `$${kpiData.inventoryValue.toFixed(2)}`}
           </div>
           <p className="text-xs text-muted-foreground">
-            {showWarehouseData ? "Products in warehouse" : `${kpiData.lowStockCount} products low in stock`}
+            {showWarehouseData ? "Products in warehouse" : `${kpiData.lowStockCount} ${t("inventory.lowStock")}`}
           </p>
         </CardContent>
       </Card>

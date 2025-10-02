@@ -10,7 +10,7 @@ interface LocaleLayoutProps {
 }
 
 export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
-  const { locale } = params;
+  const locale = (await Promise.resolve(params)).locale;
 
   if (!locales.includes(locale as Locale)) {
     notFound();

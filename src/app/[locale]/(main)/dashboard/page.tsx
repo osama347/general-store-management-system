@@ -76,17 +76,17 @@ export default function DashboardPage() {
 
   // Dashboard header based on current dashboard type
   const getDashboardTitle = useCallback(() => {
-    if (dashboardType === 'warehouse') return t('title.warehouse')
-    if (dashboardType === 'store') return t('title.store')
-    if (dashboardType === 'overall') return t('title.overall')
-    return t('title.default')
+    if (dashboardType === 'warehouse') return t('header.title.warehouse')
+    if (dashboardType === 'store') return t('header.title.store')
+    if (dashboardType === 'overall') return t('header.title.overall')
+    return t('header.title.default')
   }, [dashboardType, t])
   
   const getDashboardDescription = useCallback(() => {
-    if (dashboardType === 'warehouse') return t('description.warehouse')
-    if (dashboardType === 'store') return t('description.store')
-    if (dashboardType === 'overall') return t('description.overall')
-    return t('description.default')
+    if (dashboardType === 'warehouse') return t('header.description.warehouse')
+    if (dashboardType === 'store') return t('header.description.store')
+    if (dashboardType === 'overall') return t('header.description.overall')
+    return t('header.description.default')
   }, [dashboardType, t])
 
   const getLocationTypeLabel = useCallback((type: string | null | undefined) => {
@@ -101,7 +101,7 @@ export default function DashboardPage() {
       <div className="flex items-center space-x-2 text-sm text-muted-foreground">
         <CalendarIcon className="h-4 w-4" />
         <span>
-          {t('currentMonth', {
+          {t('common.currentMonth', {
             date: formatter.dateTime(currentMonthRange.from, {
               month: 'long',
               year: 'numeric',
@@ -112,28 +112,28 @@ export default function DashboardPage() {
     )
   }
   
-  // Location Selector (only for admin)
-  function LocationSelector() {
-    if (!isAdmin) return null
+  // // Location Selector (only for admin)
+  // function LocationSelector() {
+  //   if (!isAdmin) return null
     
-    return (
-      <div className="flex items-center space-x-2">
-        <span className="text-sm font-medium">{t('locationLabel')}</span>
-        <div className="flex items-center space-x-1">
-          {locations.map(location => (
-            <Button
-              key={location.location_id}
-              variant={currentLocation?.location_id === location.location_id ? "default" : "outline"}
-              size="sm"
-              onClick={() => currentLocation?.location_id !== location.location_id && setCurrentLocation(location)}
-            >
-              {location.name}
-            </Button>
-          ))}
-        </div>
-      </div>
-    )
-  }
+  //   return (
+  //     <div className="flex items-center space-x-2">
+  //       <span className="text-sm font-medium">{t('common.locationLabel')}</span>
+  //       <div className="flex items-center space-x-1">
+  //         {locations.map(location => (
+  //           <Button
+  //             key={location.location_id}
+  //             variant={currentLocation?.location_id === location.location_id ? "default" : "outline"}
+  //             size="sm"
+  //             onClick={() => currentLocation?.location_id !== location.location_id && setCurrentLocation(location)}
+  //           >
+  //             {location.name}
+  //           </Button>
+  //         ))}
+  //       </div>
+  //     </div>
+  //   )
+  // }
 
   // Show loading state while auth or location data is loading
   if (!profile?.profile || locationLoading) {
@@ -164,7 +164,7 @@ export default function DashboardPage() {
           )}
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <LocationSelector />
+          {/* <LocationSelector /> */}
           <CurrentMonthDisplay />
           <div className="flex items-center space-x-2">
             <Avatar className="h-8 w-8">
@@ -203,13 +203,13 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>
               {showWarehouseFeatures
-                ? t('inventory.titleWarehouse')
-                : t('inventory.titleStore')}
+                ? t('inventoryTable.title.warehouse')
+                : t('inventoryTable.title.store')}
             </CardTitle>
             <CardDescription>
               {showWarehouseFeatures
-                ? t('inventory.descWarehouse')
-                : t('inventory.descStore')}
+                ? t('inventoryTable.description.warehouse')
+                : t('inventoryTable.description.store')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -223,11 +223,11 @@ export default function DashboardPage() {
         
         <Card>
           <CardHeader>
-            <CardTitle>{t('activity.title')}</CardTitle>
+            <CardTitle>{t('activityFeed.title')}</CardTitle>
             <CardDescription>
               {showWarehouseFeatures
-                ? t('activity.descWarehouse')
-                : t('activity.descStore')}
+                ? t('activityFeed.description.warehouse')
+                : t('activityFeed.description.store')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -244,21 +244,21 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 mb-6">
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="overview">{t('tabs.overview')}</TabsTrigger>
-            <TabsTrigger value="detailed">{t('tabs.detailed')}</TabsTrigger>
+            <TabsTrigger value="overview">{t('common.tabs.overview.title')}</TabsTrigger>
+            <TabsTrigger value="detailed">{t('common.tabs.detailed.title')}</TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview">
             <Card>
               <CardHeader>
-                <CardTitle>{t('cards.overview.title')}</CardTitle>
+                <CardTitle>{t('common.tabs.overview.title')}</CardTitle>
                 <CardDescription>
-                  {t('cards.overview.description')}
+                  {t('common.tabs.overview.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  {t('cards.overview.placeholder')}
+                  {t('common.tabs.overview.placeholder')}
                 </p>
               </CardContent>
             </Card>
@@ -267,14 +267,14 @@ export default function DashboardPage() {
           <TabsContent value="detailed">
             <Card>
               <CardHeader>
-                <CardTitle>{t('cards.detailed.title')}</CardTitle>
+                <CardTitle>{t('common.tabs.detailed.title')}</CardTitle>
                 <CardDescription>
-                  {t('cards.detailed.description')}
+                  {t('common.tabs.detailed.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  {t('cards.detailed.placeholder')}
+                  {t('common.tabs.detailed.placeholder')}
                 </p>
               </CardContent>
             </Card>
