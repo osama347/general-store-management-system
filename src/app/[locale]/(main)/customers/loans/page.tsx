@@ -519,6 +519,9 @@ const fetchData = async () => {
     return loans.filter(loan => loan.status === 'paid').length
   }
 
+  const selectedLoanStatusInfo = selectedLoan ? getLoanStatus(selectedLoan.status) : null
+  const SelectedLoanStatusIcon = selectedLoanStatusInfo?.icon
+
   if (loading || authLoading || locationLoading) {
     return (
       <main className="container mx-auto p-6 space-y-4">
@@ -661,7 +664,7 @@ const fetchData = async () => {
           className="gap-2"
         >
           <Plus className="h-4 w-4" />
-          {t('actions.addLoan.title')}
+          {t('tabs.actions.addLoan.title')}
         </Button>
           )}
         </div>
@@ -1289,38 +1292,41 @@ const fetchData = async () => {
     <DialogHeader>
       <DialogTitle className="text-xl flex items-center gap-2">
         <CreditCard className="h-5 w-5 text-primary" />
-        Add New Loan
+        {t('addnewform.title')}
       </DialogTitle>
       <DialogDescription>
-        {isAddingForSpecificCustomer 
-          ? `Adding loan for ${selectedCustomer?.first_name} ${selectedCustomer?.last_name}`
-          : "Search for a customer and fill in the loan details."
-        }
+        {isAddingForSpecificCustomer
+          ? t('addnewform.description.specificCustomer', {
+              name: `${selectedCustomer?.first_name} ${selectedCustomer?.last_name}`,
+            })
+          : t('addnewform.description.general')}
       </DialogDescription>
-      
+
       {profile?.location && (
         <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
           <p className="text-sm text-blue-700 flex items-center gap-2">
             <Building className="h-4 w-4" />
-            This loan will be associated with {profile.location.name}.
+            {t('addnewform.locationNotice', {
+              location: profile.location.name ?? '-',
+            })}
           </p>
         </div>
       )}
     </DialogHeader>
-    
+
     <div className="grid gap-6 py-4">
       {/* Customer Selection */}
       {!isAddingForSpecificCustomer ? (
         <div className="space-y-3">
           <Label htmlFor="customerSearch" className="text-sm font-medium">
-            Select Customer <span className="text-red-500">*</span>
+            {t('addnewform.fields.selectCustomer')} <span className="text-red-500">*</span>
           </Label>
           <div className="relative">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 id="customerSearch"
-                placeholder="Search customers by name or email..."
+                placeholder={t('addnewform.fields.searchPlaceholder')}
                 value={customerSearch}
                 onChange={(e) => {
                   setCustomerSearch(e.target.value)
@@ -1344,7 +1350,7 @@ const fetchData = async () => {
                 </Button>
               )}
             </div>
-            
+
             {/* Customer Dropdown */}
             {showCustomerDropdown && (
               <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -1370,13 +1376,13 @@ const fetchData = async () => {
                   ))
                 ) : (
                   <div className="p-4 text-center text-muted-foreground">
-                    No customers found
+                    {t('addnewform.fields.noCustomersFound')}
                   </div>
                 )}
               </div>
             )}
           </div>
-          
+
           {/* Selected Customer Display */}
           {selectedCustomer && (
             <div className="p-4 bg-green-50 rounded-lg border border-green-200">
@@ -1411,7 +1417,7 @@ const fetchData = async () => {
         </div>
       ) : (
         <div className="space-y-3">
-          <Label className="text-sm font-medium">Customer</Label>
+          <Label className="text-sm font-medium">{t('addnewform.fields.customer')}</Label>
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex items-center gap-3">
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
@@ -1429,11 +1435,11 @@ const fetchData = async () => {
           </div>
         </div>
       )}
-      
+
       {/* Loan Amount */}
       <div className="space-y-3">
         <Label htmlFor="amount" className="text-sm font-medium">
-          Loan Amount <span className="text-red-500">*</span>
+          {t('addnewform.fields.amount')} <span className="text-red-500">*</span>
         </Label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1446,15 +1452,17 @@ const fetchData = async () => {
             min="0"
             placeholder="0.00"
             value={newLoan.amount}
-            onChange={(e) => setNewLoan({...newLoan, amount: e.target.value})}
+            onChange={(e) => setNewLoan({ ...newLoan, amount: e.target.value })}
             className="pl-9"
           />
         </div>
       </div>
-      
+
       {/* Due Date */}
       <div className="space-y-3">
-        <Label htmlFor="dueDate" className="text-sm font-medium">Due Date (Optional)</Label>
+        <Label htmlFor="dueDate" className="text-sm font-medium">
+          {t('addnewform.fields.dueDateOptional')}
+        </Label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -1463,18 +1471,20 @@ const fetchData = async () => {
             id="dueDate"
             type="date"
             value={newLoan.dueDate}
-            onChange={(e) => setNewLoan({...newLoan, dueDate: e.target.value})}
+            onChange={(e) => setNewLoan({ ...newLoan, dueDate: e.target.value })}
             className="pl-9"
           />
         </div>
       </div>
-      
+
       {/* Status */}
       <div className="space-y-3">
-        <Label htmlFor="status" className="text-sm font-medium">Status</Label>
+        <Label htmlFor="status" className="text-sm font-medium">
+          {t('addnewform.fields.status')}
+        </Label>
         <Select
           value={newLoan.status}
-          onValueChange={(value) => setNewLoan({...newLoan, status: value})}
+          onValueChange={(value) => setNewLoan({ ...newLoan, status: value })}
         >
           <SelectTrigger>
             <SelectValue />
@@ -1483,215 +1493,232 @@ const fetchData = async () => {
             <SelectItem value="pending">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Pending
+                {t('addnewform.statusOptions.pending')}
               </div>
             </SelectItem>
             <SelectItem value="paid">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4" />
-                Paid
+                {t('addnewform.statusOptions.paid')}
               </div>
             </SelectItem>
           </SelectContent>
         </Select>
       </div>
     </div>
-    
+
     <DialogFooter className="flex justify-end gap-2 pt-4">
       <Button variant="outline" onClick={() => setIsNewLoanDialogOpen(false)}>
-        Cancel
+        {t('addnewform.buttons.cancel')}
       </Button>
-      <Button 
-        onClick={handleCreateLoan} 
+      <Button
+        onClick={handleCreateLoan}
         disabled={isSubmitting || !selectedCustomer || !newLoan.amount}
         className="min-w-[120px]"
       >
         {isSubmitting ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Creating...
+            {t('addnewform.buttons.creating')}
           </>
         ) : (
           <>
             <Plus className="h-4 w-4 mr-2" />
-            Create Loan
+            {t('addnewform.buttons.create')}
           </>
         )}
       </Button>
     </DialogFooter>
   </DialogContent>
+  </Dialog>
+{/* Edit Loan Dialog */}
+<Dialog open={isEditLoanDialogOpen} onOpenChange={setIsEditLoanDialogOpen}>
+  <DialogContent className="sm:max-w-[500px]">
+    <DialogHeader>
+  <DialogTitle className="text-xl flex items-center gap-2">
+    <Edit className="h-5 w-5 text-primary" />
+    {t('updateform.title')}
+  </DialogTitle>
+  <DialogDescription>
+    {t('updateform.description')}
+  </DialogDescription>
+    </DialogHeader>
+    
+  <div className="space-y-2">
+    <Label htmlFor="editAmount" className="text-sm font-medium">
+      {t('updateform.fields.amount')}
+    </Label>
+    <Input
+      id="editAmount"
+      type="number"
+      step="0.01"
+      min="0"
+      placeholder="0.00"
+      value={editLoan.amount}
+      onChange={(e) => setEditLoan({ ...editLoan, amount: e.target.value })}
+    />
+  </div>
+  <div className="space-y-2">
+    <Label htmlFor="editDueDate" className="text-sm font-medium">
+      {t('updateform.fields.dueDateOptional')}
+    </Label>
+    <Input
+      id="editDueDate"
+      type="date"
+      value={editLoan.dueDate}
+      onChange={(e) => setEditLoan({ ...editLoan, dueDate: e.target.value })}
+    />
+  </div>
+  <div className="space-y-2">
+    <Label htmlFor="editStatus" className="text-sm font-medium">
+      {t('updateform.fields.status')}
+    </Label>
+    <Select
+      value={editLoan.status}
+      onValueChange={(value) => setEditLoan({ ...editLoan, status: value })}
+    >
+      <SelectTrigger id="editStatus">
+    <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+    <SelectItem value="pending">{t('updateform.statusOptions.pending')}</SelectItem>
+    <SelectItem value="paid">{t('updateform.statusOptions.paid')}</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+    
+    <div className="flex justify-end gap-2">
+  <Button variant="outline" onClick={() => setIsEditLoanDialogOpen(false)}>
+    {t('updateform.buttons.cancel')}
+  </Button>
+  <Button
+    onClick={handleUpdateLoan}
+    disabled={isSubmitting || !editLoan.amount}
+    className="min-w-[140px]"
+  >
+    {isSubmitting ? (
+      <>
+    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+    {t('updateform.buttons.updating')}
+      </>
+    ) : (
+      t('updateform.buttons.update')
+    )}
+  </Button>
+    </div>
+  </DialogContent>
+  </Dialog>
+{/* Payment Dialog */}
+<Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+  <DialogContent className="sm:max-w-[500px]">
+    <DialogHeader>
+  <DialogTitle>{t('paymentDialog.title')}</DialogTitle>
+  <DialogDescription>{t('paymentDialog.description')}</DialogDescription>
+    </DialogHeader>
+    <div className="grid gap-4 py-4">
+  {selectedLoan ? (
+    <div className="p-4 bg-gray-50 rounded-lg">
+      <div className="grid grid-cols-2 gap-2 text-sm">
+    <div>
+      <p className="text-muted-foreground">{t('paymentDialog.loanAmount')}</p>
+      <p className="font-medium">{formatCurrency(selectedLoan.amount)}</p>
+    </div>
+    <div>
+      <p className="text-muted-foreground">{t('paymentDialog.customer')}</p>
+      <p className="font-medium">{selectedLoan.customerName}</p>
+    </div>
+    {profile?.role === 'admin' && selectedLoan.locationName && (
+      <div>
+        <p className="text-muted-foreground">{t('paymentDialog.location')}</p>
+        <p className="font-medium">{selectedLoan.locationName}</p>
+      </div>
+    )}
+      </div>
+    </div>
+  ) : null}
+    </div>
+    <div className="flex justify-end gap-2">
+  <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>
+    {t('paymentDialog.actions.cancel')}
+  </Button>
+  <Button
+    onClick={handlePaymentSubmit}
+    disabled={isSubmitting}
+    className="bg-green-600 hover:bg-green-700"
+  >
+    {isSubmitting ? (
+      <>
+    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+    {t('paymentDialog.actions.processing')}
+      </>
+    ) : (
+      t('paymentDialog.actions.markAsPaid')
+    )}
+  </Button>
+    </div>
+  </DialogContent>
+  </Dialog>
+{/* View Loan Dialog */}
+<Dialog open={isViewLoanDialogOpen} onOpenChange={setIsViewLoanDialogOpen}>
+  <DialogContent className="sm:max-w-[500px]">
+    <DialogHeader>
+  <DialogTitle>{t('viewLoanDialog.title')}</DialogTitle>
+  <DialogDescription>{t('viewLoanDialog.description')}</DialogDescription>
+    </DialogHeader>
+    {selectedLoan ? (
+  <div className="space-y-4">
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+    <Label className="text-sm font-medium">{t('viewLoanDialog.fields.loanId')}</Label>
+    <p className="text-sm">#{selectedLoan.id}</p>
+      </div>
+      <div>
+    <Label className="text-sm font-medium">{t('viewLoanDialog.fields.amount')}</Label>
+    <p className="text-lg font-bold">{formatCurrency(selectedLoan.amount)}</p>
+      </div>
+      <div>
+    <Label className="text-sm font-medium">{t('viewLoanDialog.fields.customer')}</Label>
+    <p className="text-sm">{selectedLoan.customerName}</p>
+      </div>
+      <div>
+    <Label className="text-sm font-medium">{t('viewLoanDialog.fields.customerEmail')}</Label>
+    <p className="text-sm">{selectedLoan.customerEmail}</p>
+      </div>
+      {profile?.role === 'admin' && selectedLoan.locationName && (
+    <div>
+      <Label className="text-sm font-medium">{t('viewLoanDialog.fields.location')}</Label>
+      <p className="text-sm">{selectedLoan.locationName}</p>
+    </div>
+      )}
+      <div>
+    <Label className="text-sm font-medium">{t('viewLoanDialog.fields.loanDate')}</Label>
+    <p className="text-sm">{formatDate(selectedLoan.loanDate)}</p>
+      </div>
+      <div>
+    <Label className="text-sm font-medium">{t('viewLoanDialog.fields.dueDate')}</Label>
+    <p className="text-sm">
+      {selectedLoan.dueDate ? formatDate(selectedLoan.dueDate) : t('viewLoanDialog.fields.noDueDate')}
+    </p>
+      </div>
+    </div>
+
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">{t('viewLoanDialog.fields.status')}</Label>
+      <div className="flex items-center gap-2">
+    {selectedLoanStatusInfo && SelectedLoanStatusIcon ? (
+      <div
+        className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${selectedLoanStatusInfo.bgColor} ${selectedLoanStatusInfo.textColor}`}
+      >
+        <SelectedLoanStatusIcon className="h-4 w-4" />
+        <span className="font-medium">{selectedLoanStatusInfo.text}</span>
+      </div>
+    ) : null}
+      </div>
+    </div>
+  </div>
+    ) : null}
+  </DialogContent>
 </Dialog>
-
-      {/* Edit Loan Dialog */}
-      <Dialog open={isEditLoanDialogOpen} onOpenChange={setIsEditLoanDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Edit Loan</DialogTitle>
-            <DialogDescription>
-              Update the loan details.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="editAmount">Loan Amount *</Label>
-              <Input
-                id="editAmount"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={editLoan.amount}
-                onChange={(e) => setEditLoan({...editLoan, amount: e.target.value})}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editDueDate">Due Date (Optional)</Label>
-              <Input
-                id="editDueDate"
-                type="date"
-                value={editLoan.dueDate}
-                onChange={(e) => setEditLoan({...editLoan, dueDate: e.target.value})}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editStatus">Status</Label>
-              <Select
-                value={editLoan.status}
-                onValueChange={(value) => setEditLoan({...editLoan, status: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsEditLoanDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleUpdateLoan} 
-              disabled={isSubmitting || !editLoan.amount}
-            >
-              {isSubmitting ? "Updating..." : "Update Loan"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Payment Dialog */}
-      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Record Payment</DialogTitle>
-            <DialogDescription>
-              Mark this loan as paid.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {selectedLoan && (
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Loan Amount</p>
-                    <p className="font-medium">{formatCurrency(selectedLoan.amount)}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Customer</p>
-                    <p className="font-medium">{selectedLoan.customerName}</p>
-                  </div>
-                  {profile?.role === 'admin' && selectedLoan.locationName && (
-                    <div>
-                      <p className="text-muted-foreground">Location</p>
-                      <p className="font-medium">{selectedLoan.locationName}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handlePaymentSubmit} 
-              disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isSubmitting ? "Processing..." : "Mark as Paid"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Loan Dialog */}
-      <Dialog open={isViewLoanDialogOpen} onOpenChange={setIsViewLoanDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Loan Details</DialogTitle>
-            <DialogDescription>
-              Complete loan information
-            </DialogDescription>
-          </DialogHeader>
-          {selectedLoan && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Loan ID</Label>
-                  <p className="text-sm">#{selectedLoan.id}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Amount</Label>
-                  <p className="text-lg font-bold">{formatCurrency(selectedLoan.amount)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Customer</Label>
-                  <p className="text-sm">{selectedLoan.customerName}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Customer Email</Label>
-                  <p className="text-sm">{selectedLoan.customerEmail}</p>
-                </div>
-                {profile?.role === 'admin' && selectedLoan.locationName && (
-                  <div>
-                    <Label className="text-sm font-medium">Location</Label>
-                    <p className="text-sm">{selectedLoan.locationName}</p>
-                  </div>
-                )}
-                <div>
-                  <Label className="text-sm font-medium">Loan Date</Label>
-                  <p className="text-sm">{formatDate(selectedLoan.loanDate)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Due Date</Label>
-                  <p className="text-sm">{selectedLoan.dueDate ? formatDate(selectedLoan.dueDate) : "No due date"}</p>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Status</Label>
-                <div className="flex items-center gap-2">
-                  {(() => {
-                    const statusInfo = getLoanStatus(selectedLoan.status)
-                    const StatusIcon = statusInfo.icon
-                    return (
-                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${statusInfo.bgColor} ${statusInfo.textColor}`}>
-                        <StatusIcon className="h-4 w-4" />
-                        <span className="font-medium">{statusInfo.text}</span>
-                      </div>
-                    )
-                  })()}
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </main>
   )
 }

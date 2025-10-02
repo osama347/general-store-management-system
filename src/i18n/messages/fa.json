@@ -438,6 +438,77 @@
           "icon": "علامت به‌علاوه"
             }
           }
+        },
+        "addnewform": {
+          "title": "افزودن وام جدید",
+          "description": {
+            "specificCustomer": "افزودن وام برای {name}",
+            "general": "برای یک مشتری جستجو کنید و جزئیات وام را تکمیل کنید."
+          },
+          "locationNotice": "این وام با {location} مرتبط خواهد بود.",
+          "fields": {
+            "selectCustomer": "انتخاب مشتری",
+            "searchPlaceholder": "مشتریان را بر اساس نام یا ایمیل جستجو کنید...",
+            "noCustomersFound": "هیچ مشتری‌ای یافت نشد",
+            "customer": "مشتری",
+            "amount": "مبلغ وام",
+            "dueDateOptional": "تاریخ سررسید (اختیاری)",
+            "status": "وضعیت"
+          },
+          "statusOptions": {
+            "pending": "در انتظار",
+            "paid": "پرداخت شده"
+          },
+          "buttons": {
+            "cancel": "انصراف",
+            "create": "ایجاد وام",
+            "creating": "در حال ایجاد..."
+          }
+        },
+        "updateform": {
+          "title": "ویرایش وام",
+          "description": "جزئیات وام را به‌روزرسانی کنید.",
+          "fields": {
+            "amount": "مبلغ وام *",
+            "dueDateOptional": "تاریخ سررسید (اختیاری)",
+            "status": "وضعیت"
+          },
+          "statusOptions": {
+            "pending": "در انتظار",
+            "paid": "پرداخت شده"
+          },
+          "buttons": {
+            "cancel": "انصراف",
+            "update": "به‌روزرسانی وام",
+            "updating": "در حال به‌روزرسانی..."
+          }
+        },
+        "paymentDialog": {
+          "title": "ثبت پرداخت",
+          "description": "این وام را به عنوان پرداخت شده علامت‌گذاری کنید.",
+          "loanAmount": "مبلغ وام",
+          "customer": "مشتری",
+          "location": "مکان",
+          "actions": {
+            "cancel": "انصراف",
+            "markAsPaid": "علامت‌گذاری به عنوان پرداخت شده",
+            "processing": "در حال پردازش..."
+          }
+        },
+        "viewLoanDialog": {
+          "title": "جزئیات وام",
+          "description": "اطلاعات کامل وام",
+          "fields": {
+            "loanId": "شماره وام",
+            "amount": "مبلغ",
+            "customer": "مشتری",
+            "customerEmail": "ایمیل مشتری",
+            "location": "مکان",
+            "loanDate": "تاریخ وام",
+            "dueDate": "تاریخ سررسید",
+            "noDueDate": "بدون تاریخ سررسید",
+            "status": "وضعیت"
+          }
         }
       
     
