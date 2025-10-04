@@ -11,6 +11,7 @@ export type Profile = {
   avatar_url: string | null
   role: string | null
   location_id: number | null
+  phone: string | null
   location?: {
     location_id: number
     name: string
@@ -25,59 +26,77 @@ export function useAuth() {
   const supabase = createClient()
 
   const loadProfile = async (uid: string) => {
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select(`
-        id,
-        email,
-        full_name,
-        avatar_url,
-        role,
-        location_id,
-        location:locations!profiles_location_id_fkey (
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          email,
+          full_name,
+          avatar_url,
+          role,
           location_id,
-          name,
-          location_type
-        )
-      `)
-      .eq('id', uid)
-      .single()
+          phone,
+          location:locations!profiles_location_id_fkey (
+            location_id,
+            name,
+            location_type
+          )
+        `)
+        .eq('id', uid)
+        .single()
 
-    setProfile(profileData as Profile | null)
+      setProfile(profileData as Profile | null)
+    } catch (error) {
+      console.error('Error loading profile:', error)
+      setProfile(null)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
+    let mounted = true
+
     // ✅ Fast local session check
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return
+      
       if (session?.user) {
-        setUser(session.user) // immediate set
-        loadProfile(session.user.id) // fetch profile async
+        setUser(session.user)
+        loadProfile(session.user.id)
+      } else {
+        setLoading(false)
       }
-      setLoading(false)
     })
 
     // ✅ Listen for login/logout
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!mounted) return
+        
         if (session?.user) {
           setUser(session.user)
           await loadProfile(session.user.id)
         } else {
           setUser(null)
           setProfile(null)
+          setLoading(false)
         }
       }
     )
 
-    return () => subscription.unsubscribe()
-  }, [supabase])
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [])
 
   const signOut = async () => {
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
   }
-
 
   return {
     user,

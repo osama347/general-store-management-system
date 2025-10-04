@@ -33,8 +33,7 @@ import { toast } from "sonner"
 
 // Icons
 import { 
-  Plus, Search, Edit, Trash2, FolderOpen, RefreshCw, 
-  Settings, Tag, Info, X, ChevronLeft, ChevronRight, Filter
+  Plus, Search, Edit, FolderOpen, Tag, X, Layers
 } from "lucide-react"
 
 export default function CategoriesPage() {
@@ -223,54 +222,73 @@ export default function CategoriesPage() {
   }
   
   return (
-    <div className="flex flex-col min-h-screen">
-      <div className="flex-1 space-y-4 p-4 md:p-8">
-        <Card className="w-full">
-          {/* Header with Add Category button */}
-          <div className="p-6 pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex flex-col md:flex-row md:items-center gap-4 w-full">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  
-                  {t('title')}
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {t('description')}
-                </CardDescription>
+    <div className="flex flex-col min-h-screen ">
+      {/* Premium Header */}
+      <header className="bg-white border-b-2 border-teal-200 shadow-md sticky top-0 z-10">
+        <div className="max-w-[1920px] mx-auto px-6 py-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-teal-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Layers className="h-6 w-6 text-white" />
               </div>
-              
-              <div className="relative w-full md:w-[300px] flex items-center">
-                <Search className="h-4 w-4 text-muted-foreground absolute left-3" />
+              <div>
+                <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-emerald-600 tracking-tight">{t('title')}</h1>
+                <p className="text-slate-600 text-sm font-medium">{t('description')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="px-3 py-1.5 bg-gradient-to-br from-teal-50 to-emerald-100 border-2 border-teal-300 shadow-sm">
+                <Tag className="h-3 w-3 mr-1.5" />
+                <span className="text-sm font-semibold text-teal-900">{filteredCategories.length}</span>
+                <span className="text-xs text-teal-600 font-semibold ml-1">{filteredCategories.length === 1 ? 'Category' : 'Categories'}</span>
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </header>
+      
+      <div className="flex-1 space-y-6 p-4 md:p-8">
+
+        <Card className="w-full shadow-lg border-2 rounded-2xl">
+          {/* Search and Add Button */}
+          <div className="p-6 pb-4 bg-gradient-to-r from-slate-50 to-white border-b-2 border-slate-100">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="relative w-full md:max-w-md">
+                <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
                 <Input
                   placeholder={t("searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-4"
+                  className="w-full pl-9 pr-4 border-2 focus:border-teal-500"
                 />
               </div>
+              
+              { profile?.role === 'admin' && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white whitespace-nowrap shadow-md">
+                      <Plus className="h-4 w-4 mr-2" />
+                      {t('addCategory')}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                        <Plus className="h-5 w-5 text-teal-600" />
+                        {t("addForm.title")}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {t("addForm.description")}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <CategoryForm 
+                      onSubmit={addCategory} 
+                      isLoading={isLoading}
+                    />
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
-            { profile?.role === 'admin' && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="bg-gray-900 hover:bg-gray-800 text-white whitespace-nowrap">
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t('addCategory')}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>{t("addForm.title")}</DialogTitle>
-                  <DialogDescription>
-                    {t("addForm.description")}
-                  </DialogDescription>
-                </DialogHeader>
-                <CategoryForm 
-                  onSubmit={addCategory} 
-                  isLoading={isLoading}
-                />
-              </DialogContent>
-            </Dialog>
-            )}
           </div>
           
           {/* Main content inside Card */}
@@ -306,37 +324,41 @@ export default function CategoriesPage() {
                 ))}
               </div>
             ) : filteredCategories.length === 0 ? (
-              <div className="text-center py-12">
-                <FolderOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-semibold mb-2">
+              <div className="text-center py-16 rounded-xl border-2 border-dashed border-teal-200 bg-gradient-to-br from-teal-50 to-emerald-50">
+                <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <FolderOpen className="h-10 w-10 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">
                   {searchTerm ? "No categories found" : "No categories yet"}
                 </h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                <p className="text-slate-600 mb-8 max-w-md mx-auto">
                   {searchTerm 
                     ? "Try adjusting your search or filters" 
                     : "Get started by adding your first category"
                   }
                 </p>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="mr-2 h-4 w-4" />
-                      {t('addCategory')}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>{t("addForm.title")}</DialogTitle>
-                      <DialogDescription>
-                        {t("addForm.description")}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <CategoryForm 
-                      onSubmit={addCategory} 
-                      isLoading={isLoading}
-                    />
-                  </DialogContent>
-                </Dialog>
+                {profile?.role === 'admin' && !searchTerm && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white shadow-md">
+                        <Plus className="mr-2 h-4 w-4" />
+                        {t('addCategory')}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-bold">{t("addForm.title")}</DialogTitle>
+                        <DialogDescription>
+                          {t("addForm.description")}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <CategoryForm 
+                        onSubmit={addCategory} 
+                        isLoading={isLoading}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -373,44 +395,50 @@ function CategoryCard({ category, updateCategory }: CategoryCardProps) {
   
   return (
     <>
-      <Card className="group border-0 shadow-sm hover:shadow-md transition-all duration-200 bg-white rounded-xl overflow-hidden h-full">
+      <Card className="group border-2 border-slate-200 shadow-sm hover:shadow-xl hover:border-teal-300 transition-all duration-300 bg-white rounded-2xl overflow-hidden h-full hover:-translate-y-1">
         <CardContent className="p-6 h-full flex flex-col">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 mb-1 truncate">{category.name}</h3>
-              <p className="text-sm text-gray-500 line-clamp-2">{category.description || t("nodescription")}</p>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-md">
+                  <Tag className="h-4 w-4 text-white" />
+                </div>
+                <h3 className="font-bold text-slate-900 truncate">{category.name}</h3>
+              </div>
+              <p className="text-sm text-slate-600 line-clamp-2 ml-10">{category.description || t("nodescription")}</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleEdit}
-              className=" h-8 w-8 p-0 hover:bg-gray-100 rounded-lg"
+              className="h-9 px-3 bg-teal-50 hover:bg-teal-100 text-teal-700 font-medium ml-2"
             >
-              <Edit className="h-4 w-4" />
+              <Edit className="h-4 w-4 mr-1.5" />
+              Edit
             </Button>
           </div>
           
           <div className="mt-auto space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">{t('tabs.attributes')}</span>
-              <Badge variant="secondary" className="text-xs rounded-full px-3 py-1">
+            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl border border-teal-100">
+              <span className="text-sm font-semibold text-teal-700">{t('tabs.attributes')}</span>
+              <Badge className="text-xs rounded-full px-3 py-1 bg-teal-600 text-white">
                 {category.attributes.length}
               </Badge>
             </div>
             
             {category.attributes.length > 0 && (
-              <div className="pt-2 border-t border-gray-100">
+              <div className="pt-2 border-t-2 border-slate-100">
                 <div className="space-y-2">
                   {category.attributes.slice(0, 3).map((attr:any, index:any) => (
-                    <div key={index} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-900 font-medium truncate max-w-[120px]">{attr.attribute_name}</span>
-                      <Badge variant="outline" className="text-xs text-gray-600 rounded-full px-2 py-1">
+                    <div key={index} className="flex items-center justify-between text-sm p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                      <span className="text-slate-900 font-semibold truncate max-w-[140px]">{attr.attribute_name}</span>
+                      <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 rounded-full px-2 py-1 font-medium">
                         {attr.data_type}
                       </Badge>
                     </div>
                   ))}
                   {category.attributes.length > 3 && (
-                    <div className="text-xs text-gray-400 pt-1">
+                    <div className="text-xs text-teal-600 font-medium pt-1 pl-2">
                       +{category.attributes.length - 3} {t("moreattributes")}
                     </div>
                   )}
@@ -423,9 +451,12 @@ function CategoryCard({ category, updateCategory }: CategoryCardProps) {
       
       {/* Edit Category Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t("editForm.title")}</DialogTitle>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Edit className="h-5 w-5 text-teal-600" />
+              {t("editForm.title")}
+            </DialogTitle>
             <DialogDescription>
               {t("editForm.description")}
             </DialogDescription>
@@ -506,74 +537,94 @@ function CategoryForm({ category, onSubmit, isLoading }: CategoryFormProps) {
   }
   
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="basic">{t("tabs.basicInfo")}</TabsTrigger>
-          <TabsTrigger value="attributes">{t("tabs.attributes")}</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100 p-1.5 rounded-xl border-2 border-slate-200">
+          <TabsTrigger 
+            value="basic"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg font-semibold"
+          >
+            {t("tabs.basicInfo")}
+          </TabsTrigger>
+          <TabsTrigger 
+            value="attributes"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg font-semibold"
+          >
+            {t("tabs.attributes")}
+          </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="basic" className="space-y-4">
-          <div className="space-y-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="name" className="font-medium">{t('editForm.formFields.name')}</Label>
+        <TabsContent value="basic" className="space-y-5 pt-4">
+          <div className="space-y-5">
+            <div className="grid gap-3 p-4 bg-slate-50 rounded-xl border-2 border-slate-100">
+              <Label htmlFor="name" className="font-bold text-slate-900">{t('editForm.formFields.name')} *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder={t('editForm.formFields.namePlaceholder')}
                 required
+                className="border-2 focus:border-teal-500"
               />
             </div>
             
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="description" className="font-medium">{t('editForm.formFields.description')}</Label>
+            <div className="grid gap-3 p-4 bg-slate-50 rounded-xl border-2 border-slate-100">
+              <Label htmlFor="description" className="font-bold text-slate-900">{t('editForm.formFields.description')}</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder={t('editForm.formFields.descriptionPlaceholder')}
-                className="min-h-[100px]"
+                className="min-h-[100px] border-2 focus:border-teal-500"
               />
+              <p className="text-xs text-slate-600">Optional: Provide a brief description of this category</p>
             </div>
           </div>
         </TabsContent>
         
-        <TabsContent value="attributes" className="space-y-4">
+        <TabsContent value="attributes" className="space-y-5 pt-4">
           {/* Existing Attributes */}
           {formData.attributes.length > 0 && (
             <div className="space-y-3">
-              <Label className="font-medium">{t("")}</Label>
-              {formData.attributes.map((attr:any, index:any) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-md border">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{attr.attribute_name}</span>
-                    <Badge variant="outline" className="ml-2 text-xs">
-                      {attr.data_type}
-                    </Badge>
+              <Label className="font-bold text-slate-900">Current Attributes</Label>
+              <div className="space-y-2">
+                {formData.attributes.map((attr:any, index:any) => (
+                  <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl border-2 border-teal-100 hover:border-teal-200 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center">
+                        <Tag className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-900">{attr.attribute_name}</span>
+                        <Badge variant="outline" className="ml-2 text-xs bg-white border-teal-200 text-teal-700">
+                          {attr.data_type}
+                        </Badge>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveAttribute(index)}
+                      className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveAttribute(index)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
           
           {/* Add New Attribute */}
-          <div className="space-y-3 pt-2">
-            <Label className="font-medium">{t('editForm.formFields.addnewattribute')}</Label>
-            <div className="flex gap-2">
+          <div className="space-y-3 p-4 bg-slate-50 rounded-xl border-2 border-slate-100">
+            <Label className="font-bold text-slate-900">{t('editForm.formFields.addnewattribute')}</Label>
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 placeholder={t('editForm.formFields.attributesPlaceholder')}
                 value={newAttribute.attribute_name}
                 onChange={(e) => setNewAttribute({ ...newAttribute, attribute_name: e.target.value })}
-                className="flex-1"
+                className="flex-1 border-2 focus:border-teal-500"
               />
               <Select
                 value={newAttribute.data_type}
@@ -581,7 +632,7 @@ function CategoryForm({ category, onSubmit, isLoading }: CategoryFormProps) {
                   setNewAttribute({ ...newAttribute, data_type: value })
                 }
               >
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full sm:w-32 border-2">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -595,20 +646,22 @@ function CategoryForm({ category, onSubmit, isLoading }: CategoryFormProps) {
                 type="button"
                 onClick={handleAddAttribute}
                 disabled={!newAttribute.attribute_name}
-                variant="outline"
+                className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white"
               >
+                <Plus className="h-4 w-4 mr-1.5" />
                 Add
               </Button>
             </div>
+            <p className="text-xs text-slate-600">Add custom attributes that products in this category will have</p>
           </div>
         </TabsContent>
       </Tabs>
       
-      <DialogFooter>
+      <DialogFooter className="pt-6 border-t-2 border-slate-100">
         <Button 
           type="submit" 
           disabled={isSubmitting || !formData.name}
-          className="mt-4"
+          className="min-w-[140px] bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-semibold shadow-md disabled:opacity-50"
         >
           {isSubmitting ? t("saving")+"..." : category ? t("UpdateCategory") : t('addCategory')}
         </Button>

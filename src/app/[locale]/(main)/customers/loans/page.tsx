@@ -1,9 +1,11 @@
 "use client"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,DialogFooter } from "@/components/ui/dialog"
@@ -26,8 +28,7 @@ import {
   X,
   BookOpen,
   Users,
-  Building,
-  Filter
+  Building
 } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
@@ -56,20 +57,15 @@ interface Customer {
 }
 
 export default function LoansPage() {
-  const [loans, setLoans] = useState<Loan[]>([])
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
   const [currentPage, setCurrentPage] = useState(1)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [selectedLocation, setSelectedLocation] = useState<string>("current") // Default to current location
   const [isNewLoanDialogOpen, setIsNewLoanDialogOpen] = useState(false)
   const [isViewLoanDialogOpen, setIsViewLoanDialogOpen] = useState(false)
   const [isEditLoanDialogOpen, setIsEditLoanDialogOpen] = useState(false)
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const t=useTranslations('loans')
   
   // Customer search for new loan
@@ -102,18 +98,15 @@ export default function LoansPage() {
 
   // Get the user's location from their profile
   const userLocationId = profile?.location_id
+  
+  // Determine effective location
+  const effectiveLocationId = profile?.role === 'admin' 
+    ? currentLocation?.location_id 
+    : userLocationId
 
-  // Fetch loans and customers data
-
-
-// Replace the fetchData function with this corrected version:
-
-const fetchData = async () => {
-  try {
-    setLoading(true)
-    setError(null)
-    
-    // Build query based on user role and location
+  // Data Fetching Function
+  const fetchLoansData = async () => {
+    // Build loans query
     let loansQuery = supabase
       .from("loans")
       .select(`
@@ -128,18 +121,8 @@ const fetchData = async () => {
         customers (first_name, last_name, email, location_id)
       `)
 
-    // For non-admin users, use location_id from their profile
-    if (profile?.role !== 'admin' && userLocationId) {
-      loansQuery = loansQuery.eq('location_id', userLocationId)
-    } 
-    // For admin users, filter based on selected location
-    else if (profile?.role === 'admin') {
-      if (selectedLocation === "current" && currentLocation) {
-        loansQuery = loansQuery.eq('location_id', currentLocation.location_id)
-      } else if (selectedLocation !== "all") {
-        loansQuery = loansQuery.eq('location_id', parseInt(selectedLocation))
-      }
-      // If selectedLocation is "all", don't add a location filter
+    if (effectiveLocationId) {
+      loansQuery = loansQuery.eq('location_id', effectiveLocationId)
     }
 
     const { data: loansData, error: loansError } = await loansQuery
@@ -147,33 +130,22 @@ const fetchData = async () => {
     
     if (loansError) throw new Error(`Loans error: ${loansError.message}`)
     
-    // Fetch all customers for dropdown - also filtered by location
+    // Fetch customers
     let customersQuery = supabase
       .from("customers")
       .select("customer_id, first_name, last_name, email, location_id")
+      .neq("first_name", "Walk-in")
       .order("first_name", { ascending: true })
 
-    // For non-admin users, use location_id from their profile
-    if (profile?.role !== 'admin' && userLocationId) {
-      customersQuery = customersQuery.eq('location_id', userLocationId)
-    } 
-    // For admin users, filter based on selected location
-    else if (profile?.role === 'admin') {
-      if (selectedLocation === "current" && currentLocation) {
-        customersQuery = customersQuery.eq('location_id', currentLocation.location_id)
-      } else if (selectedLocation !== "all") {
-        customersQuery = customersQuery.eq('location_id', parseInt(selectedLocation))
-      }
-      // If selectedLocation is "all", don't add a location filter
+    if (effectiveLocationId) {
+      customersQuery = customersQuery.eq('location_id', effectiveLocationId)
     }
 
     const { data: customersData, error: customersError } = await customersQuery
-    
     if (customersError) throw new Error(`Customers error: ${customersError.message}`)
     
-    // Transform loans data with proper typing
+    // Transform loans data
     const transformedLoans = loansData?.map(loan => {
-      // Access the first element of the nested arrays (since Supabase returns arrays for joined tables)
       const customer = Array.isArray(loan.customers) ? loan.customers[0] : loan.customers;
       const location = Array.isArray(loan.locations) ? loan.locations[0] : loan.locations;
       
@@ -191,20 +163,85 @@ const fetchData = async () => {
       }
     }) || []
     
-    setLoans(transformedLoans)
-    setCustomers(customersData || [])
-  } catch (err) {
-    console.error("Error loading data:", err)
-    setError(err instanceof Error ? err.message : "Unknown error occurred")
-  } finally {
-    setLoading(false)
-  }
-}
-  useEffect(() => {
-    if (!authLoading && !locationLoading && profile) {
-      fetchData()
+    return {
+      loans: transformedLoans,
+      customers: customersData || []
     }
-  }, [profile, authLoading, locationLoading, selectedLocation])
+  }
+
+  // React Query for loans data
+  const { data, isLoading: loading, error } = useQuery({
+    queryKey: ['loans', effectiveLocationId],
+    queryFn: fetchLoansData,
+    enabled: !authLoading && !locationLoading && !!profile,
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+  })
+
+  const loans = data?.loans || []
+  const customers = data?.customers || []
+
+  // Mutations
+  const createLoanMutation = useMutation({
+    mutationFn: async (loanData: any) => {
+      const { data, error } = await supabase
+        .from("loans")
+        .insert([loanData])
+        .select()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loans'] })
+      toast.success("Loan created successfully!")
+      setIsNewLoanDialogOpen(false)
+      setNewLoan({ amount: "", dueDate: "", status: "pending" })
+      setSelectedCustomer(null)
+      setCustomerSearch("")
+      setIsAddingForSpecificCustomer(false)
+    },
+    onError: (error) => {
+      console.error("Error creating loan:", error)
+      toast.error("Failed to create loan")
+    }
+  })
+
+  const updateLoanMutation = useMutation({
+    mutationFn: async ({ loanId, updateData }: { loanId: number; updateData: any }) => {
+      const { error } = await supabase
+        .from("loans")
+        .update(updateData)
+        .eq("loan_id", loanId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loans'] })
+      toast.success("Loan updated successfully!")
+      setIsEditLoanDialogOpen(false)
+    },
+    onError: (error) => {
+      console.error("Error updating loan:", error)
+      toast.error("Failed to update loan")
+    }
+  })
+
+  const deleteLoanMutation = useMutation({
+    mutationFn: async (loanId: string) => {
+      const { error } = await supabase
+        .from("loans")
+        .delete()
+        .eq("loan_id", parseInt(loanId))
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loans'] })
+      toast.success("Loan deleted successfully!")
+    },
+    onError: (error) => {
+      console.error("Error deleting loan:", error)
+      toast.error("Failed to delete loan")
+    }
+  })
 
   // Filter customers based on search
   const filteredCustomersForSearch = useMemo(() => {
@@ -352,51 +389,21 @@ const fetchData = async () => {
       return
     }
     
-    // Non-admin users must have a location_id in their profile
-    if (profile?.role !== 'admin' && !userLocationId) {
-      toast.error("Your account is not associated with any location")
+    const targetLocationId = effectiveLocationId
+    if (!targetLocationId) {
+      toast.error("No location selected. Please select a location first.")
       return
     }
     
-    setIsSubmitting(true)
-    try {
-      const loanData: any = {
-        customer_id: selectedCustomer.customer_id,
-        loan_amount: parseFloat(newLoan.amount),
-        due_date: newLoan.dueDate || null,
-        status: newLoan.status,
-      }
-
-      // Add location_id from user's profile
-      if (userLocationId) {
-        loanData.location_id = userLocationId
-      }
-
-      const { data, error } = await supabase
-        .from("loans")
-        .insert([loanData])
-        .select()
-      
-      if (error) throw error
-      
-      toast.success("Loan created successfully!")
-      setIsNewLoanDialogOpen(false)
-      setNewLoan({
-        amount: "",
-        dueDate: "",
-        status: "pending"
-      })
-      setSelectedCustomer(null)
-      setCustomerSearch("")
-      setIsAddingForSpecificCustomer(false)
-      
-      await fetchData()
-    } catch (error) {
-      console.error("Error creating loan:", error)
-      toast.error("Failed to create loan")
-    } finally {
-      setIsSubmitting(false)
+    const loanData: any = {
+      customer_id: selectedCustomer.customer_id,
+      loan_amount: parseFloat(newLoan.amount),
+      due_date: newLoan.dueDate || null,
+      status: newLoan.status,
+      location_id: targetLocationId,
     }
+
+    createLoanMutation.mutate(loanData)
   }
 
   const handleUpdateLoan = async () => {
@@ -409,29 +416,14 @@ const fetchData = async () => {
       return
     }
     
-    setIsSubmitting(true)
-    try {
-      const { error } = await supabase
-        .from("loans")
-        .update({
-          loan_amount: parseFloat(editLoan.amount),
-          due_date: editLoan.dueDate || null,
-          status: editLoan.status,
-        })
-        .eq("loan_id", parseInt(selectedLoan.id))
-      
-      if (error) throw error
-      
-      toast.success("Loan updated successfully!")
-      setIsEditLoanDialogOpen(false)
-      
-      await fetchData()
-    } catch (error) {
-      console.error("Error updating loan:", error)
-      toast.error("Failed to update loan")
-    } finally {
-      setIsSubmitting(false)
-    }
+    updateLoanMutation.mutate({
+      loanId: parseInt(selectedLoan.id),
+      updateData: {
+        loan_amount: parseFloat(editLoan.amount),
+        due_date: editLoan.dueDate || null,
+        status: editLoan.status,
+      }
+    })
   }
 
   const handlePaymentSubmit = async () => {
@@ -440,27 +432,11 @@ const fetchData = async () => {
       return
     }
     
-    setIsSubmitting(true)
-    try {
-      const { error } = await supabase
-        .from("loans")
-        .update({
-          status: 'paid',
-        })
-        .eq("loan_id", parseInt(selectedLoan.id))
-      
-      if (error) throw error
-      
-      toast.success("Loan marked as paid successfully!")
-      setIsPaymentDialogOpen(false)
-      
-      await fetchData()
-    } catch (error) {
-      console.error("Error marking loan as paid:", error)
-      toast.error("Failed to mark loan as paid")
-    } finally {
-      setIsSubmitting(false)
-    }
+    updateLoanMutation.mutate({
+      loanId: parseInt(selectedLoan.id),
+      updateData: { status: 'paid' }
+    })
+    setIsPaymentDialogOpen(false)
   }
 
   const handleDeleteLoan = async (loanId: string) => {
@@ -468,20 +444,7 @@ const fetchData = async () => {
       return
     }
     
-    try {
-      const { error } = await supabase
-        .from("loans")
-        .delete()
-        .eq("loan_id", parseInt(loanId))
-      
-      if (error) throw error
-      
-      toast.success("Loan deleted successfully!")
-      await fetchData()
-    } catch (error) {
-      console.error("Error deleting loan:", error)
-      toast.error("Failed to delete loan")
-    }
+    deleteLoanMutation.mutate(loanId)
   }
 
   const handleSelectCustomerForNotebook = (customer: Customer) => {
@@ -543,10 +506,10 @@ const fetchData = async () => {
           <p>{t('error.description')}</p>
           <details className="mt-4 text-sm">
             <summary>{t('error.technicalDetails')}</summary>
-            <pre className="bg-white p-2 rounded mt-2">{error}</pre>
+            <pre className="bg-white p-2 rounded mt-2">{error instanceof Error ? error.message : String(error)}</pre>
           </details>
           <Button 
-            onClick={fetchData} 
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['loans'] })} 
             className="mt-4"
             variant="outline"
           >
@@ -575,77 +538,135 @@ const fetchData = async () => {
   }
 
   return (
-    <main className="container mx-auto p-6 space-y-6">
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <CreditCard className="h-5 w-5 text-blue-600" />
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">{t('cards.totalLoans.title')}</p>
-            <p className="text-xl font-bold">{loans.length}</p>
+    <div className="flex flex-col min-h-screen ">
+      {/* Premium Header */}
+      <header className="bg-white border-b-2 border-teal-200 shadow-md sticky top-0 z-10">
+        <div className="max-w-[1920px] mx-auto px-6 py-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-teal-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <CreditCard className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-emerald-600 tracking-tight">
+                  {t('cards.title') || 'Customer Loans'}
+                </h1>
+                <p className="text-slate-600 text-sm font-medium">
+                  {profile?.role === 'admin' && currentLocation && currentLocation.name}
+                  {profile?.role !== 'admin' && profile?.location && profile.location.name}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="px-3 py-1.5 bg-gradient-to-br from-teal-50 to-emerald-100 border-2 border-teal-300 shadow-sm">
+                <CreditCard className="h-3 w-3 mr-1.5" />
+                <span className="text-sm font-semibold text-teal-900">{loans.length}</span>
+                <span className="text-xs text-teal-600 font-semibold ml-1">{loans.length === 1 ? 'Loan' : 'Loans'}</span>
+              </Badge>
+            </div>
           </div>
         </div>
+      </header>
+      
+      <main className="container mx-auto p-6 space-y-6">
+
+      {/* Statistics Cards - KPI Style */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Total Loans Card */}
+        <Card className="border-2 border-teal-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+          <CardContent className="p-0">
+            <div className="p-6 bg-gradient-to-br from-teal-500 to-teal-600">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                  <CreditCard className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <p className="text-sm font-semibold text-teal-100">{t('cards.totalLoans.title')}</p>
+              <div className="text-3xl font-black text-white mt-2">
+                {loans.length}
+              </div>
+              <p className="text-xs text-teal-100 mt-3 font-medium">
+                Active loan records
+              </p>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-green-100 rounded-lg">
-            <DollarSign className="h-5 w-5 text-green-600" />
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">{t('cards.totalAmount.title')}</p>
-            <p className="text-xl font-bold">{formatCurrency(getTotalLoanAmount())}</p>
-          </div>
-        </div>
+
+        {/* Total Amount Card */}
+        <Card className="border-2 border-emerald-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+          <CardContent className="p-0">
+            <div className="p-6 bg-gradient-to-br from-emerald-500 to-emerald-600">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <p className="text-sm font-semibold text-emerald-100">{t('cards.totalAmount.title')}</p>
+              <div className="text-3xl font-black text-white mt-2">
+                {formatCurrency(getTotalLoanAmount())}
+              </div>
+              <p className="text-xs text-emerald-100 mt-3 font-medium">
+                Total loan value
+              </p>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-red-100 rounded-lg">
-            <Clock className="h-5 w-5 text-red-600" />
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">{t('cards.pending.title')}</p>
-            <p className="text-xl font-bold">{getPendingLoansCount()}</p>
-          </div>
-        </div>
+
+        {/* Pending Loans Card */}
+        <Card className="border-2 border-slate-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+          <CardContent className="p-0">
+            <div className="p-6 bg-gradient-to-br from-slate-500 to-slate-600">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <p className="text-sm font-semibold text-slate-100">{t('cards.pending.title')}</p>
+              <div className="text-3xl font-black text-white mt-2">
+                {getPendingLoansCount()}
+              </div>
+              <p className="text-xs text-slate-100 mt-3 font-medium">
+                Awaiting payment
+              </p>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-green-100 rounded-lg">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">{t('cards.paid.title')}</p>
-            <p className="text-xl font-bold">{getPaidLoansCount()}</p>
-          </div>
-        </div>
+
+        {/* Paid Loans Card */}
+        <Card className="border-2 border-green-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+          <CardContent className="p-0">
+            <div className="p-6 bg-gradient-to-br from-green-500 to-green-600">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <p className="text-sm font-semibold text-green-100">{t('cards.paid.title')}</p>
+              <div className="text-3xl font-black text-white mt-2">
+                {getPaidLoansCount()}
+              </div>
+              <p className="text-xs text-green-100 mt-3 font-medium">
+                Successfully completed
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Main Content with Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex justify-between items-center mb-4">
-          <TabsList>
-        <TabsTrigger value="all-loans" className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <TabsList className="bg-gradient-to-r from-teal-50 to-emerald-50 border-2 border-teal-100 p-1">
+        <TabsTrigger value="all-loans" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white">
           <CreditCard className="h-4 w-4" />
           {t('tabs.all-loans.title')}
         </TabsTrigger>
-        <TabsTrigger value="customer-notebooks" className="flex items-center gap-2">
+        <TabsTrigger value="customer-notebooks" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white">
           <BookOpen className="h-4 w-4" />
           {t('tabs.customer-notebooks.title')}
         </TabsTrigger>
         {selectedCustomerForNotebook && (
-          <TabsTrigger value="customer-notebook" className="flex items-center gap-2">
+          <TabsTrigger value="customer-notebook" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white">
             <User className="h-4 w-4" />
             {selectedCustomerForNotebook.first_name} {selectedCustomerForNotebook.last_name}
           </TabsTrigger>
@@ -661,7 +682,7 @@ const fetchData = async () => {
             setIsAddingForSpecificCustomer(false)
             setIsNewLoanDialogOpen(true)
           }}
-          className="gap-2"
+          className="gap-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-md"
         >
           <Plus className="h-4 w-4" />
           {t('tabs.actions.addLoan.title')}
@@ -693,35 +714,6 @@ const fetchData = async () => {
           />
             </div>
             <div className="flex gap-3">
-          {/* Location Filter for Admin Users */}
-          {profile?.role === 'admin' && (
-            <Select
-              value={selectedLocation}
-              onValueChange={(value) => {
-            setSelectedLocation(value)
-            setCurrentPage(1)
-              }}
-            >
-              <SelectTrigger className="w-[200px]">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder={t('tabs.all-loans.filters.location.title')} />
-              </SelectTrigger>
-              <SelectContent>
-            <SelectItem value="current">
-              {t('tabs.all-loans.filters.location.current', {
-                name: currentLocation?.name || '-'
-              })}
-            </SelectItem>
-            <SelectItem value="all">{t('tabs.all-loans.filters.location.all')}</SelectItem>
-            {locations.map((location) => (
-              <SelectItem key={location.location_id} value={location.location_id.toString()}>
-                {location.name}
-              </SelectItem>
-            ))}
-              </SelectContent>
-            </Select>
-          )}
-          
           <Select
             value={statusFilter}
             onValueChange={(value) => {
@@ -742,23 +734,23 @@ const fetchData = async () => {
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg border">
             <table className="w-full">
           <thead>
-            <tr className="border-b">
-              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.loanId')}</th>
-              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.customer')}</th>
+            <tr className="bg-gradient-to-r from-teal-50 via-emerald-50 to-green-50 border-b-2 border-teal-200">
+              <th className="text-left p-4 font-semibold text-slate-700">{t('tabs.all-loans.table.columns.loanId')}</th>
+              <th className="text-left p-4 font-semibold text-slate-700">{t('tabs.all-loans.table.columns.customer')}</th>
               {profile?.role === 'admin' && (
-            <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.location')}</th>
+            <th className="text-left p-4 font-semibold text-slate-700">{t('tabs.all-loans.table.columns.location')}</th>
               )}
-              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.amount')}</th>
-              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.loanDate')}</th>
-              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.dueDate')}</th>
-              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.status')}</th>
-              <th className="text-left p-4 font-medium">{t('tabs.all-loans.table.columns.actions')}</th>
+              <th className="text-left p-4 font-semibold text-slate-700">{t('tabs.all-loans.table.columns.amount')}</th>
+              <th className="text-left p-4 font-semibold text-slate-700">{t('tabs.all-loans.table.columns.loanDate')}</th>
+              <th className="text-left p-4 font-semibold text-slate-700">{t('tabs.all-loans.table.columns.dueDate')}</th>
+              <th className="text-left p-4 font-semibold text-slate-700">{t('tabs.all-loans.table.columns.status')}</th>
+              <th className="text-left p-4 font-semibold text-slate-700">{t('tabs.all-loans.table.columns.actions')}</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white">
             {paginatedLoans.map((loan) => {
               const statusInfo = getLoanStatus(loan.status)
               const StatusIcon = statusInfo.icon
@@ -767,7 +759,7 @@ const fetchData = async () => {
               return (
                 <tr 
                   key={loan.id} 
-                  className={`border-b hover:bg-gray-50 ${isPaid ? 'opacity-50' : ''}`}
+                  className={`border-b hover:bg-gradient-to-r hover:from-teal-50/50 hover:to-emerald-50/50 transition-colors ${isPaid ? 'opacity-60' : ''}`}
                 >
                   <td className="p-4">
                     <div className="font-medium">#{loan.id}</div>
@@ -825,6 +817,7 @@ const fetchData = async () => {
                         size="sm"
                         onClick={() => handleViewLoan(loan)}
                         title={t('tabs.all-loans.table.actions.view')}
+                        className="hover:bg-slate-100 transition-colors"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -835,6 +828,7 @@ const fetchData = async () => {
                             size="sm"
                             onClick={() => handleEditLoan(loan)}
                             title={t('tabs.all-loans.table.actions.edit')}
+                            className="hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -843,7 +837,7 @@ const fetchData = async () => {
                             size="sm"
                             onClick={() => handlePaymentLoan(loan)}
                             title={t('tabs.all-loans.table.actions.markAsPaid')}
-                            className="text-green-600 hover:text-green-700"
+                            className="text-green-600 hover:bg-green-50 hover:text-green-700 transition-colors"
                           >
                             <DollarSign className="h-4 w-4" />
                           </Button>
@@ -852,7 +846,7 @@ const fetchData = async () => {
                             size="sm"
                             onClick={() => handleDeleteLoan(loan.id)}
                             title={t('tabs.all-loans.table.actions.delete')}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -871,15 +865,26 @@ const fetchData = async () => {
             </table>
           </div>
           {filteredLoans.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-          <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <h3 className="font-medium mb-2">{t('tabs.all-loans.table.noLoans.title')}</h3>
-          <p className="text-sm">
-            {searchTerm || statusFilter !== "all" || (profile?.role === 'admin' && selectedLocation !== "all")
+            <div className="text-center py-16 bg-gradient-to-br from-teal-50 to-emerald-50 rounded-lg">
+          <div className="p-4 bg-gradient-to-br from-teal-100 to-emerald-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+            <CreditCard className="h-10 w-10 text-teal-600" />
+          </div>
+          <h3 className="font-semibold text-slate-800 mb-2 text-lg">{t('tabs.all-loans.table.noLoans.title')}</h3>
+          <p className="text-sm text-slate-600 max-w-md mx-auto">
+            {searchTerm || statusFilter !== "all"
               ? t('tabs.all-loans.table.noLoans.withFilters')
               : t('tabs.all-loans.table.noLoans.noLoansYet')
             }
           </p>
+          {!searchTerm && statusFilter === "all" && (
+            <Button
+              onClick={() => setIsNewLoanDialogOpen(true)}
+              className="mt-4 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Your First Loan
+            </Button>
+          )}
             </div>
           )}
           {/* Pagination */}
@@ -926,10 +931,12 @@ const fetchData = async () => {
             </CardHeader>
             <CardContent className="p-6">
               {customers.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <h3 className="font-medium mb-2">{t('tabs.customer-notebooks.noCustomers.title')}</h3>
-                  <p className="text-sm">{t('tabs.customer-notebooks.noCustomers.description')}</p>
+                <div className="text-center py-16 bg-gradient-to-br from-teal-50 to-emerald-50 rounded-lg">
+                  <div className="p-4 bg-gradient-to-br from-teal-100 to-emerald-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                    <Users className="h-10 w-10 text-teal-600" />
+                  </div>
+                  <h3 className="font-semibold text-slate-800 mb-2 text-lg">{t('tabs.customer-notebooks.noCustomers.title')}</h3>
+                  <p className="text-sm text-slate-600 max-w-md mx-auto">{t('tabs.customer-notebooks.noCustomers.description')}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -939,50 +946,50 @@ const fetchData = async () => {
                     return (
                       <Card
                         key={customer.customer_id}
-                        className="cursor-pointer hover:shadow-md transition-shadow"
+                        className="cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200 border-2 hover:border-teal-200 bg-gradient-to-br from-white to-teal-50/30"
                         onClick={() => handleSelectCustomerForNotebook(customer)}
                       >
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3 mb-3">
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                              <User className="h-5 w-5 text-blue-600" />
+                            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-md">
+                              <User className="h-5 w-5 text-white" />
                             </div>
                             <div>
-                              <h3 className="font-medium">
+                              <h3 className="font-semibold text-gray-800">
                                 {customer.first_name} {customer.last_name}
                               </h3>
                               {customer.email && (
-                                <p className="text-sm text-muted-foreground">
-                                  {t('tabs.customer-notebooks.customerCard.email')}: {customer.email}
+                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                  {customer.email}
                                 </p>
                               )}
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div>
-                              <p className="text-muted-foreground">
+                          <div className="grid grid-cols-2 gap-3 text-sm mt-4 mb-3">
+                            <div className="bg-blue-50 rounded-lg p-2 border border-blue-100">
+                              <p className="text-blue-600 text-xs font-medium">
                                 {t('tabs.customer-notebooks.customerCard.stats.loans')}
                               </p>
-                              <p className="font-medium">{stats.totalLoans}</p>
+                              <p className="font-bold text-blue-700">{stats.totalLoans}</p>
                             </div>
-                            <div>
-                              <p className="text-muted-foreground">
+                            <div className="bg-gray-50 rounded-lg p-2 border border-gray-200">
+                              <p className="text-gray-600 text-xs font-medium">
                                 {t('tabs.customer-notebooks.customerCard.stats.amount')}
                               </p>
-                              <p className="font-medium">{formatCurrency(stats.totalAmount)}</p>
+                              <p className="font-bold text-gray-700">{formatCurrency(stats.totalAmount)}</p>
                             </div>
-                            <div>
-                              <p className="text-muted-foreground">
+                            <div className="bg-red-50 rounded-lg p-2 border border-red-100">
+                              <p className="text-red-600 text-xs font-medium">
                                 {t('tabs.customer-notebooks.customerCard.stats.pending')}
                               </p>
-                              <p className="font-medium text-red-600">{stats.pendingCount}</p>
+                              <p className="font-bold text-red-700">{stats.pendingCount}</p>
                             </div>
-                            <div>
-                              <p className="text-muted-foreground">
+                            <div className="bg-green-50 rounded-lg p-2 border border-green-100">
+                              <p className="text-green-600 text-xs font-medium">
                                 {t('tabs.customer-notebooks.customerCard.stats.paid')}
                               </p>
-                              <p className="font-medium text-green-600">{stats.paidCount}</p>
+                              <p className="font-bold text-green-700">{stats.paidCount}</p>
                             </div>
                           </div>
 
@@ -990,17 +997,18 @@ const fetchData = async () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="flex-1"
+                              className="flex-1 hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleSelectCustomerForNotebook(customer)
                               }}
                             >
+                              <Eye className="h-3 w-3 mr-1" />
                               {t('tabs.customer-notebooks.customerCard.buttons.view')}
                             </Button>
                             <Button
                               size="sm"
-                              className="flex-1"
+                              className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleAddLoanForCustomer(customer)
@@ -1082,19 +1090,19 @@ const fetchData = async () => {
                   </div>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto rounded-lg border">
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b">
-                          <th className="text-left p-4 font-medium">{t('tabs.customer-notebook.table.columns.loanId')}</th>
-                          <th className="text-left p-4 font-medium">{t('tabs.customer-notebook.table.columns.amount')}</th>
-                          <th className="text-left p-4 font-medium">{t('tabs.customer-notebook.table.columns.loanDate')}</th>
-                          <th className="text-left p-4 font-medium">{t('tabs.customer-notebook.table.columns.dueDate')}</th>
-                          <th className="text-left p-4 font-medium">{t('tabs.customer-notebook.table.columns.status')}</th>
-                          <th className="text-left p-4 font-medium">{t('tabs.customer-notebook.table.columns.actions')}</th>
+                        <tr className="bg-gradient-to-r from-teal-50 via-emerald-50 to-green-50 border-b-2 border-teal-200">
+                          <th className="text-left p-4 font-semibold text-gray-700">{t('tabs.customer-notebook.table.columns.loanId')}</th>
+                          <th className="text-left p-4 font-semibold text-gray-700">{t('tabs.customer-notebook.table.columns.amount')}</th>
+                          <th className="text-left p-4 font-semibold text-gray-700">{t('tabs.customer-notebook.table.columns.loanDate')}</th>
+                          <th className="text-left p-4 font-semibold text-gray-700">{t('tabs.customer-notebook.table.columns.dueDate')}</th>
+                          <th className="text-left p-4 font-semibold text-gray-700">{t('tabs.customer-notebook.table.columns.status')}</th>
+                          <th className="text-left p-4 font-semibold text-gray-700">{t('tabs.customer-notebook.table.columns.actions')}</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="bg-white">
                         {paginatedLoans.map((loan) => {
                           const statusInfo = getLoanStatus(loan.status)
                           const StatusIcon = statusInfo.icon
@@ -1103,7 +1111,7 @@ const fetchData = async () => {
                           return (
                             <tr
                               key={loan.id}
-                              className={`border-b hover:bg-gray-50 ${isPaid ? 'opacity-50' : ''}`}
+                              className={`border-b hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-colors ${isPaid ? 'opacity-60' : ''}`}
                             >
                               <td className="p-4">
                                 <div className="font-medium">#{loan.id}</div>
@@ -1231,50 +1239,6 @@ const fetchData = async () => {
                   )}
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader className="p-4">
-                  <CardTitle className="text-lg">
-                    {t('tabs.customer-notebook.summary.title')}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  {(() => {
-                    const stats = getCustomerStats(selectedCustomerForNotebook.customer_id.toString())
-
-                    return (
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="text-center p-4 bg-blue-50 rounded-lg">
-                          <p className="text-sm text-muted-foreground">
-                            {t('tabs.customer-notebook.summary.stats.totalLoans')}
-                          </p>
-                          <p className="text-2xl font-bold text-blue-600">{stats.totalLoans}</p>
-                        </div>
-                        <div className="text-center p-4 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-muted-foreground">
-                            {t('tabs.customer-notebook.summary.stats.totalAmount')}
-                          </p>
-                          <p className="text-2xl font-bold text-gray-700">{formatCurrency(stats.totalAmount)}</p>
-                        </div>
-                        <div className="text-center p-4 bg-red-50 rounded-lg">
-                          <p className="text-sm text-muted-foreground">
-                            {t('tabs.customer-notebook.summary.stats.pending')}
-                          </p>
-                          <p className="text-2xl font-bold text-red-600">{stats.pendingCount}</p>
-                          <p className="text-sm font-medium text-red-600">{formatCurrency(stats.pendingAmount)}</p>
-                        </div>
-                        <div className="text-center p-4 bg-green-50 rounded-lg">
-                          <p className="text-sm text-muted-foreground">
-                            {t('tabs.customer-notebook.summary.stats.paid')}
-                          </p>
-                          <p className="text-2xl font-bold text-green-600">{stats.paidCount}</p>
-                          <p className="text-sm font-medium text-green-600">{formatCurrency(stats.paidAmount)}</p>
-                        </div>
-                      </div>
-                    )
-                  })()}
-                </CardContent>
-              </Card>
             </>
           ) : null}
         </TabsContent>
@@ -1289,12 +1253,12 @@ const fetchData = async () => {
   }
 }}>
   <DialogContent className="sm:max-w-[550px]">
-    <DialogHeader>
-      <DialogTitle className="text-xl flex items-center gap-2">
-        <CreditCard className="h-5 w-5 text-primary" />
+    <DialogHeader className="bg-gradient-to-r from-teal-600 via-emerald-600 to-green-600 -m-6 mb-4 p-6 rounded-t-lg">
+      <DialogTitle className="text-xl flex items-center gap-2 text-white">
+        <CreditCard className="h-5 w-5" />
         {t('addnewform.title')}
       </DialogTitle>
-      <DialogDescription>
+      <DialogDescription className="text-white/90">
         {isAddingForSpecificCustomer
           ? t('addnewform.description.specificCustomer', {
               name: `${selectedCustomer?.first_name} ${selectedCustomer?.last_name}`,
@@ -1302,16 +1266,25 @@ const fetchData = async () => {
           : t('addnewform.description.general')}
       </DialogDescription>
 
-      {profile?.location && (
-        <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
-          <p className="text-sm text-blue-700 flex items-center gap-2">
+      {profile?.role === 'admin' && currentLocation ? (
+        <div className="mt-2 p-3 bg-white/20 rounded-md border border-white/30">
+          <p className="text-sm text-white flex items-center gap-2">
+            <Building className="h-4 w-4" />
+            {t('addnewform.locationNotice', {
+              location: currentLocation.name,
+            })}
+          </p>
+        </div>
+      ) : profile?.location ? (
+        <div className="mt-2 p-3 bg-white/20 rounded-md border border-white/30">
+          <p className="text-sm text-white flex items-center gap-2">
             <Building className="h-4 w-4" />
             {t('addnewform.locationNotice', {
               location: profile.location.name ?? '-',
             })}
           </p>
         </div>
-      )}
+      ) : null}
     </DialogHeader>
 
     <div className="grid gap-6 py-4">
@@ -1385,11 +1358,11 @@ const fetchData = async () => {
 
           {/* Selected Customer Display */}
           {selectedCustomer && (
-            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+            <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                    <User className="h-5 w-5 text-green-600" />
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <User className="h-5 w-5 text-emerald-600" />
                   </div>
                   <div>
                     <div className="font-medium text-green-800">
@@ -1407,7 +1380,7 @@ const fetchData = async () => {
                     setSelectedCustomer(null)
                     setCustomerSearch("")
                   }}
-                  className="text-green-600 hover:text-green-800"
+                  className="text-emerald-600 hover:text-emerald-800"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -1418,17 +1391,17 @@ const fetchData = async () => {
       ) : (
         <div className="space-y-3">
           <Label className="text-sm font-medium">{t('addnewform.fields.customer')}</Label>
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="p-4 bg-teal-50 rounded-lg border border-teal-200">
             <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <User className="h-5 w-5 text-blue-600" />
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
+                <User className="h-5 w-5 text-teal-600" />
               </div>
               <div>
-                <div className="font-medium text-blue-800">
+                <div className="font-medium text-teal-800">
                   {selectedCustomer?.first_name} {selectedCustomer?.last_name}
                 </div>
                 {selectedCustomer?.email && (
-                  <div className="text-sm text-blue-600">{selectedCustomer?.email}</div>
+                  <div className="text-sm text-teal-600">{selectedCustomer?.email}</div>
                 )}
               </div>
             </div>
@@ -1513,10 +1486,10 @@ const fetchData = async () => {
       </Button>
       <Button
         onClick={handleCreateLoan}
-        disabled={isSubmitting || !selectedCustomer || !newLoan.amount}
+        disabled={createLoanMutation.isPending || !selectedCustomer || !newLoan.amount}
         className="min-w-[120px]"
       >
-        {isSubmitting ? (
+        {createLoanMutation.isPending ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             {t('addnewform.buttons.creating')}
@@ -1534,12 +1507,12 @@ const fetchData = async () => {
 {/* Edit Loan Dialog */}
 <Dialog open={isEditLoanDialogOpen} onOpenChange={setIsEditLoanDialogOpen}>
   <DialogContent className="sm:max-w-[500px]">
-    <DialogHeader>
-  <DialogTitle className="text-xl flex items-center gap-2">
-    <Edit className="h-5 w-5 text-primary" />
+    <DialogHeader className="bg-gradient-to-r from-teal-600 via-emerald-600 to-green-600 -m-6 mb-4 p-6 rounded-t-lg">
+  <DialogTitle className="text-xl flex items-center gap-2 text-white">
+    <Edit className="h-5 w-5" />
     {t('updateform.title')}
   </DialogTitle>
-  <DialogDescription>
+  <DialogDescription className="text-white/90">
     {t('updateform.description')}
   </DialogDescription>
     </DialogHeader>
@@ -1593,10 +1566,10 @@ const fetchData = async () => {
   </Button>
   <Button
     onClick={handleUpdateLoan}
-    disabled={isSubmitting || !editLoan.amount}
+    disabled={updateLoanMutation.isPending || !editLoan.amount}
     className="min-w-[140px]"
   >
-    {isSubmitting ? (
+    {updateLoanMutation.isPending ? (
       <>
     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
     {t('updateform.buttons.updating')}
@@ -1611,9 +1584,12 @@ const fetchData = async () => {
 {/* Payment Dialog */}
 <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
   <DialogContent className="sm:max-w-[500px]">
-    <DialogHeader>
-  <DialogTitle>{t('paymentDialog.title')}</DialogTitle>
-  <DialogDescription>{t('paymentDialog.description')}</DialogDescription>
+    <DialogHeader className="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 -m-6 mb-4 p-6 rounded-t-lg">
+  <DialogTitle className="text-xl flex items-center gap-2 text-white">
+    <CheckCircle className="h-5 w-5" />
+    {t('paymentDialog.title')}
+  </DialogTitle>
+  <DialogDescription className="text-white/90">{t('paymentDialog.description')}</DialogDescription>
     </DialogHeader>
     <div className="grid gap-4 py-4">
   {selectedLoan ? (
@@ -1643,10 +1619,10 @@ const fetchData = async () => {
   </Button>
   <Button
     onClick={handlePaymentSubmit}
-    disabled={isSubmitting}
-    className="bg-green-600 hover:bg-green-700"
+    disabled={updateLoanMutation.isPending}
+    className="bg-emerald-600 hover:bg-emerald-700"
   >
-    {isSubmitting ? (
+    {updateLoanMutation.isPending ? (
       <>
     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
     {t('paymentDialog.actions.processing')}
@@ -1661,9 +1637,12 @@ const fetchData = async () => {
 {/* View Loan Dialog */}
 <Dialog open={isViewLoanDialogOpen} onOpenChange={setIsViewLoanDialogOpen}>
   <DialogContent className="sm:max-w-[500px]">
-    <DialogHeader>
-  <DialogTitle>{t('viewLoanDialog.title')}</DialogTitle>
-  <DialogDescription>{t('viewLoanDialog.description')}</DialogDescription>
+    <DialogHeader className="bg-gradient-to-r from-slate-700 via-slate-600 to-slate-500 -m-6 mb-4 p-6 rounded-t-lg">
+  <DialogTitle className="text-xl flex items-center gap-2 text-white">
+    <Eye className="h-5 w-5" />
+    {t('viewLoanDialog.title')}
+  </DialogTitle>
+  <DialogDescription className="text-white/90">{t('viewLoanDialog.description')}</DialogDescription>
     </DialogHeader>
     {selectedLoan ? (
   <div className="space-y-4">
@@ -1720,5 +1699,6 @@ const fetchData = async () => {
   </DialogContent>
 </Dialog>
     </main>
+    </div>
   )
 }

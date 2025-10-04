@@ -1,14 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, Plus, Building2, Warehouse as WarehouseIcon } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { ChevronsUpDown, Building2, Warehouse as WarehouseIcon } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -20,23 +18,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useLocation, type Location } from "@/contexts/LocationContext"
 import { useAuth } from "@/hooks/use-auth"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "sonner"
-import { createClient } from "@/lib/supabase/client"
 import { Skeleton } from "@/components/ui/skeleton"
-
-const supabase = createClient()
 
 function getIconFor(type: Location["location_type"]) {
   return type === "warehouse" ? WarehouseIcon : Building2
@@ -62,18 +44,17 @@ function LocationSwitcherSkeleton() {
 
 export function LocationSwitcher() {
   const { isMobile } = useSidebar()
-  const router = useRouter()
-  const { locations, currentLocation, setCurrentLocation, refresh, isLoading } = useLocation()
+  const { locations, currentLocation, setCurrentLocation, isLoading } = useLocation()
   const { profile, loading: authLoading } = useAuth()
 
-  // Add location dialog state
-  const [showAddLocationDialog, setShowAddLocationDialog] = React.useState(false)
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
-  const [newLocation, setNewLocation] = React.useState({
-    name: "",
-    address: "",
-    location_type: "",
-  })
+  // Track if initial load is complete to prevent loading skeleton on tab switch
+  const [hasLoaded, setHasLoaded] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!authLoading && !isLoading && profile) {
+      setHasLoaded(true)
+    }
+  }, [authLoading, isLoading, profile])
 
   // ---- Sync non-admin user with their profile location ----
   // This useEffect must be called before any early returns to maintain hooks order
@@ -86,39 +67,12 @@ export function LocationSwitcher() {
     }
   }, [profile, locations, currentLocation, setCurrentLocation])
 
+  // Only show loading on initial load, not on subsequent re-renders
+  const showLoading = ((authLoading && !hasLoaded) || (isLoading && !hasLoaded))
+
   // Show loading skeleton while auth or location data is loading
-  if (authLoading || isLoading) {
+  if (showLoading) {
     return <LocationSwitcherSkeleton />
-  }
-
-  const handleAddLocation = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
-    try {
-      const { data, error } = await supabase
-        .from("locations")
-        .insert({
-          name: newLocation.name,
-          address: newLocation.address || null,
-          location_type: newLocation.location_type,
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      await refresh()
-      setCurrentLocation(data)
-
-      setNewLocation({ name: "", address: "", location_type: "" })
-      setShowAddLocationDialog(false)
-      toast.success("Location added successfully!")
-    } catch (error: any) {
-      toast.error("Failed to add location", { description: error.message })
-    } finally {
-      setIsSubmitting(false)
-    }
   }
 
   if (!profile) return null // wait until profile is loaded
@@ -135,11 +89,11 @@ export function LocationSwitcher() {
       return (
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" disabled>
-              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg" />
+            <SidebarMenuButton size="lg" disabled className="bg-slate-50 border-2 border-slate-200">
+              <div className="bg-slate-200 text-slate-500 flex aspect-square size-8 items-center justify-center rounded-lg" />
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">No location</span>
-                <span className="truncate text-xs">—</span>
+                <span className="truncate font-medium text-gray-600">No location</span>
+                <span className="truncate text-xs text-gray-400">—</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -148,17 +102,32 @@ export function LocationSwitcher() {
     }
 
     const Icon = getIconFor(userLocation.location_type)
+    const isTealTheme = userLocation.location_type === "store"
 
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton size="lg" disabled>
-            <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-              <Icon className="size-4" />
+          <SidebarMenuButton 
+            size="lg" 
+            disabled 
+            className={`border-2 ${
+              isTealTheme 
+                ? 'bg-gradient-to-br from-teal-50/50 to-teal-50/30 border-teal-200' 
+                : 'bg-gradient-to-br from-emerald-50/50 to-emerald-50/30 border-emerald-200'
+            }`}
+          >
+            <div className={`flex aspect-square size-8 items-center justify-center rounded-lg ${
+              isTealTheme 
+                ? 'bg-gradient-to-br from-teal-500 to-teal-600' 
+                : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+            }`}>
+              <Icon className="size-4 text-white" />
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">{userLocation.name}</span>
-              <span className="truncate text-xs capitalize">
+              <span className="truncate font-semibold text-gray-900">{userLocation.name}</span>
+              <span className={`truncate text-xs capitalize font-medium ${
+                isTealTheme ? 'text-teal-600' : 'text-emerald-600'
+              }`}>
                 {userLocation.location_type}
               </span>
             </div>
@@ -175,13 +144,13 @@ export function LocationSwitcher() {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton size="lg" disabled>
-            <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg" />
+          <SidebarMenuButton size="lg" disabled className="bg-slate-50 border-2 border-slate-200">
+            <div className="bg-slate-200 text-slate-500 flex aspect-square size-8 items-center justify-center rounded-lg" />
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">Select a location</span>
-              <span className="truncate text-xs">—</span>
+              <span className="truncate font-medium text-gray-600">Select a location</span>
+              <span className="truncate text-xs text-gray-400">—</span>
             </div>
-            <ChevronsUpDown className="ml-auto" />
+            <ChevronsUpDown className="ml-auto text-slate-400" />
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -189,6 +158,7 @@ export function LocationSwitcher() {
   }
 
   const ActiveIcon = getIconFor(currentLocation.location_type)
+  const isActiveStore = currentLocation.location_type === "store"
 
   return (
     <>
@@ -198,142 +168,76 @@ export function LocationSwitcher() {
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
                 size="lg"
-                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                className={`data-[state=open]:bg-teal-50 data-[state=open]:text-teal-900 hover:bg-teal-50 hover:text-teal-900 transition-colors border-2 ${
+                  isActiveStore ? 'border-teal-200 bg-teal-50/30' : 'border-emerald-200 bg-emerald-50/30'
+                }`}
               >
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <ActiveIcon className="size-4" />
+                <div className={`flex aspect-square size-8 items-center justify-center rounded-lg ${
+                  isActiveStore 
+                    ? 'bg-gradient-to-br from-teal-500 to-teal-600' 
+                    : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+                }`}>
+                  <ActiveIcon className="size-4 text-white" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{currentLocation.name}</span>
-                  <span className="truncate text-xs capitalize">
+                  <span className="truncate font-semibold text-gray-900">{currentLocation.name}</span>
+                  <span className={`truncate text-xs capitalize font-medium ${
+                    isActiveStore ? 'text-teal-600' : 'text-emerald-600'
+                  }`}>
                     {currentLocation.location_type}
                   </span>
                 </div>
-                <ChevronsUpDown className="ml-auto" />
+                <ChevronsUpDown className="ml-auto text-teal-600" />
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+              className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg border-2 border-teal-100 shadow-lg"
               align="start"
               side={isMobile ? "bottom" : "right"}
               sideOffset={4}
             >
-              <DropdownMenuLabel className="text-muted-foreground text-xs">
+              <DropdownMenuLabel className="text-xs font-semibold text-teal-700 uppercase tracking-wide bg-gradient-to-br from-teal-50/50 via-emerald-50/30 to-green-50/30">
                 Locations
               </DropdownMenuLabel>
               {locations.map((loc, index) => {
                 const Icon = getIconFor(loc.location_type)
                 const isActive = loc.location_id === currentLocation.location_id
+                const isStore = loc.location_type === "store"
                 return (
                   <DropdownMenuItem
                     key={loc.location_id}
                     onClick={() => setCurrentLocation(loc)}
-                    className={`gap-2 p-2 ${isActive ? "bg-sidebar-accent/50" : ""}`}
+                    className={`gap-2 p-2 cursor-pointer ${
+                      isActive 
+                        ? isStore 
+                          ? 'bg-teal-50 text-teal-900' 
+                          : 'bg-emerald-50 text-emerald-900'
+                        : 'hover:bg-teal-50'
+                    }`}
                   >
-                    <div className="flex size-6 items-center justify-center rounded-md border">
-                      <Icon className="size-3.5 shrink-0" />
+                    <div className={`flex size-6 items-center justify-center rounded-md border-2 ${
+                      isStore ? 'border-teal-200 bg-teal-50' : 'border-emerald-200 bg-emerald-50'
+                    }`}>
+                      <Icon className={`size-3.5 shrink-0 ${
+                        isStore ? 'text-teal-600' : 'text-emerald-600'
+                      }`} />
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-sm">{loc.name}</span>
-                      <span className="text-muted-foreground text-xs capitalize">
+                      <span className="text-sm font-medium">{loc.name}</span>
+                      <span className={`text-xs capitalize font-medium ${
+                        isStore ? 'text-teal-600' : 'text-emerald-600'
+                      }`}>
                         {loc.location_type}
                       </span>
                     </div>
-                    <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                    <DropdownMenuShortcut className="text-teal-600">⌘{index + 1}</DropdownMenuShortcut>
                   </DropdownMenuItem>
                 )
               })}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="gap-2 p-2"
-                onSelect={(e) => {
-                  e.preventDefault()
-                  setShowAddLocationDialog(true)
-                }}
-              >
-                <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
-                  <Plus className="size-4" />
-                </div>
-                <div className="text-muted-foreground font-medium">Add location</div>
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarMenuItem>
       </SidebarMenu>
-
-      {/* Add Location Dialog */}
-      <Dialog open={showAddLocationDialog} onOpenChange={setShowAddLocationDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add New Location</DialogTitle>
-            <DialogDescription>
-              Create a new location for your inventory.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleAddLocation}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  placeholder="Location name"
-                  className="col-span-3"
-                  value={newLocation.name}
-                  onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="type" className="text-right">
-                  Type
-                </Label>
-                <Select
-                  value={newLocation.location_type}
-                  onValueChange={(value) => setNewLocation({ ...newLocation, location_type: value })}
-                  required
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select location type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="warehouse">Warehouse</SelectItem>
-                    <SelectItem value="store">Store</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="address" className="text-right">
-                  Address
-                </Label>
-                <Input
-                  id="address"
-                  placeholder="Address (optional)"
-                  className="col-span-3"
-                  value={newLocation.address}
-                  onChange={(e) => setNewLocation({ ...newLocation, address: e.target.value })}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowAddLocationDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting || !newLocation.name || !newLocation.location_type}
-              >
-                {isSubmitting ? "Creating..." : "Create Location"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }

@@ -10,6 +10,11 @@ const intlMiddleware = createMiddleware({
 })
 
 export async function middleware(request: NextRequest) {
+  // Skip locale middleware for API routes
+  if (request.nextUrl.pathname.startsWith('/api')) {
+    return await updateSession(request)
+  }
+  
   const response = intlMiddleware(request)
   return await updateSession(request, response)
 }

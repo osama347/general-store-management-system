@@ -86,7 +86,7 @@
         "title": "Inventory Value",
         "lowStock": "Low Stock",
         "pendingTransfers": "Pending Transfers",
-        "totalValue": "Total Value",
+        "totalvalue": "Total Value",
         "totalProducts": "Total Products"
       },
       "states": {
@@ -156,7 +156,7 @@
       "description": "Your account is not connected to any location. Please contact the system administrator."
     },
     "header": {
-      "title": "Customer Management ({count})",
+      "title": "Customer Management",
       "locationContext": "Showing customers for: {location}",
       "buttons": {
         "walkInCustomer": {

@@ -96,6 +96,25 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       ],
     },
   ]
+
+  const adminItems = [
+    {
+      title: "Locations",
+      url: "/locations",
+      icon: WarehouseIcon,
+      items: [
+        { title: "All Locations", url: "/locations" },
+      ],
+    },
+    {
+      title: "Staff",
+      url: "/staff",
+      icon: Users,
+      items: [
+        { title: "All Staff", url: "/staff" },
+      ],
+    },
+  ]
   
   // Determine which navigation items to show based on user role
   const getNavItems = () => {
@@ -108,8 +127,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     
     switch (role) {
       case 'admin':
-        // Admin sees everything
-        return [...base, ...storeItems, ...warehouseItems, ...reports]
+        // Admin sees everything including staff and locations management
+        return [...base, ...storeItems, ...warehouseItems, ...reports, ...adminItems]
         
       case 'warehouse-manager':
         // Warehouse manager sees only inventory, products, and reports
@@ -179,10 +198,21 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     </div>
   )
 
+  // Only show loading on initial load, not on subsequent re-renders
+  const [hasLoaded, setHasLoaded] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!authLoading && profile) {
+      setHasLoaded(true)
+    }
+  }, [authLoading, profile])
+
+  const showLoading = (authLoading && !hasLoaded) || (isLoading && !hasLoaded)
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        {isLoading || authLoading ? (
+        {showLoading ? (
           <LocationSwitcherSkeleton />
         ) : hasLocations ? (
           <LocationSwitcher />
@@ -193,14 +223,14 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         )}
       </SidebarHeader>
       <SidebarContent>
-        {isLoading || authLoading ? (
+        {showLoading ? (
           <NavItemsSkeleton />
         ) : (
           <NavMain items={navMain} />
         )}
       </SidebarContent>
       <SidebarFooter>
-        {isLoading || authLoading ? (
+        {showLoading ? (
           <NavUserSkeleton />
         ) : (
           <NavUser />

@@ -1,8 +1,27 @@
 "use client"
-import React, { useState, useEffect } from 'react';
-import { FileText, AlertCircle, Loader2, Download } from 'lucide-react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { 
+  FileText, 
+  AlertCircle, 
+  Loader2, 
+  Download, 
+  Calendar,
+  Building2,
+  Package,
+  DollarSign,
+  TrendingUp,
+  Users,
+  ShoppingCart,
+  Receipt,
+  TruckIcon,
+  Boxes,
+  FileBarChart,
+  Filter
+} from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
+import { useLocation } from '@/contexts/LocationContext';
 import { PDFGenerator } from '@/lib/pdf-generator';
 import { useTranslations } from 'next-intl';
 
@@ -38,7 +57,12 @@ type Profile = {
 
 const ReportsModule = () => {
   const supabase = createClient();
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
+  const { currentLocation, isLoading: locationLoading } = useLocation();
+  
+  // Get user's location and role
+  const userLocationId = profile?.location_id;
+  const isAdmin = profile?.role === 'admin';
   
   // Form state
   const [reportType, setReportType] = useState<string>('sales');
@@ -55,48 +79,70 @@ const ReportsModule = () => {
   const [reportStatus, setReportStatus] = useState<string>('all');
   
   // Data state
-  const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
-  const [staff, setStaff] = useState<Profile[]>([]);
 
   const t = useTranslations('reports');
+  const rawInfoCardItems = t.raw('generator.infoCard.items');
+  const infoCardItems = Array.isArray(rawInfoCardItems) ? (rawInfoCardItems as string[]) : [];
   
-  // Fetch filter options
+  // Fetch filter options with React Query
   const fetchFilterOptions = async () => {
-    setLoading(true);
-    try {
-      const [locationsRes, categoriesRes, expenseCategoriesRes, staffRes] = await Promise.all([
-        supabase.from('locations').select('location_id, name, location_type'),
-        supabase.from('categories').select('category_id, name'),
-        supabase.from('expense_categories').select('category_id, name').eq('is_active', true),
-        supabase.from('profiles').select('id, full_name, email').eq('is_active', true)
-      ]);
-      
-      if (locationsRes.data) setLocations(locationsRes.data);
-      if (categoriesRes.data) setCategories(categoriesRes.data);
-      if (expenseCategoriesRes.data) setExpenseCategories(expenseCategoriesRes.data);
-      if (staffRes.data) setStaff(staffRes.data);
-    } catch (err) {
-      console.error('Error fetching filter options:', err);
-      toast.error('Failed to load filter options');
-    } finally {
-      setLoading(false);
-    }
+    const [locationsRes, categoriesRes, expenseCategoriesRes, staffRes] = await Promise.all([
+      supabase.from('locations').select('location_id, name, location_type'),
+      supabase.from('categories').select('category_id, name'),
+      supabase.from('expense_categories').select('category_id, name').eq('is_active', true),
+      supabase.from('profiles').select('id, full_name, email').eq('is_active', true)
+    ]);
+    
+    if (locationsRes.error) throw locationsRes.error;
+    if (categoriesRes.error) throw categoriesRes.error;
+    if (expenseCategoriesRes.error) throw expenseCategoriesRes.error;
+    if (staffRes.error) throw staffRes.error;
+    
+    return {
+      locations: locationsRes.data || [],
+      categories: categoriesRes.data || [],
+      expenseCategories: expenseCategoriesRes.data || [],
+      staff: staffRes.data || []
+    };
   };
+
+  // React Query for filter options
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['report-filters'],
+    queryFn: fetchFilterOptions,
+    enabled: !authLoading && !locationLoading,
+    staleTime: 60000, // Cache for 1 minute
+    refetchOnWindowFocus: false,
+  });
+
+  const locations = data?.locations || [];
+  const categories = data?.categories || [];
+  const expenseCategories = data?.expenseCategories || [];
+  const staff = data?.staff || [];
   
   // Fetch report data from Supabase
   const fetchReportData = async () => {
     const startDateTime = `${startDate}T00:00:00`;
     const endDateTime = `${endDate}T23:59:59`;
     
+    // Determine effective location for filtering
+    let effectiveLocationId: string | undefined;
+    if (isAdmin) {
+      // Admin uses currentLocation from sidebar or 'all'
+      effectiveLocationId = currentLocation?.location_id?.toString();
+    } else {
+      // Non-admin must use their assigned location
+      effectiveLocationId = userLocationId?.toString();
+    }
+    
     console.log('Fetching report data for:', {
       reportType,
       startDateTime,
       endDateTime,
-      selectedLocation,
+      effectiveLocationId,
+      isAdmin,
+      userId: profile?.id,
       selectedCategory
     });
     
@@ -122,8 +168,18 @@ const ReportsModule = () => {
             .lte('sale_date', endDateTime)
             .order('sale_date', { ascending: false });
           
-          if (selectedLocation !== 'all') salesQuery = salesQuery.eq('location_id', selectedLocation);
-          if (selectedStaff !== 'all') salesQuery = salesQuery.eq('profile_id', selectedStaff);
+          // Apply location filter based on user role
+          if (effectiveLocationId) {
+            salesQuery = salesQuery.eq('location_id', effectiveLocationId);
+          }
+          
+          // Non-admin can only see their own sales
+          if (!isAdmin) {
+            salesQuery = salesQuery.eq('profile_id', profile?.id);
+          } else if (selectedStaff !== 'all') {
+            salesQuery = salesQuery.eq('profile_id', selectedStaff);
+          }
+          
           if (reportStatus !== 'all') salesQuery = salesQuery.eq('status', reportStatus);
           
           const { data: salesData, error: salesError } = await salesQuery;
@@ -149,7 +205,11 @@ const ReportsModule = () => {
             .lte('updated_at', endDateTime)
             .order('updated_at', { ascending: false });
           
-          if (selectedLocation !== 'all') inventoryQuery = inventoryQuery.eq('location_id', selectedLocation);
+          // Apply location filter based on user role
+          if (effectiveLocationId) {
+            inventoryQuery = inventoryQuery.eq('location_id', effectiveLocationId);
+          }
+          
           if (selectedCategory !== 'all') inventoryQuery = inventoryQuery.eq('products.category_id', selectedCategory);
           
           const { data: inventoryData, error: inventoryError } = await inventoryQuery;
@@ -171,9 +231,19 @@ const ReportsModule = () => {
             .lte('expense_date', endDateTime)
             .order('expense_date', { ascending: false });
           
-          if (selectedLocation !== 'all') expensesQuery = expensesQuery.eq('location_id', selectedLocation);
+          // Apply location filter based on user role
+          if (effectiveLocationId) {
+            expensesQuery = expensesQuery.eq('location_id', effectiveLocationId);
+          }
+          
+          // Non-admin can only see their own expenses
+          if (!isAdmin) {
+            expensesQuery = expensesQuery.eq('profile_id', profile?.id);
+          } else if (selectedStaff !== 'all') {
+            expensesQuery = expensesQuery.eq('profile_id', selectedStaff);
+          }
+          
           if (selectedExpenseCategory !== 'all') expensesQuery = expensesQuery.eq('category_id', selectedExpenseCategory);
-          if (selectedStaff !== 'all') expensesQuery = expensesQuery.eq('profile_id', selectedStaff);
           if (reportStatus !== 'all') expensesQuery = expensesQuery.eq('status', reportStatus);
           
           const { data: expensesData, error: expensesError } = await expensesQuery;
@@ -194,7 +264,11 @@ const ReportsModule = () => {
             .lte('loan_date', endDateTime)
             .order('loan_date', { ascending: false });
           
-          if (selectedLocation !== 'all') loansQuery = loansQuery.eq('location_id', selectedLocation);
+          // Apply location filter based on user role
+          if (effectiveLocationId) {
+            loansQuery = loansQuery.eq('location_id', effectiveLocationId);
+          }
+          
           if (reportStatus !== 'all') loansQuery = loansQuery.eq('status', reportStatus);
           
           const { data: loansData, error: loansError } = await loansQuery;
@@ -202,7 +276,7 @@ const ReportsModule = () => {
           data = loansData;
           break;
         }
-          
+        
         case 'transfers': {
           let transfersQuery = supabase
             .from('inventory_transfers')
@@ -217,17 +291,24 @@ const ReportsModule = () => {
             .lte('created_at', endDateTime)
             .order('created_at', { ascending: false });
           
-          if (selectedLocation !== 'all') {
-            transfersQuery = transfersQuery.or(`from_location_id.eq.${selectedLocation},to_location_id.eq.${selectedLocation}`);
+          // Apply location filter based on user role
+          if (effectiveLocationId) {
+            transfersQuery = transfersQuery.or(`from_location_id.eq.${effectiveLocationId},to_location_id.eq.${effectiveLocationId}`);
           }
-          if (selectedStaff !== 'all') transfersQuery = transfersQuery.eq('created_by_profile_id', selectedStaff);
+          
+          // Non-admin can only see their own transfers
+          if (!isAdmin) {
+            transfersQuery = transfersQuery.eq('created_by_profile_id', profile?.id);
+          } else if (selectedStaff !== 'all') {
+            transfersQuery = transfersQuery.eq('created_by_profile_id', selectedStaff);
+          }
           
           const { data: transfersData, error: transfersError } = await transfersQuery;
           if (transfersError) throw transfersError;
           data = transfersData;
           break;
         }
-          
+        
         case 'customers': {
           let customersQuery = supabase
             .from('customers')
@@ -241,50 +322,67 @@ const ReportsModule = () => {
             .lte('created_at', endDateTime)
             .order('created_at', { ascending: false });
           
-          if (selectedLocation !== 'all') customersQuery = customersQuery.eq('location_id', selectedLocation);
+          // Apply location filter based on user role
+          if (effectiveLocationId) {
+            customersQuery = customersQuery.eq('location_id', effectiveLocationId);
+          }
           
           const { data: customersData, error: customersError } = await customersQuery;
           if (customersError) throw customersError;
           data = customersData;
           break;
         }
-          
+        
         case 'financial': {
-          // Fetch multiple datasets for financial summary
+          // Build queries for financial summary
+          let salesQuery = supabase
+            .from('sales')
+            .select('sale_id, sale_date, total_amount, status, location_id, profile_id')
+            .gte('sale_date', startDateTime)
+            .lte('sale_date', endDateTime)
+            .eq('status', 'Completed');
+          
+          let expensesQuery = supabase
+            .from('expenses')
+            .select('expense_id, expense_date, amount, status, location_id, profile_id, expense_categories(name)')
+            .gte('expense_date', startDateTime)
+            .lte('expense_date', endDateTime)
+            .eq('status', 'approved');
+          
+          let loansQuery = supabase
+            .from('loans')
+            .select('loan_id, loan_date, loan_amount, status, location_id')
+            .gte('loan_date', startDateTime)
+            .lte('loan_date', endDateTime);
+          
+          // Apply location filter
+          if (effectiveLocationId) {
+            salesQuery = salesQuery.eq('location_id', effectiveLocationId);
+            expensesQuery = expensesQuery.eq('location_id', effectiveLocationId);
+            loansQuery = loansQuery.eq('location_id', effectiveLocationId);
+          }
+          
+          // Apply user filter for non-admin
+          if (!isAdmin && profile?.id) {
+            salesQuery = salesQuery.eq('profile_id', profile.id);
+            expensesQuery = expensesQuery.eq('profile_id', profile.id);
+          }
+          
+          // Fetch all data
           const [salesRes, expensesRes, loansRes] = await Promise.all([
-            supabase
-              .from('sales')
-              .select('sale_id, sale_date, total_amount, status, location_id')
-              .gte('sale_date', startDateTime)
-              .lte('sale_date', endDateTime)
-              .eq('status', 'Completed'),
-            supabase
-              .from('expenses')
-              .select('expense_id, expense_date, amount, status, location_id, expense_categories(name)')
-              .gte('expense_date', startDateTime)
-              .lte('expense_date', endDateTime)
-              .eq('status', 'approved'),
-            supabase
-              .from('loans')
-              .select('loan_id, loan_date, loan_amount, status, location_id')
-              .gte('loan_date', startDateTime)
-              .lte('loan_date', endDateTime)
+            salesQuery,
+            expensesQuery,
+            loansQuery
           ]);
           
           if (salesRes.error) throw salesRes.error;
           if (expensesRes.error) throw expensesRes.error;
           if (loansRes.error) throw loansRes.error;
           
-          // Filter by location if needed
-          const filterByLocation = (items: any[]) => {
-            if (selectedLocation === 'all') return items;
-            return items.filter(item => item.location_id?.toString() === selectedLocation);
-          };
-          
           data = {
-            sales: filterByLocation(salesRes.data || []),
-            expenses: filterByLocation(expensesRes.data || []),
-            loans: filterByLocation(loansRes.data || [])
+            sales: salesRes.data || [],
+            expenses: expensesRes.data || [],
+            loans: loansRes.data || []
           };
           break;
         }
@@ -334,19 +432,20 @@ const ReportsModule = () => {
       return;
     }
     
-    console.log('Starting PDF generation for:', reportType);
     setGenerating(true);
+    console.log('Starting PDF generation for:', reportType);
     
     try {
-      // Fetch data from Supabase
-      console.log('Calling fetchReportData...');
+      // Fetch report data first
       const reportData = await fetchReportData();
-      console.log('fetchReportData completed:', reportData ? 'Data received' : 'No data');
       
-      if (!reportData || (Array.isArray(reportData) && reportData.length === 0)) {
-        toast.error('No data found for the selected filters');
-        setGenerating(false);
-        return;
+      // Determine location name for PDF
+      let locationName = 'All Locations';
+      if (isAdmin && currentLocation) {
+        locationName = currentLocation.name;
+      } else if (!isAdmin && userLocationId) {
+        const userLocation = locations.find(l => l.location_id.toString() === userLocationId.toString());
+        locationName = userLocation?.name || 'Unknown Location';
       }
       
       // Prepare filters for PDF generation
@@ -354,32 +453,26 @@ const ReportsModule = () => {
         reportType,
         startDate,
         endDate,
-        location: selectedLocation !== 'all' ? (locations.find(l => l.location_id.toString() === selectedLocation)?.name || 'Unknown Location') : 'All Locations',
+        location: locationName,
         category: selectedCategory !== 'all' ? (categories.find(c => c.category_id.toString() === selectedCategory)?.name || 'Unknown Category') : 'All Categories',
         expenseCategory: selectedExpenseCategory !== 'all' ? (expenseCategories.find(c => c.category_id.toString() === selectedExpenseCategory)?.name || 'Unknown Category') : 'All Categories',
-        staff: selectedStaff !== 'all' ? (staff.find(s => s.id === selectedStaff)?.full_name || staff.find(s => s.id === selectedStaff)?.email || 'Unknown Staff') : 'All Staff',
+        staff: !isAdmin ? (profile?.full_name || profile?.email || 'Unknown Staff') : (selectedStaff !== 'all' ? (staff.find(s => s.id === selectedStaff)?.full_name || staff.find(s => s.id === selectedStaff)?.email || 'Unknown Staff') : 'All Staff'),
         status: reportStatus !== 'all' ? reportStatus : 'All Statuses',
         generatedBy: profile?.full_name || profile?.email || 'Unknown',
         generatedAt: new Date().toLocaleString()
       };
       
       // Generate and download PDF
-      try {
-        const pdfGenerator = new PDFGenerator();
-        pdfGenerator.download(reportType, reportData, filters);
-        
-        const dataCount = Array.isArray(reportData) 
-          ? reportData.length 
-          : Object.values(reportData).flat().length;
-        
-        toast.success(`PDF report generated successfully!`, {
-          description: `Report contains ${dataCount} records and has been downloaded.`
-        });
-      } catch (pdfError) {
-        console.error('Error generating PDF:', pdfError);
-        throw new Error('Failed to generate PDF: ' + (pdfError instanceof Error ? pdfError.message : 'Unknown error'));
-      }
+      const pdfGenerator = new PDFGenerator();
+      pdfGenerator.download(reportType, reportData, filters);
       
+      const dataCount = Array.isArray(reportData) 
+        ? reportData.length 
+        : Object.values(reportData).flat().length;
+      
+      toast.success(`PDF report generated successfully!`, {
+        description: `Report contains ${dataCount} records and has been downloaded.`
+      });
     } catch (err: any) {
       console.error('Error generating report:', err);
       console.error('Error details:', {
@@ -401,213 +494,389 @@ const ReportsModule = () => {
     }
   };
   
-  // Initialize component
-  useEffect(() => {
-    fetchFilterOptions();
-  }, []);
-  
-  const infoCardItems = [
-    t('generator.infoCard.items.0'),
-    t('generator.infoCard.items.1'),
-    t('generator.infoCard.items.2'),
-    t('generator.infoCard.items.3')
-  ];
+  // Get report type icon and color
+  const getReportTypeConfig = (type: string) => {
+    const configs: Record<string, { icon: any; color: string; bgColor: string; borderColor: string }> = {
+      sales: { icon: ShoppingCart, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
+      inventory: { icon: Boxes, color: 'text-purple-600', bgColor: 'bg-purple-50', borderColor: 'border-purple-200' },
+      expenses: { icon: Receipt, color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
+      loans: { icon: DollarSign, color: 'text-amber-600', bgColor: 'bg-amber-50', borderColor: 'border-amber-200' },
+      transfers: { icon: TruckIcon, color: 'text-indigo-600', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200' },
+      customers: { icon: Users, color: 'text-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
+      financial: { icon: TrendingUp, color: 'text-emerald-600', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200' },
+      products: { icon: Package, color: 'text-pink-600', bgColor: 'bg-pink-50', borderColor: 'border-pink-200' },
+    };
+    return configs[type] || { icon: FileText, color: 'text-gray-600', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' };
+  };
+
+  const currentConfig = getReportTypeConfig(reportType);
+  const ReportIcon = currentConfig.icon;
+
+  // Get effective location name for display
+  const getEffectiveLocationName = () => {
+    if (isAdmin) {
+      return currentLocation?.name || 'All Locations';
+    } else if (userLocationId) {
+      const userLocation = locations.find(l => l.location_id.toString() === userLocationId.toString());
+      return userLocation?.name || 'Your Location';
+    }
+    return 'No Location';
+  };
+
+  if (authLoading || locationLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-700">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">{t('generator.page.title')}</h1>
-          <p className="text-gray-600">{t('generator.page.description')}</p>
+    <div className="flex flex-col min-h-screen">
+      {/* Premium Sticky Header */}
+      <header className="bg-white border-b-2 border-teal-200 shadow-md sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-teal-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <FileBarChart className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-emerald-600">
+                  Report Generator
+                </h1>
+                <p className="text-sm text-gray-600 flex items-center gap-1.5 mt-0.5">
+                  <Building2 className="h-3.5 w-3.5" />
+                  {getEffectiveLocationName()}
+                  {!isAdmin && <span className="text-xs bg-slate-100 px-2 py-0.5 rounded-full ml-1">Your Reports</span>}
+                </p>
+              </div>
+            </div>
+            <div className="p-3 bg-gradient-to-br from-teal-100 to-emerald-100 rounded-xl border-2 border-teal-200">
+              <ReportIcon className="h-6 w-6 text-teal-600" />
+            </div>
+          </div>
         </div>
+      </header>
 
-        <Card className="border-gray-200">
-          <CardHeader >
-            <CardTitle className="text-xl">{t('generator.form.card.title')}</CardTitle>
-            <CardDescription>{t('generator.form.card.description')}</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="reportType" className="text-sm font-medium">
-                {t('generator.form.fields.reportType.label')}
-              </Label>
-              <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger id="reportType">
-                  <SelectValue placeholder={t('generator.form.fields.reportType.placeholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sales">{t('generator.form.fields.reportType.options.sales')}</SelectItem>
-                  <SelectItem value="inventory">{t('generator.form.fields.reportType.options.inventory')}</SelectItem>
-                  <SelectItem value="expenses">{t('generator.form.fields.reportType.options.expenses')}</SelectItem>
-                  <SelectItem value="loans">{t('generator.form.fields.reportType.options.loans')}</SelectItem>
-                  <SelectItem value="transfers">{t('generator.form.fields.reportType.options.transfers')}</SelectItem>
-                  <SelectItem value="customers">{t('generator.form.fields.reportType.options.customers')}</SelectItem>
-                  <SelectItem value="financial">{t('generator.form.fields.reportType.options.financial')}</SelectItem>
-                  <SelectItem value="products">{t('generator.form.fields.reportType.options.products')}</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500">{t('generator.form.fields.reportType.helpText')}</p>
-            </div>
+      <main className="flex-1 ">
+        <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startDate" className="text-sm font-medium">
-                  {t('generator.form.fields.startDate.label')}
-                </Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  max={endDate}
-                />
+          {/* Report Type Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { type: 'sales', label: 'Sales', icon: ShoppingCart, color: 'teal' },
+              { type: 'inventory', label: 'Inventory', icon: Boxes, color: 'emerald' },
+              { type: 'expenses', label: 'Expenses', icon: Receipt, color: 'red' },
+              { type: 'loans', label: 'Loans', icon: DollarSign, color: 'green' },
+              { type: 'transfers', label: 'Transfers', icon: TruckIcon, color: 'teal' },
+              { type: 'customers', label: 'Customers', icon: Users, color: 'emerald' },
+              { type: 'financial', label: 'Financial', icon: TrendingUp, color: 'green' },
+              { type: 'products', label: 'Products', icon: Package, color: 'teal' },
+            ].map((item) => {
+              const Icon = item.icon;
+              const isSelected = reportType === item.type;
+              return (
+                <button
+                  key={item.type}
+                  onClick={() => setReportType(item.type)}
+                  className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                    isSelected
+                      ? 'bg-gradient-to-br from-teal-50 to-emerald-100 border-teal-300 shadow-lg scale-105'
+                      : 'bg-white border-teal-200 hover:border-teal-300 hover:shadow-md'
+                  }`}
+                >
+                  <Icon className={`h-8 w-8 mx-auto mb-2 ${
+                    isSelected ? 'text-teal-600' : 'text-gray-400'
+                  }`} />
+                  <p className={`text-sm font-semibold ${
+                    isSelected ? 'text-gray-900' : 'text-gray-600'
+                  }`}>
+                    {item.label}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+          
+          {/* Main Form Card */}
+          <Card className="border-2 border-teal-100 shadow-xl rounded-2xl">
+            <CardHeader className="bg-gradient-to-r from-teal-50/50 via-emerald-50/30 to-green-50/30 border-b-2 border-teal-100">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-teal-100 to-emerald-100 border-2 border-teal-200">
+                  <ReportIcon className="h-6 w-6 text-teal-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold text-gray-900">Report Configuration</CardTitle>
+                  <CardDescription>Configure filters and parameters for your report</CardDescription>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="endDate" className="text-sm font-medium">
-                  {t('generator.form.fields.endDate.label')}
-                </Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate}
-                />
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              {/* Selected Report Type Display */}
+              <div className="p-4 rounded-xl border-2 border-teal-200 bg-gradient-to-br from-teal-50 to-emerald-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <ReportIcon className="h-8 w-8 text-teal-600" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Selected Report</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report
+                      </p>
+                    </div>
+                  </div>
+                  <div className="px-4 py-2 rounded-lg bg-teal-100 border border-teal-200">
+                    <FileText className="h-5 w-5 text-teal-600" />
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="location" className="text-sm font-medium">
-                {t('generator.form.fields.location.label')}
-              </Label>
-              <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                <SelectTrigger id="location">
-                  <SelectValue placeholder={t('generator.form.fields.location.placeholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('generator.form.fields.location.placeholder')}</SelectItem>
-                  {locations.map((location) => (
-                    <SelectItem key={location.location_id.toString()} value={location.location_id.toString()}>
-                      {location.name} ({location.location_type})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {(reportType === 'sales' || reportType === 'products' || reportType === 'inventory') && (
-              <div className="space-y-2">
-                <Label htmlFor="category" className="text-sm font-medium">
-                  {t('generator.form.fields.category.label')}
-                </Label>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder={t('generator.form.fields.category.placeholder')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('generator.form.fields.category.placeholder')}</SelectItem>
-                    {categories.map((category) => (
-                      <SelectItem key={category.category_id} value={category.category_id.toString()}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Date Range */}
+              <div className="bg-gradient-to-r from-teal-50 via-emerald-50 to-green-50 border-2 border-teal-200 rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Calendar className="h-5 w-5 text-teal-600" />
+                  <h3 className="font-semibold text-gray-900">Date Range</h3>
+                  <span className="text-red-500">*</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate" className="text-sm font-semibold text-gray-700">
+                      Start Date
+                    </Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      max={endDate}
+                      className="border-2 border-teal-200 h-12 focus:border-teal-500 focus:ring-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endDate" className="text-sm font-semibold text-gray-700">
+                      End Date
+                    </Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={startDate}
+                      className="border-2 border-teal-200 h-12 focus:border-teal-500 focus:ring-teal-500"
+                    />
+                  </div>
+                </div>
               </div>
-            )}
 
-            {reportType === 'expenses' && (
-              <div className="space-y-2">
-                <Label htmlFor="expenseCategory" className="text-sm font-medium">
-                  {t('generator.form.fields.expenseCategory.label')}
-                </Label>
-                <Select value={selectedExpenseCategory} onValueChange={setSelectedExpenseCategory}>
-                  <SelectTrigger id="expenseCategory">
-                    <SelectValue placeholder={t('generator.form.fields.expenseCategory.placeholder')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('generator.form.fields.expenseCategory.placeholder')}</SelectItem>
-                    {expenseCategories.map((category) => (
-                      <SelectItem key={category.category_id} value={category.category_id.toString()}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {(reportType === 'sales' || reportType === 'expenses' || reportType === 'transfers') && (
-              <div className="space-y-2">
-                <Label htmlFor="staff" className="text-sm font-medium">
-                  {t('generator.form.fields.staff.label')}
-                </Label>
-                <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-                  <SelectTrigger id="staff">
-                    <SelectValue placeholder={t('generator.form.fields.staff.placeholder')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('generator.form.fields.staff.placeholder')}</SelectItem>
-                    {staff.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.full_name || member.email || 'Unknown'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {(reportType === 'sales' || reportType === 'loans' || reportType === 'expenses') && (
-              <div className="space-y-2">
-                <Label htmlFor="status" className="text-sm font-medium">
-                  {t('generator.form.fields.status.label')}
-                </Label>
-                <Select value={reportStatus} onValueChange={setReportStatus}>
-                  <SelectTrigger id="status">
-                    <SelectValue placeholder={t('generator.form.fields.status.placeholder')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('generator.form.fields.status.placeholder')}</SelectItem>
-                    {reportType === 'sales' && (
-                      <>
-                        <SelectItem value="Completed">{t('generator.form.fields.status.options.sales.completed')}</SelectItem>
-                        <SelectItem value="Pending">{t('generator.form.fields.status.options.sales.pending')}</SelectItem>
-                        <SelectItem value="Cancelled">{t('generator.form.fields.status.options.sales.cancelled')}</SelectItem>
-                      </>
+              <div className="space-y-4">
+                {/* Location Display - Read-only for non-admin */}
+                <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-teal-600" />
+                      Location {!isAdmin && <span className="text-xs text-gray-500">(Auto-selected)</span>}
+                    </Label>
+                    {isAdmin ? (
+                      <div className="p-4 bg-teal-50 border-2 border-teal-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center">
+                            <Building2 className="h-5 w-5 text-teal-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Report Location</p>
+                            <p className="text-lg font-bold text-gray-900">{getEffectiveLocationName()}</p>
+                            <p className="text-xs text-gray-500 mt-1">Change location from sidebar to view different reports</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-slate-50 border-2 border-slate-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                            <Building2 className="h-5 w-5 text-slate-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Your Assigned Location</p>
+                            <p className="text-lg font-bold text-gray-900">{getEffectiveLocationName()}</p>
+                            <p className="text-xs text-gray-500 mt-1">Reports are limited to your assigned location</p>
+                          </div>
+                        </div>
+                      </div>
                     )}
-                    {reportType === 'loans' && (
-                      <>
-                        <SelectItem value="pending">{t('generator.form.fields.status.options.loans.pending')}</SelectItem>
-                        <SelectItem value="paid">{t('generator.form.fields.status.options.loans.paid')}</SelectItem>
-                      </>
+                  </div>
+
+                  {/* Filters Row - Conditional based on Report Type */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Product Category Filter */}
+                    {(reportType === 'sales' || reportType === 'products' || reportType === 'inventory') && (
+                      <div className="space-y-2">
+                        <Label htmlFor="category" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                          <Package className="h-4 w-4 text-emerald-600" />
+                          Product Category
+                        </Label>
+                        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                          <SelectTrigger id="category" className="border-2 border-teal-200 h-11 focus:ring-teal-500">
+                            <SelectValue placeholder="All categories" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                                All Categories
+                              </div>
+                            </SelectItem>
+                            {categories.map((category) => (
+                              <SelectItem key={category.category_id} value={category.category_id.toString()}>
+                                <div className="flex items-center gap-2">
+                                  <Package className="h-3 w-3 text-emerald-600" />
+                                  {category.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     )}
+
+                    {/* Expense Category Filter */}
                     {reportType === 'expenses' && (
-                      <>
-                        <SelectItem value="pending">{t('generator.form.fields.status.options.expenses.pending')}</SelectItem>
-                        <SelectItem value="approved">{t('generator.form.fields.status.options.expenses.approved')}</SelectItem>
-                        <SelectItem value="rejected">{t('generator.form.fields.status.options.expenses.rejected')}</SelectItem>
-                      </>
+                      <div className="space-y-2">
+                        <Label htmlFor="expenseCategory" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                          <Receipt className="h-4 w-4 text-red-600" />
+                          Expense Category
+                        </Label>
+                        <Select value={selectedExpenseCategory} onValueChange={setSelectedExpenseCategory}>
+                          <SelectTrigger id="expenseCategory" className="border-2 border-teal-200 h-11 focus:ring-teal-500">
+                            <SelectValue placeholder="All expense categories" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                                All Expense Categories
+                              </div>
+                            </SelectItem>
+                            {expenseCategories.map((category) => (
+                              <SelectItem key={category.category_id} value={category.category_id.toString()}>
+                                <div className="flex items-center gap-2">
+                                  <Receipt className="h-3 w-3 text-red-600" />
+                                  {category.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     )}
-                  </SelectContent>
-                </Select>
+
+                    {/* Staff Filter - Only for admin */}
+                    {isAdmin && (reportType === 'sales' || reportType === 'expenses' || reportType === 'transfers') && (
+                      <div className="space-y-2">
+                        <Label htmlFor="staff" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                          <Users className="h-4 w-4 text-green-600" />
+                          Staff Member
+                        </Label>
+                        <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+                          <SelectTrigger id="staff" className="border-2 border-teal-200 h-11 focus:ring-teal-500">
+                            <SelectValue placeholder="All staff" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                                All Staff
+                              </div>
+                            </SelectItem>
+                            {staff.map((member) => (
+                              <SelectItem key={member.id} value={member.id}>
+                                <div className="flex items-center gap-2">
+                                  <Users className="h-3 w-3 text-green-600" />
+                                  {member.full_name || member.email || 'Unknown'}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Status Filter */}
+                    {(reportType === 'sales' || reportType === 'loans' || reportType === 'expenses') && (
+                      <div className="space-y-2">
+                        <Label htmlFor="status" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-emerald-600" />
+                          {t('generator.form.fields.status.label')}
+                        </Label>
+                        <Select value={reportStatus} onValueChange={setReportStatus}>
+                          <SelectTrigger id="status" className="border-2 border-teal-200 h-11 focus:ring-teal-500">
+                            <SelectValue placeholder={t('generator.form.fields.status.placeholder')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                                {t('generator.form.fields.status.placeholder')}
+                              </div>
+                            </SelectItem>
+                            {reportType === 'sales' && (
+                              <>
+                                <SelectItem value="Completed">{t('generator.form.fields.status.options.sales.completed')}</SelectItem>
+                                <SelectItem value="Pending">{t('generator.form.fields.status.options.sales.pending')}</SelectItem>
+                                <SelectItem value="Cancelled">{t('generator.form.fields.status.options.sales.cancelled')}</SelectItem>
+                              </>
+                            )}
+                            {reportType === 'loans' && (
+                              <>
+                                <SelectItem value="pending">{t('generator.form.fields.status.options.loans.pending')}</SelectItem>
+                                <SelectItem value="paid">{t('generator.form.fields.status.options.loans.paid')}</SelectItem>
+                              </>
+                            )}
+                            {reportType === 'expenses' && (
+                              <>
+                                <SelectItem value="pending">{t('generator.form.fields.status.options.expenses.pending')}</SelectItem>
+                                <SelectItem value="approved">{t('generator.form.fields.status.options.expenses.approved')}</SelectItem>
+                                <SelectItem value="rejected">{t('generator.form.fields.status.options.expenses.rejected')}</SelectItem>
+                              </>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Non-admin info banner */}
+                  {!isAdmin && (reportType === 'sales' || reportType === 'expenses' || reportType === 'transfers') && (
+                    <div className="p-4 bg-teal-50 border-2 border-teal-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <AlertCircle className="h-5 w-5 text-teal-600 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-teal-900">Personal Reports Only</p>
+                          <p className="text-xs text-teal-700 mt-1">
+                            This report will only include your own {reportType} records
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
               </div>
-            )}
+            
 
             <div className="pt-4">
               <Button
                 onClick={generatePDFReport}
                 disabled={generating || !startDate || !endDate}
-                className="w-full bg-gray-900 hover:bg-gray-800 text-white h-12 text-base font-medium"
+                className="w-full bg-gradient-to-r from-teal-600 via-emerald-600 to-green-600 hover:from-teal-700 hover:via-emerald-700 hover:to-green-700 text-white h-14 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all"
               >
                 {generating ? (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    <Loader2 className="mr-3 h-6 w-6 animate-spin" />
                     {t('generator.actions.generating')}
                   </>
                 ) : (
                   <>
-                    <Download className="mr-2 h-5 w-5" />
+                    <Download className="mr-3 h-6 w-6" />
                     {t('generator.actions.generate')}
                   </>
                 )}
@@ -616,22 +885,28 @@ const ReportsModule = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-2 border-teal-200 bg-gradient-to-br from-teal-50 to-emerald-50 shadow-lg rounded-2xl">
           <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-900 space-y-1">
-                <p className="font-medium">{t('generator.infoCard.title')}</p>
-                <ul className="list-disc list-inside space-y-1 text-blue-800 ml-2">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-teal-100 rounded-xl border-2 border-teal-200">
+                <AlertCircle className="h-6 w-6 text-teal-600 flex-shrink-0" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-lg text-gray-900 mb-3">{t('generator.infoCard.title')}</p>
+                <ul className="space-y-2 text-sm text-teal-900">
                   {infoCardItems.map((item, index) => (
-                    <li key={index}>{item}</li>
+                    <li key={index} className="flex items-start gap-2">
+                      <span className="text-teal-600 font-bold mt-0.5">•</span>
+                      <span className="flex-1">{item}</span>
+                    </li>
                   ))}
                 </ul>
               </div>
             </div>
           </CardContent>
         </Card>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };

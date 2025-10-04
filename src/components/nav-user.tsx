@@ -7,6 +7,7 @@ import {
   Settings,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { useRouter, usePathname } from '@/i18n/routing'
 import {
   Avatar,
   AvatarFallback,
@@ -37,6 +38,7 @@ export function NavUser() {
   const { user, profile, loading } = useAuth()
   const { isMobile } = useSidebar()
   const t = useTranslations('common.navigation.navUser')
+  const router = useRouter()
 
   const getInitials = (name: string | null) => {
     if (!name) return "UN"
@@ -74,51 +76,61 @@ export function NavUser() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="data-[state=open]:bg-teal-50 data-[state=open]:text-teal-900 hover:bg-teal-50 hover:text-teal-900 transition-colors border-t-2 border-teal-100"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
+              <Avatar className="h-8 w-8 rounded-lg ring-2 ring-teal-200">
                 <AvatarImage src={profile?.avatar_url ?? undefined} alt={profile?.full_name ?? t('fallbackName')} />
-                <AvatarFallback className="rounded-lg">{getInitials(profile?.full_name ?? null)}</AvatarFallback>
+                <AvatarFallback className="rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 text-white font-semibold">
+                  {getInitials(profile?.full_name ?? null)}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{profile?.full_name || t('fallbackName')}</span>
-                <span className="truncate text-xs">{profile?.email || t('fallbackEmail')}</span>
+                <span className="truncate font-semibold">{profile?.full_name || t('fallbackName')}</span>
+                <span className="truncate text-xs text-teal-600">{profile?.email || t('fallbackEmail')}</span>
               </div>
-              <ChevronsUpDown className="ml-auto size-4" />
+              <ChevronsUpDown className="ml-auto size-4 text-teal-600" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg border-2 border-teal-100 shadow-lg"
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={4}
           >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
+            <DropdownMenuLabel className="p-0 font-normal bg-gradient-to-br from-teal-50/50 via-emerald-50/30 to-green-50/30">
+              <div className="flex items-center gap-2 px-2 py-2 text-left text-sm">
+                <Avatar className="h-8 w-8 rounded-lg ring-2 ring-teal-200">
                   <AvatarImage src={profile?.avatar_url ?? undefined} alt={profile?.full_name ?? t('fallbackName')} />
-                  <AvatarFallback className="rounded-lg">{getInitials(profile?.full_name ?? null)}</AvatarFallback>
+                  <AvatarFallback className="rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 text-white font-semibold">
+                    {getInitials(profile?.full_name ?? null)}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{profile?.full_name || t('fallbackName')}</span>
-                  <span className="truncate text-xs">{profile?.email || t('fallbackEmail')}</span>
+                  <span className="truncate font-semibold text-gray-900">{profile?.full_name || t('fallbackName')}</span>
+                  <span className="truncate text-xs text-teal-600">{profile?.email || t('fallbackEmail')}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-teal-100" />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Settings />
+              <DropdownMenuItem 
+                onClick={() => router.push('/settings')} 
+                className="cursor-pointer hover:bg-teal-50 focus:bg-teal-50 text-gray-700"
+              >
+                <Settings className="text-teal-600" />
                 {t('settings')}
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
+              <DropdownMenuItem className="cursor-pointer hover:bg-emerald-50 focus:bg-emerald-50 text-gray-700">
+                <Bell className="text-emerald-600" />
                 {t('notifications')}
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={signOut} className="cursor-pointer">
-              <LogOut />
+            <DropdownMenuSeparator className="bg-teal-100" />
+            <DropdownMenuItem 
+              onSelect={signOut} 
+              className="cursor-pointer hover:bg-red-50 focus:bg-red-50 text-red-700 font-medium"
+            >
+              <LogOut className="text-red-600" />
               {t('logout')}
             </DropdownMenuItem>
           </DropdownMenuContent>

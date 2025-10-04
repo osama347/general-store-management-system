@@ -1,7 +1,8 @@
 "use client"
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
@@ -13,10 +14,16 @@ import {
   Search,
   Plus,
   Filter,
-  Trash2,
   Edit,
   AlertTriangle,
   X,
+  DollarSign,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Receipt,
+  TrendingUp,
+  Building2,
 } from "lucide-react"
 import {
   Dialog,
@@ -27,6 +34,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -101,18 +109,13 @@ interface FilterState {
 }
 
 export default function ExpensesPage() {
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [locations, setLocations] = useState<Location[]>([])
-  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState("")
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "ascending" | "descending" } | null>(null)
   
   // Form states
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     location_id: "",
     category_id: "",
@@ -134,193 +137,184 @@ export default function ExpensesPage() {
   const [showFilters, setShowFilters] = useState(false)
   
   const { profile, loading: authLoading } = useAuth()
-  const { locations: allLocations, isLoading: locationLoading } = useLocation()
+  const { currentLocation, locations: allLocations, isLoading: locationLoading } = useLocation()
   
   // Get the user's location from their profile
   const userLocationId = profile?.location_id
+  
+  // Determine effective location
+  const effectiveLocationId = profile?.role === 'admin' 
+    ? currentLocation?.location_id 
+    : userLocationId
 
-  // Data Fetching Functions
-  const fetchExpenses = async () => {
-    try {
-      let query = supabase
-        .from("expenses")
-        .select(`
-          *,
-          locations ( location_id, name, location_type ),
-          profile:profile_id ( id, full_name ),
-          created_by:created_by ( id, full_name ),
-          updated_by:updated_by ( id, full_name )
-        `)
-        .order("expense_date", { ascending: false })
-      
-      // For non-admin users, filter by their profile location_id
-      if (profile?.role !== 'admin' && userLocationId) {
-        query = query.eq('location_id', userLocationId)
-      }
-      
-      const { data, error } = await query
-      
-      if (error) throw error
-      setExpenses(data || [])
-    } catch (err: any) {
-      setError(err.message)
-      toast.error("Failed to load expenses", { description: err.message })
-    }
-  }
-
-  const fetchLocations = async () => {
-    try {
-      const { data, error } = await supabase.from("locations").select("location_id, name, location_type")
-      if (error) throw error
-      setLocations(data || [])
-    } catch (err: any) {
-      setError(err.message)
-      toast.error("Failed to load locations", { description: err.message })
-    }
-  }
-
-  const fetchExpenseCategories = async () => {
-    try {
-      const { data, error } = await supabase.from("expense_categories").select("category_id, name, description, is_active")
-      if (error) throw error
-      setExpenseCategories(data || [])
-    } catch (err: any) {
-      setError(err.message)
-      toast.error("Failed to load expense categories", { description: err.message })
-    }
-  }
-
-  // Expense CRUD Functions
-  const handleCreateExpense = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+  // Data Fetching Function
+  const fetchExpensesData = async () => {
+    // Fetch expenses
+    let expensesQuery = supabase
+      .from("expenses")
+      .select(`
+        *,
+        locations ( location_id, name, location_type ),
+        profile:profile_id ( id, full_name ),
+        created_by:created_by ( id, full_name ),
+        updated_by:updated_by ( id, full_name )
+      `)
+      .order("expense_date", { ascending: false })
     
-    try {
+    if (effectiveLocationId) {
+      expensesQuery = expensesQuery.eq('location_id', effectiveLocationId)
+    }
+    
+    const { data: expensesData, error: expensesError } = await expensesQuery
+    if (expensesError) throw expensesError
+    
+    // Fetch locations
+    const { data: locationsData, error: locationsError } = await supabase
+      .from("locations")
+      .select("location_id, name, location_type")
+    if (locationsError) throw locationsError
+    
+    // Fetch expense categories
+    const { data: categoriesData, error: categoriesError } = await supabase
+      .from("expense_categories")
+      .select("category_id, name, description, is_active")
+    if (categoriesError) throw categoriesError
+    
+    return {
+      expenses: expensesData || [],
+      locations: locationsData || [],
+      expenseCategories: categoriesData || [],
+    }
+  }
+
+  // React Query for expenses data
+  const { data, isLoading: loading, error } = useQuery({
+    queryKey: ['expenses', effectiveLocationId],
+    queryFn: fetchExpensesData,
+    enabled: !authLoading && !locationLoading && !!profile,
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+  })
+
+  const expenses = data?.expenses || []
+  const locations = data?.locations || []
+  const expenseCategories = data?.expenseCategories || []
+
+  // Mutations
+  const createExpenseMutation = useMutation({
+    mutationFn: async (expenseData: any) => {
       // Validate required fields
-      if (!formData.amount || isNaN(Number(formData.amount)) || Number(formData.amount) <= 0) {
-        toast.error("Amount must be greater than zero!")
-        setIsSubmitting(false)
-        return
+      if (!expenseData.amount || isNaN(Number(expenseData.amount)) || Number(expenseData.amount) <= 0) {
+        throw new Error("Amount must be greater than zero!")
       }
       
-      if (!formData.expense_date) {
-        toast.error("Expense date is required!")
-        setIsSubmitting(false)
-        return
+      if (!expenseData.expense_date) {
+        throw new Error("Expense date is required!")
       }
       
-      const expenseData: any = {
-        category_id: formData.category_id ? Number(formData.category_id) : null,
-        amount: Number(formData.amount),
-        expense_date: new Date(formData.expense_date).toISOString(),
-        description: formData.description || null,
-        status: formData.status,
-        receipt_number: formData.receipt_number || null,
-        vendor_name: formData.vendor_name || null,
-        notes: formData.notes || null,
+      const insertData: any = {
+        category_id: expenseData.category_id ? Number(expenseData.category_id) : null,
+        amount: Number(expenseData.amount),
+        expense_date: new Date(expenseData.expense_date).toISOString(),
+        description: expenseData.description || null,
+        status: expenseData.status,
+        receipt_number: expenseData.receipt_number || null,
+        vendor_name: expenseData.vendor_name || null,
+        notes: expenseData.notes || null,
         profile_id: profile?.id || null,
         created_by: profile?.id || null,
         updated_by: profile?.id || null,
       }
       
-      // Add location_id
-      if (userLocationId) {
-        expenseData.location_id = userLocationId
-      } else if (formData.location_id) {
-        expenseData.location_id = Number(formData.location_id)
+      // Add location_id based on user role
+      const targetLocationId = profile?.role === 'admin' 
+        ? currentLocation?.location_id 
+        : userLocationId
+      
+      if (targetLocationId) {
+        insertData.location_id = targetLocationId
       }
       
       const { data, error } = await supabase
         .from("expenses")
-        .insert(expenseData)
+        .insert(insertData)
         .select()
         .single()
       
       if (error) throw error
-      
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] })
       toast.success("Expense added successfully!")
       setIsExpenseDialogOpen(false)
       resetForm()
-      await fetchExpenses()
-    } catch (err: any) {
+    },
+    onError: (err: Error) => {
       toast.error("Failed to add expense", { description: err.message })
-    } finally {
-      setIsSubmitting(false)
     }
+  })
+
+  const updateExpenseMutation = useMutation({
+    mutationFn: async ({ expenseId, updateData }: { expenseId: number; updateData: any }) => {
+      // Validate required fields
+      if (!updateData.amount || isNaN(Number(updateData.amount)) || Number(updateData.amount) <= 0) {
+        throw new Error("Amount must be greater than zero!")
+      }
+      
+      if (!updateData.expense_date) {
+        throw new Error("Expense date is required!")
+      }
+      
+      const data: any = {
+        category_id: updateData.category_id ? Number(updateData.category_id) : null,
+        amount: Number(updateData.amount),
+        expense_date: new Date(updateData.expense_date).toISOString(),
+        description: updateData.description || null,
+        status: updateData.status,
+        receipt_number: updateData.receipt_number || null,
+        vendor_name: updateData.vendor_name || null,
+        notes: updateData.notes || null,
+        updated_by: profile?.id || null,
+      }
+      
+      // Only update location_id if user is admin
+      if (profile?.role === 'admin' && updateData.location_id) {
+        data.location_id = Number(updateData.location_id)
+      }
+      
+      const { error } = await supabase
+        .from("expenses")
+        .update(data)
+        .eq("expense_id", expenseId)
+      
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] })
+      toast.success("Expense updated successfully!")
+      setIsExpenseDialogOpen(false)
+      setEditingExpense(null)
+      resetForm()
+    },
+    onError: (err: Error) => {
+      toast.error("Failed to update expense", { description: err.message })
+    }
+  })
+
+  // Expense CRUD Functions
+  const handleCreateExpense = async (e: React.FormEvent) => {
+    e.preventDefault()
+    createExpenseMutation.mutate(formData)
   }
 
   const handleUpdateExpense = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingExpense) return
-    
-    setIsSubmitting(true)
-    
-    try {
-      // Validate required fields
-      if (!formData.amount || isNaN(Number(formData.amount)) || Number(formData.amount) <= 0) {
-        toast.error("Amount must be greater than zero!")
-        setIsSubmitting(false)
-        return
-      }
-      
-      if (!formData.expense_date) {
-        toast.error("Expense date is required!")
-        setIsSubmitting(false)
-        return
-      }
-      
-      const updateData: any = {
-        category_id: formData.category_id ? Number(formData.category_id) : null,
-        amount: Number(formData.amount),
-        expense_date: new Date(formData.expense_date).toISOString(),
-        description: formData.description || null,
-        status: formData.status,
-        receipt_number: formData.receipt_number || null,
-        vendor_name: formData.vendor_name || null,
-        notes: formData.notes || null,
-        updated_by: profile?.id || null,
-      }
-      
-      // Only update location_id if user is admin
-      if (profile?.role === 'admin' && formData.location_id) {
-        updateData.location_id = Number(formData.location_id)
-      }
-      
-      const { error } = await supabase
-        .from("expenses")
-        .update(updateData)
-        .eq("expense_id", editingExpense.expense_id)
-      
-      if (error) throw error
-      
-      toast.success("Expense updated successfully!")
-      setIsExpenseDialogOpen(false)
-      setEditingExpense(null)
-      resetForm()
-      await fetchExpenses()
-    } catch (err: any) {
-      toast.error("Failed to update expense", { description: err.message })
-    } finally {
-      setIsSubmitting(false)
-    }
+    updateExpenseMutation.mutate({ expenseId: editingExpense.expense_id, updateData: formData })
   }
 
-  const handleDeleteExpense = async (expenseId: number) => {
-    if (!confirm("Are you sure you want to delete this expense? This action cannot be undone.")) {
-      return
-    }
-    
-    try {
-      const { error } = await supabase.from("expenses").delete().eq("expense_id", expenseId)
-      
-      if (error) throw error
-      
-      toast.success("Expense deleted successfully!")
-      await fetchExpenses()
-    } catch (err: any) {
-      toast.error("Failed to delete expense", { description: err.message })
-    }
-  }
+
 
   const startEditExpense = (expense: Expense) => {
     setEditingExpense(expense)
@@ -461,27 +455,6 @@ export default function ExpensesPage() {
     })
   }
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
-      try {
-        await Promise.all([
-          fetchExpenses(),
-          fetchLocations(),
-          fetchExpenseCategories(),
-        ])
-      } catch (err) {
-        setError("Failed to load data")
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    if (!authLoading && !locationLoading) {
-      loadData()
-    }
-  }, [authLoading, locationLoading, profile])
-
   const t = useTranslations("expenses")
 
   const renderStatusBadge = (status: string) => {
@@ -495,6 +468,23 @@ export default function ExpensesPage() {
       default:
         return <Badge variant="outline">{status}</Badge>
     }
+  }
+
+  // Statistics calculations
+  const getTotalExpenses = () => {
+    return expenses.reduce((sum, expense) => sum + expense.amount, 0)
+  }
+
+  const getPendingCount = () => {
+    return expenses.filter(e => e.status === 'pending').length
+  }
+
+  const getApprovedCount = () => {
+    return expenses.filter(e => e.status === 'approved').length
+  }
+
+  const getRejectedCount = () => {
+    return expenses.filter(e => e.status === 'rejected').length
   }
 
   if (loading || authLoading || locationLoading) {
@@ -521,8 +511,41 @@ export default function ExpensesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="flex flex-col min-h-screen ">
+      {/* Premium Header */}
+      <header className="bg-white border-b-2 border-teal-200 shadow-md sticky top-0 z-10">
+        <div className="max-w-[1920px] mx-auto px-6 py-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-teal-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Receipt className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-emerald-600 tracking-tight">
+                  {t("header.title")}
+                </h1>
+                <p className="text-slate-600 text-sm font-medium">
+                  {profile?.role === 'admin' && currentLocation 
+                    ? currentLocation.name
+                    : profile?.location 
+                    ? profile.location.name
+                    : t("header.description")
+                  }
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="px-3 py-1.5 bg-gradient-to-br from-teal-50 to-emerald-100 border-2 border-teal-300 shadow-sm">
+                <Receipt className="h-3 w-3 mr-1.5" />
+                <span className="text-sm font-semibold text-teal-900">{expenses.length}</span>
+                <span className="text-xs text-teal-600 font-semibold ml-1">{expenses.length === 1 ? 'Expense' : 'Expenses'}</span>
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 space-y-6 p-4 md:p-8">
         {error && (
           <div className="mb-8 p-4 bg-red-50 border border-red-100 rounded-lg">
             <div className="flex items-start gap-3">
@@ -535,302 +558,355 @@ export default function ExpensesPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">{t("header.title")}</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                {t("header.description")}
-                {profile?.role !== "admin" && profile?.location && (
-                  <span className="ml-1">
-                    {t("header.locationSuffix", { location: profile.location.name })}
-                  </span>
-                )}
-              </p>
-            </div>
+        {/* KPI Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Total Amount Card */}
+          <Card className="border-2 border-emerald-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+            <CardContent className="p-0">
+              <div className="p-6 bg-gradient-to-br from-emerald-500 to-emerald-600">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-emerald-100">Total Amount</p>
+                <div className="text-3xl font-black text-white mt-2">
+                  {formatCurrency(getTotalExpenses())}
+                </div>
+                <p className="text-xs text-emerald-100 mt-3 font-medium">
+                  Total expense value
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
-              <DialogTrigger asChild>
+          {/* Pending Expenses Card */}
+          <Card className="border-2 border-slate-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+            <CardContent className="p-0">
+              <div className="p-6 bg-gradient-to-br from-slate-500 to-slate-600">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-slate-100">Pending</p>
+                <div className="text-3xl font-black text-white mt-2">
+                  {getPendingCount()}
+                </div>
+                <p className="text-xs text-slate-100 mt-3 font-medium">
+                  Awaiting approval
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Approved Expenses Card */}
+          <Card className="border-2 border-teal-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+            <CardContent className="p-0">
+              <div className="p-6 bg-gradient-to-br from-teal-500 to-teal-600">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                    <CheckCircle className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-teal-100">Approved</p>
+                <div className="text-3xl font-black text-white mt-2">
+                  {getApprovedCount()}
+                </div>
+                <p className="text-xs text-teal-100 mt-3 font-medium">
+                  Successfully approved
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Rejected Expenses Card */}
+          <Card className="border-2 border-red-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+            <CardContent className="p-0">
+              <div className="p-6 bg-gradient-to-br from-red-500 to-red-600">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                    <XCircle className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-red-100">Rejected</p>
+                <div className="text-3xl font-black text-white mt-2">
+                  {getRejectedCount()}
+                </div>
+                <p className="text-xs text-red-100 mt-3 font-medium">
+                  Declined expenses
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Card */}
+        <div className="bg-white rounded-xl border-2 border-gray-100 shadow-lg overflow-hidden">
+          <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-white">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    placeholder={t("search.placeholder")}
+                    className="pl-10 border-2 bg-white focus:border-teal-500"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
                 <Button
-                  size="sm"
-                  onClick={() => {
-                    resetForm()
-                    setEditingExpense(null)
-                  }}
-                  className="bg-gray-900 hover:bg-gray-800 text-white"
+                  variant="outline"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="border-2 hover:bg-teal-50 hover:border-teal-300"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t("actions.add")}
+                  <Filter className="h-4 w-4 mr-2" />
+                  {t("filters.toggle")}
+                  {(filters.location ||
+                    filters.category ||
+                    filters.status ||
+                    filters.dateRange.start ||
+                    filters.dateRange.end) && (
+                    <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
+                      !
+                    </Badge>
+                  )}
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingExpense ? t("dialog.editTitle") : t("dialog.addTitle")}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {editingExpense ? t("dialog.editDescription") : t("dialog.addDescription")}
-                  </DialogDescription>
-                </DialogHeader>
 
-                <form onSubmit={editingExpense ? handleUpdateExpense : handleCreateExpense}>
-                  <Tabs defaultValue="basic" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="basic">{t("tabs.basic")}</TabsTrigger>
-                      <TabsTrigger value="details">{t("tabs.details")}</TabsTrigger>
-                      <TabsTrigger value="status">{t("tabs.status")}</TabsTrigger>
-                    </TabsList>
+                <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="default"
+                      onClick={() => {
+                        resetForm()
+                        setEditingExpense(null)
+                      }}
+                      className="gap-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-md text-white"
+                    >
+                      <Plus className="h-4 w-4" />
+                      {t("actions.add")}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader className={`${editingExpense ? 'bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600' : 'bg-gradient-to-r from-teal-600 via-emerald-600 to-green-600'} -m-6 mb-4 p-6 rounded-t-lg`}>
+                      <DialogTitle className="text-xl flex items-center gap-2 text-white">
+                        <Receipt className="h-5 w-5" />
+                        {editingExpense ? t("dialog.editTitle") : t("dialog.addTitle")}
+                      </DialogTitle>
+                      <DialogDescription className="text-teal-100">
+                        {editingExpense ? t("dialog.editDescription") : t("dialog.addDescription")}
+                      </DialogDescription>
+                    </DialogHeader>
 
-                    <TabsContent value="basic" className="space-y-4 pt-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {profile?.role === "admin" && (
+                    <form onSubmit={editingExpense ? handleUpdateExpense : handleCreateExpense}>
+                      <Tabs defaultValue="basic" className="w-full">
+                        <TabsList className="grid w-full grid-cols-3">
+                          <TabsTrigger value="basic">{t("tabs.basic")}</TabsTrigger>
+                          <TabsTrigger value="details">{t("tabs.details")}</TabsTrigger>
+                          <TabsTrigger value="status">{t("tabs.status")}</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="basic" className="space-y-4 pt-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {profile?.role === "admin" && (
+                              <div className="space-y-2">
+                                <Label htmlFor="location" className="text-sm font-medium">
+                                  {t("form.location")}
+                                </Label>
+                                <Select
+                                  value={formData.location_id}
+                                  onValueChange={(value) => setFormData({ ...formData, location_id: value })}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder={t("form.location")} />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {locations.map((location) => (
+                                      <SelectItem key={location.location_id} value={location.location_id.toString()}>
+                                        {location.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+
+                            <div className="space-y-2">
+                              <Label htmlFor="category" className="text-sm font-medium">
+                                {t("form.category")}
+                              </Label>
+                              <Select
+                                value={formData.category_id}
+                                onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder={t("form.category")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {expenseCategories.map((category) => (
+                                    <SelectItem key={category.category_id} value={category.category_id.toString()}>
+                                      {category.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="amount" className="text-sm font-medium">
+                                {t("form.amount")}
+                              </Label>
+                              <Input
+                                id="amount"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="0.00"
+                                value={formData.amount}
+                                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                                required
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="expense_date" className="text-sm font-medium">
+                                {t("form.date")}
+                              </Label>
+                              <Input
+                                id="expense_date"
+                                type="date"
+                                value={formData.expense_date}
+                                onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })}
+                                required
+                              />
+                            </div>
+                          </div>
+                        </TabsContent>
+
+                        <TabsContent value="details" className="space-y-4 pt-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="vendor_name" className="text-sm font-medium">
+                                {t("form.vendor")}
+                              </Label>
+                              <Input
+                                id="vendor_name"
+                                placeholder={t("form.vendor")}
+                                value={formData.vendor_name}
+                                onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="receipt_number" className="text-sm font-medium">
+                                {t("form.receipt")}
+                              </Label>
+                              <Input
+                                id="receipt_number"
+                                placeholder={t("form.receipt")}
+                                value={formData.receipt_number}
+                                onChange={(e) => setFormData({ ...formData, receipt_number: e.target.value })}
+                              />
+                            </div>
+
+                            <div className="space-y-2 md:col-span-2">
+                              <Label htmlFor="description" className="text-sm font-medium">
+                                {t("form.description")}
+                              </Label>
+                              <Input
+                                id="description"
+                                placeholder={t("form.description")}
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                              />
+                            </div>
+
+                            <div className="space-y-2 md:col-span-2">
+                              <Label htmlFor="notes" className="text-sm font-medium">
+                                {t("form.notes")}
+                              </Label>
+                              <Input
+                                id="notes"
+                                placeholder={t("form.notes")}
+                                value={formData.notes}
+                                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                        </TabsContent>
+
+                        <TabsContent value="status" className="space-y-4 pt-4">
                           <div className="space-y-2">
-                            <Label htmlFor="location" className="text-sm font-medium">
-                              {t("form.location")}
+                            <Label htmlFor="status" className="text-sm font-medium">
+                              {t("form.status")}
                             </Label>
                             <Select
-                              value={formData.location_id}
-                              onValueChange={(value) => setFormData({ ...formData, location_id: value })}
+                              value={formData.status}
+                              onValueChange={(value) => setFormData({ ...formData, status: value })}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder={t("form.location")} />
+                                <SelectValue placeholder={t("form.status")} />
                               </SelectTrigger>
                               <SelectContent>
-                                {locations.map((location) => (
-                                  <SelectItem key={location.location_id} value={location.location_id.toString()}>
-                                    {location.name}
-                                  </SelectItem>
-                                ))}
+                                <SelectItem value="pending">{t("statusInfo.pending.label")}</SelectItem>
+                                <SelectItem value="approved">{t("statusInfo.approved.label")}</SelectItem>
+                                <SelectItem value="rejected">{t("statusInfo.rejected.label")}</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
-                        )}
 
-                        <div className="space-y-2">
-                          <Label htmlFor="category" className="text-sm font-medium">
-                            {t("form.category")}
-                          </Label>
-                          <Select
-                            value={formData.category_id}
-                            onValueChange={(value) => setFormData({ ...formData, category_id: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder={t("form.category")} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {expenseCategories.map((category) => (
-                                <SelectItem key={category.category_id} value={category.category_id.toString()}>
-                                  {category.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <h4 className="text-sm font-medium text-gray-900 mb-2">{t("statusInfo.title")}</h4>
+                            <ul className="text-sm text-gray-600 space-y-1">
+                              <li>
+                                • <span className="font-medium">{t("statusInfo.pending.label")}</span>:{" "}
+                                {t("statusInfo.pending.description")}
+                              </li>
+                              <li>
+                                • <span className="font-medium">{t("statusInfo.approved.label")}</span>:{" "}
+                                {t("statusInfo.approved.description")}
+                              </li>
+                              <li>
+                                • <span className="font-medium">{t("statusInfo.rejected.label")}</span>:{" "}
+                                {t("statusInfo.rejected.description")}
+                              </li>
+                            </ul>
+                          </div>
+                        </TabsContent>
+                      </Tabs>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="amount" className="text-sm font-medium">
-                            {t("form.amount")}
-                          </Label>
-                          <Input
-                            id="amount"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            value={formData.amount}
-                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                            required
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="expense_date" className="text-sm font-medium">
-                            {t("form.date")}
-                          </Label>
-                          <Input
-                            id="expense_date"
-                            type="date"
-                            value={formData.expense_date}
-                            onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })}
-                            required
-                          />
-                        </div>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="details" className="space-y-4 pt-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="vendor_name" className="text-sm font-medium">
-                            {t("form.vendor")}
-                          </Label>
-                          <Input
-                            id="vendor_name"
-                            placeholder={t("form.vendor")}
-                            value={formData.vendor_name}
-                            onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="receipt_number" className="text-sm font-medium">
-                            {t("form.receipt")}
-                          </Label>
-                          <Input
-                            id="receipt_number"
-                            placeholder={t("form.receipt")}
-                            value={formData.receipt_number}
-                            onChange={(e) => setFormData({ ...formData, receipt_number: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="description" className="text-sm font-medium">
-                            {t("form.description")}
-                          </Label>
-                          <Input
-                            id="description"
-                            placeholder={t("form.description")}
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="notes" className="text-sm font-medium">
-                            {t("form.notes")}
-                          </Label>
-                          <Input
-                            id="notes"
-                            placeholder={t("form.notes")}
-                            value={formData.notes}
-                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="status" className="space-y-4 pt-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="status" className="text-sm font-medium">
-                          {t("form.status")}
-                        </Label>
-                        <Select
-                          value={formData.status}
-                          onValueChange={(value) => setFormData({ ...formData, status: value })}
+                      <DialogFooter className="pt-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setIsExpenseDialogOpen(false)
+                            resetForm()
+                          }}
+                          className="border-gray-300"
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("form.status")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">{t("statusInfo.pending.label")}</SelectItem>
-                            <SelectItem value="approved">{t("statusInfo.approved.label")}</SelectItem>
-                            <SelectItem value="rejected">{t("statusInfo.rejected.label")}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <h4 className="text-sm font-medium text-gray-900 mb-2">{t("statusInfo.title")}</h4>
-                        <ul className="text-sm text-gray-600 space-y-1">
-                          <li>
-                            • <span className="font-medium">{t("statusInfo.pending.label")}</span>:{" "}
-                            {t("statusInfo.pending.description")}
-                          </li>
-                          <li>
-                            • <span className="font-medium">{t("statusInfo.approved.label")}</span>:{" "}
-                            {t("statusInfo.approved.description")}
-                          </li>
-                          <li>
-                            • <span className="font-medium">{t("statusInfo.rejected.label")}</span>:{" "}
-                            {t("statusInfo.rejected.description")}
-                          </li>
-                        </ul>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-
-                  <DialogFooter className="pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsExpenseDialogOpen(false)
-                        resetForm()
-                      }}
-                    >
-                      {t("actions.cancel")}
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting || !formData.amount}
-                      className="bg-gray-900 hover:bg-gray-800 text-white"
-                    >
-                      {isSubmitting ? t("actions.saving") : editingExpense ? t("actions.update") : t("actions.add")}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <Input
-                  placeholder={t("search.placeholder")}
-                  className="pl-10 border-gray-200 bg-gray-50 focus:bg-white"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                          {t("actions.cancel")}
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={(createExpenseMutation.isPending || updateExpenseMutation.isPending) || !formData.amount}
+                          className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white"
+                        >
+                          {(createExpenseMutation.isPending || updateExpenseMutation.isPending) ? t("actions.saving") : editingExpense ? t("actions.update") : t("actions.add")}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="border-gray-200 text-gray-600"
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              {t("filters.toggle")}
-              {(filters.location ||
-                filters.category ||
-                filters.status ||
-                filters.dateRange.start ||
-                filters.dateRange.end) && (
-                <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
-                  !
-                </Badge>
-              )}
-            </Button>
           </div>
 
           {showFilters && (
-            <div className="mb-6 pb-6 border-b border-gray-100">
+            <div className="p-6 bg-gradient-to-br from-teal-50 to-emerald-50 border-b border-gray-100">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {profile?.role === "admin" && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">{t("filters.location")}</Label>
-                    <Select
-                      value={filters.location}
-                      onValueChange={(value) =>
-                        setFilters((prev) => ({ ...prev, location: value === "all" ? "" : value }))
-                      }
-                    >
-                      <SelectTrigger className="border-gray-200">
-                        <SelectValue placeholder={t("filters.allLocations")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t("filters.allLocations")}</SelectItem>
-                        {locations.map((location) => (
-                          <SelectItem key={location.location_id} value={location.location_id.toString()}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-gray-700">{t("filters.category")}</Label>
@@ -840,7 +916,7 @@ export default function ExpensesPage() {
                       setFilters((prev) => ({ ...prev, category: value === "all" ? "" : value }))
                     }
                   >
-                    <SelectTrigger className="border-gray-200">
+                    <SelectTrigger className="border-gray-200 bg-white">
                       <SelectValue placeholder={t("filters.allCategories")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -862,7 +938,7 @@ export default function ExpensesPage() {
                       setFilters((prev) => ({ ...prev, status: value === "all" ? "" : value }))
                     }
                   >
-                    <SelectTrigger className="border-gray-200">
+                    <SelectTrigger className="border-gray-200 bg-white">
                       <SelectValue placeholder={t("filters.allStatuses")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -887,7 +963,7 @@ export default function ExpensesPage() {
                           dateRange: { ...prev.dateRange, start: e.target.value },
                         }))
                       }
-                      className="border-gray-200"
+                      className="border-gray-200 bg-white"
                     />
                     <Input
                       type="date"
@@ -899,14 +975,15 @@ export default function ExpensesPage() {
                           dateRange: { ...prev.dateRange, end: e.target.value },
                         }))
                       }
-                      className="border-gray-200"
+                      className="border-gray-200 bg-white"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end">
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-gray-500">
+              <div className="flex justify-end mt-4">
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-gray-500 hover:text-gray-700">
+                  <X className="h-4 w-4 mr-2" />
                   {t("filters.clearAll")}
                 </Button>
               </div>
@@ -914,7 +991,7 @@ export default function ExpensesPage() {
           )}
 
           {loading ? (
-            <div className="space-y-4">
+            <div className="space-y-4 p-6">
               {[...Array(5)].map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
@@ -923,43 +1000,43 @@ export default function ExpensesPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-gray-100">
-                    <TableHead className="font-medium text-gray-700 cursor-pointer" onClick={() => requestSort("date")}>
+                  <TableRow className="bg-gradient-to-r from-teal-50 via-emerald-50 to-green-50 border-b-2 border-teal-200">
+                    <TableHead className="font-semibold text-gray-700 cursor-pointer hover:text-teal-600 transition-colors" onClick={() => requestSort("date")}>
                       {t("table.columns.date")}
                     </TableHead>
                     <TableHead
-                      className="font-medium text-gray-700 cursor-pointer"
+                      className="font-semibold text-gray-700 cursor-pointer hover:text-teal-600 transition-colors"
                       onClick={() => requestSort("vendor")}
                     >
                       {t("table.columns.vendor")}
                     </TableHead>
                     <TableHead
-                      className="font-medium text-gray-700 cursor-pointer"
+                      className="font-semibold text-gray-700 cursor-pointer hover:text-teal-600 transition-colors"
                       onClick={() => requestSort("category")}
                     >
                       {t("table.columns.category")}
                     </TableHead>
                     {profile?.role === "admin" && (
                       <TableHead
-                        className="font-medium text-gray-700 cursor-pointer"
+                        className="font-semibold text-gray-700 cursor-pointer hover:text-teal-600 transition-colors"
                         onClick={() => requestSort("location")}
                       >
                         {t("table.columns.location")}
                       </TableHead>
                     )}
                     <TableHead
-                      className="font-medium text-gray-700 cursor-pointer"
+                      className="font-semibold text-gray-700 cursor-pointer hover:text-teal-600 transition-colors"
                       onClick={() => requestSort("amount")}
                     >
                       {t("table.columns.amount")}
                     </TableHead>
                     <TableHead
-                      className="font-medium text-gray-700 cursor-pointer"
+                      className="font-semibold text-gray-700 cursor-pointer hover:text-teal-600 transition-colors"
                       onClick={() => requestSort("status")}
                     >
                       {t("table.columns.status")}
                     </TableHead>
-                    <TableHead className="font-medium text-gray-700 text-right">
+                    <TableHead className="font-semibold text-gray-700 text-right">
                       {t("table.columns.actions")}
                     </TableHead>
                   </TableRow>
@@ -967,42 +1044,44 @@ export default function ExpensesPage() {
                 <TableBody>
                   {filteredExpenses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={profile?.role === "admin" ? 7 : 6} className="text-center py-8 text-gray-500">
-                        {t("table.empty")}
+                      <TableCell colSpan={profile?.role === "admin" ? 7 : 6} className="text-center py-16">
+                        <div className="flex flex-col items-center justify-center text-gray-500">
+                          <div className="p-4 bg-gradient-to-br from-teal-100 to-emerald-100 rounded-full w-20 h-20 mb-4 flex items-center justify-center">
+                            <Receipt className="h-10 w-10 text-teal-600" />
+                          </div>
+                          <p className="text-lg font-semibold text-gray-700">{t("table.empty")}</p>
+                          <p className="text-sm text-gray-500 mt-2">Start by adding your first expense</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredExpenses.map((expense) => (
-                      <TableRow key={expense.expense_id} className="border-gray-100 hover:bg-gray-50">
-                        <TableCell className="font-medium">{formatDate(expense.expense_date)}</TableCell>
-                        <TableCell>{expense.vendor_name || "-"}</TableCell>
-                        <TableCell>
+                      <TableRow key={expense.expense_id} className="border-b hover:bg-teal-50/50 transition-colors">
+                        <TableCell className="font-medium text-gray-700">{formatDate(expense.expense_date)}</TableCell>
+                        <TableCell className="text-gray-600">{expense.vendor_name || "-"}</TableCell>
+                        <TableCell className="text-gray-600">
                           {expenseCategories.find((c) => c.category_id === expense.category_id)?.name || "-"}
                         </TableCell>
                         {profile?.role === "admin" && (
-                          <TableCell>{expense.locations?.name || "-"}</TableCell>
+                          <TableCell className="text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-gray-400" />
+                              {expense.locations?.name || "-"}
+                            </div>
+                          </TableCell>
                         )}
-                        <TableCell className="font-medium">{formatCurrency(expense.amount)}</TableCell>
+                        <TableCell className="font-semibold text-gray-700">{formatCurrency(expense.amount)}</TableCell>
                         <TableCell>{renderStatusBadge(expense.status)}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => startEditExpense(expense)}
-                              className="text-gray-500"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteExpense(expense.expense_id)}
-                              className="text-red-500"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEditExpense(expense)}
+                            className="h-8 px-3 hover:bg-teal-100 hover:text-teal-600 transition-colors"
+                          >
+                            <Edit className="h-4 w-4 mr-1.5" />
+                            Edit
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))

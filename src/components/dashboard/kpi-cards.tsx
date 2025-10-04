@@ -228,67 +228,96 @@ export function KPICards({ userRole, locationFilter, dateRange, dashboardType }:
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
       {!showWarehouseData && (
         <>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t("revenue.title")}</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${kpiData.totalRevenue.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground flex items-center">
-                {kpiData.revenueChange >= 0 ? (
-                  <>
-                    <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
-                    <span className="text-green-500">+{kpiData.revenueChange.toFixed(1)}%</span>
-                  </>
-                ) : (
-                  <>
-                    <ArrowDownRight className="h-3 w-3 text-red-500 mr-1" />
-                    <span className="text-red-500">{kpiData.revenueChange.toFixed(1)}%</span>
-                  </>
-                )}{' '}
-                {t('revenue.comparison')}
-              </p>
+          {/* Revenue Card - Premium Design */}
+          <Card className="border-2 border-green-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+            <CardContent className="p-0">
+              <div className="p-6 bg-gradient-to-br from-green-500 to-green-600">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-green-100">{t("revenue.title")}</p>
+                <div className="text-3xl font-black text-white mt-2">
+                  ${kpiData.totalRevenue.toFixed(2)}
+                </div>
+                <div className="flex items-center mt-3 text-xs font-bold">
+                  {kpiData.revenueChange >= 0 ? (
+                    <>
+                      <div className="flex items-center gap-1 px-2 py-1 bg-white/20 backdrop-blur rounded-lg">
+                        <ArrowUpRight className="h-3.5 w-3.5 text-white" />
+                        <span className="text-white">+{kpiData.revenueChange.toFixed(1)}%</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-1 px-2 py-1 bg-red-500/30 backdrop-blur rounded-lg">
+                        <ArrowDownRight className="h-3.5 w-3.5 text-white" />
+                        <span className="text-white">{kpiData.revenueChange.toFixed(1)}%</span>
+                      </div>
+                    </>
+                  )}
+                  <span className="text-green-100 ml-2">{t('revenue.comparison')}</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('expenses.title')}</CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${kpiData.totalExpenses.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground flex items-center">
-                {kpiData.expensesChange >= 0 ? (
-                  <>
-                    <ArrowUpRight className="h-3 w-3 text-red-500 mr-1" />
-                    <span className="text-red-500">+{kpiData.expensesChange.toFixed(1)}%</span>
-                  </>
-                ) : (
-                  <>
-                    <ArrowDownRight className="h-3 w-3 text-green-500 mr-1" />
-                    <span className="text-green-500">{kpiData.expensesChange.toFixed(1)}%</span>
-                  </>
-                )}{' '}
-                {t('expenses.comparison')}
-              </p>
+          {/* Expenses Card - Premium Design */}
+          <Card className="border-2 border-red-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+            <CardContent className="p-0">
+              <div className="p-6 bg-gradient-to-br from-red-500 to-red-600">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                    <TrendingDown className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-red-100">{t('expenses.title')}</p>
+                <div className="text-3xl font-black text-white mt-2">
+                  ${kpiData.totalExpenses.toFixed(2)}
+                </div>
+                <div className="flex items-center mt-3 text-xs font-bold">
+                  {kpiData.expensesChange >= 0 ? (
+                    <>
+                      <div className="flex items-center gap-1 px-2 py-1 bg-white/20 backdrop-blur rounded-lg">
+                        <ArrowUpRight className="h-3.5 w-3.5 text-white" />
+                        <span className="text-white">+{kpiData.expensesChange.toFixed(1)}%</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-1 px-2 py-1 bg-green-500/30 backdrop-blur rounded-lg">
+                        <ArrowDownRight className="h-3.5 w-3.5 text-white" />
+                        <span className="text-white">{kpiData.expensesChange.toFixed(1)}%</span>
+                      </div>
+                    </>
+                  )}
+                  <span className="text-red-100 ml-2">{t('expenses.comparison')}</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('customers.title')}</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{kpiData.customerCount}</div>
-              <p className="text-xs text-muted-foreground">
-                {t('customers.subtitle')}
-              </p>
+          {/* Customers Card - Premium Design */}
+          <Card className="border-2 border-purple-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+            <CardContent className="p-0">
+              <div className="p-6 bg-gradient-to-br from-purple-500 to-purple-600">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                    <Users className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-purple-100">{t('customers.title')}</p>
+                <div className="text-3xl font-black text-white mt-2">
+                  {kpiData.customerCount}
+                </div>
+                <p className="text-xs text-purple-100 mt-3 font-medium">
+                  {t('customers.subtitle')}
+                </p>
+              </div>
             </CardContent>
           </Card>
         </>
@@ -296,61 +325,87 @@ export function KPICards({ userRole, locationFilter, dateRange, dashboardType }:
 
       {showWarehouseData && (
         <>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('inventory.title')}</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${kpiData.inventoryValue.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">
-                {t('inventory.totalvalue')}
-              </p>
+          {/* Warehouse: Inventory Value Card */}
+          <Card className="border-2 border-blue-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+            <CardContent className="p-0">
+              <div className="p-6 bg-gradient-to-br from-blue-500 to-blue-600">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                    <Package className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-blue-100">{t('inventory.title')}</p>
+                <div className="text-3xl font-black text-white mt-2">
+                  ${kpiData.inventoryValue.toFixed(2)}
+                </div>
+                <p className="text-xs text-blue-100 mt-3 font-medium">
+                  {t('inventory.totalvalue')}
+                </p>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{kpiData.lowStockCount}</div>
-              <p className="text-xs text-muted-foreground">
-                Need restocking
-              </p>
+          {/* Warehouse: Low Stock Card */}
+          <Card className="border-2 border-orange-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+            <CardContent className="p-0">
+              <div className="p-6 bg-gradient-to-br from-orange-500 to-orange-600">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                    <TrendingDown className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-orange-100">Low Stock Items</p>
+                <div className="text-3xl font-black text-white mt-2">
+                  {kpiData.lowStockCount}
+                </div>
+                <p className="text-xs text-orange-100 mt-3 font-medium">
+                  Need restocking
+                </p>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Transfers</CardTitle>
-              <Truck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{kpiData.pendingTransfers}</div>
-              <p className="text-xs text-muted-foreground">
-                Awaiting processing
-              </p>
+          {/* Warehouse: Pending Transfers Card */}
+          <Card className="border-2 border-indigo-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+            <CardContent className="p-0">
+              <div className="p-6 bg-gradient-to-br from-indigo-500 to-indigo-600">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                    <Truck className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-indigo-100">Pending Transfers</p>
+                <div className="text-3xl font-black text-white mt-2">
+                  {kpiData.pendingTransfers}
+                </div>
+                <p className="text-xs text-indigo-100 mt-3 font-medium">
+                  Awaiting processing
+                </p>
+              </div>
             </CardContent>
           </Card>
         </>
       )}
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            {showWarehouseData ? t("inventory.totalProducts") : t("inventory.title")}
-          </CardTitle>
-          <Package className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {showWarehouseData ? "1,248" : `$${kpiData.inventoryValue.toFixed(2)}`}
+      {/* Inventory Card - Works for both warehouse and store */}
+      <Card className="border-2 border-blue-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+        <CardContent className="p-0">
+          <div className="p-6 bg-gradient-to-br from-blue-500 to-blue-600">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                <Package className="h-6 w-6 text-white" />
+              </div>
+            </div>
+            <p className="text-sm font-semibold text-blue-100">
+              {showWarehouseData ? t("inventory.totalProducts") : t("inventory.title")}
+            </p>
+            <div className="text-3xl font-black text-white mt-2">
+              {showWarehouseData ? "1,248" : `$${kpiData.inventoryValue.toFixed(2)}`}
+            </div>
+            <p className="text-xs text-blue-100 mt-3 font-medium">
+              {showWarehouseData ? "Products in warehouse" : `${kpiData.lowStockCount} ${t("inventory.lowStock")}`}
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {showWarehouseData ? "Products in warehouse" : `${kpiData.lowStockCount} ${t("inventory.lowStock")}`}
-          </p>
         </CardContent>
       </Card>
     </div>

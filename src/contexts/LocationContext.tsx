@@ -3,6 +3,7 @@
 
 import * as React from "react"
 import { createClient } from "@/lib/supabase/client"
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 export type LocationType = "store" | "warehouse"
 
@@ -10,36 +11,79 @@ export type Location = {
   location_id: number
   name: string
   location_type: LocationType
+  address?: string | null
+  created_at?: string
 }
 
 type LocationContextType = {
   locations: Location[]
   currentLocation: Location | null
   setCurrentLocation: (loc: Location) => void
-  setLocations: (locs: Location[]) => void
-  loadLocations: () => Promise<void>
-  loading: boolean
+  isLoading: boolean
 }
 
 const LocationContext = React.createContext<LocationContextType | undefined>(undefined)
 const supabase = createClient()
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
-  const [locations, setLocations] = React.useState<Location[]>([])
+  const queryClient = useQueryClient()
   const [currentLocation, setCurrentLocation] = React.useState<Location | null>(null)
-  const [loading, setLoading] = React.useState(true)
+  const [authReady, setAuthReady] = React.useState(false)
 
-  // reselect when new locations arrive
+  // Check auth status
   React.useEffect(() => {
-    if (locations.length === 0) {
-      setLoading(false)
-      return
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setAuthReady(!!session)
     }
+    checkAuth()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        setAuthReady(true)
+        queryClient.invalidateQueries({ queryKey: ['locations'] })
+      } else if (event === 'SIGNED_OUT') {
+        setAuthReady(false)
+        setCurrentLocation(null)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [queryClient])
+
+  // Fetch locations with React Query
+  const fetchLocations = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return []
+
+    const { data, error } = await supabase
+      .from("locations")
+      .select("location_id, name, location_type, address, created_at")
+
+    if (error) {
+      console.error("Failed to fetch locations:", error)
+      return []
+    }
+
+    return data ?? []
+  }
+
+  const { data: locations = [], isLoading } = useQuery({
+    queryKey: ['locations'],
+    queryFn: fetchLocations,
+    enabled: authReady,
+    staleTime: 60000, // Cache for 1 minute
+    refetchOnWindowFocus: true,
+  })
+
+  // Auto-select current location when locations load
+  React.useEffect(() => {
+    if (locations.length === 0) return
 
     const savedId = Number(localStorage.getItem("active_location_id") || "")
     const bySaved = locations.find(l => l.location_id === savedId)
     setCurrentLocation(bySaved ?? locations[0])
-    setLoading(false)
   }, [locations])
 
   const handleSetCurrent = (loc: Location) => {
@@ -47,38 +91,13 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     setCurrentLocation(loc)
   }
 
-  // fetch locations from Supabase
-  const loadLocations = React.useCallback(async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from("locations")
-        .select("location_id, name, location_type")
-
-      if (error) throw error
-      setLocations(data ?? [])
-    } catch (err) {
-      console.error("Failed to fetch locations:", err)
-      setLocations([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  // auto-load once on mount
-  React.useEffect(() => {
-    loadLocations()
-  }, [loadLocations])
-
   return (
     <LocationContext.Provider
       value={{
         locations,
         currentLocation,
         setCurrentLocation: handleSetCurrent,
-        setLocations,
-        loadLocations,
-        loading,
+        isLoading,
       }}
     >
       {children}
@@ -93,25 +112,22 @@ export function useLocation() {
   const ctx = React.useContext(LocationContext)
   if (!ctx) throw new Error("useLocation must be used within LocationProvider")
 
+  const queryClient = useQueryClient()
   const {
     locations,
     currentLocation,
     setCurrentLocation,
-    setLocations,
-    loadLocations,
-    loading,
+    isLoading,
   } = ctx
 
   return {
     locations,
     currentLocation,
     setCurrentLocation,
-    setLocations,
-    loadLocations,
+    isLoading,
 
     // convenience helpers
-    refresh: loadLocations,
+    refresh: () => queryClient.invalidateQueries({ queryKey: ['locations'] }),
     hasLocations: locations.length > 0,
-    isLoading: loading,
   }
 }

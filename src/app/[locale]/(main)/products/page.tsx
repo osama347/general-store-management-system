@@ -1,13 +1,14 @@
 "use client"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import type React from "react"
 import { createClient } from "@/lib/supabase/client"
 // @ts-ignore
 import type { Product, Category } from "@/types/product"
 import { useLocation } from "@/contexts/LocationContext"
 import { toast } from "sonner"
-import {useAuth} from '@/hooks/use-auth'
+import { useAuth } from '@/hooks/use-auth'
 import type { Profile } from "@/hooks/use-auth"
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 // UI Components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,120 +28,118 @@ import { useTranslations } from "next-intl"
 
 // Icons
 import { 
-  Plus, Search, Edit, Trash2, Package, ChevronLeft, ChevronRight
+  Plus, Search, Edit, Package, ChevronLeft, ChevronRight
 } from "lucide-react"
 
 
 export default function ProductsPage() {
-  
   const t = useTranslations("products")
-const { profile } = useAuth()
-  const [products, setProducts] = useState<Product[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const { profile } = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
   const supabase = createClient()
+  const queryClient = useQueryClient()
   const { currentLocation } = useLocation()
   
-  
-  useEffect(() => {
-    async function fetchData() {
-      if (!currentLocation) {
-        setIsLoading(false)
-        return
-      }
-      
-      setIsLoading(true)
-      try {
-        // Fetch categories
-        const { data: categoriesData } = await supabase
-          .from("categories")
-          .select(`
-            category_id,
-            name,
-            description,
-            attributes (
-              attribute_id,
-              attribute_name,
-              data_type
-            )
-          `)
-          .order("name")
-        const categories =
-          categoriesData?.map((c) => ({
-            category_id: c.category_id,
-            name: c.name,
-            description: c.description,
-            attributes: c.attributes || [],
-          })) || []
-        setCategories(categories)
-        
-        // Fetch products with inventory for the current location
-        const { data: productsData, error: productsError } = await supabase
-          .from("products")
-          .select(`
-            product_id,
-            name,
-            base_price,
-            category_id,
-            categories!inner ( name ),
-            product_attributes (
-              attribute_id,
-              value_text,
-              value_number,
-              value_decimal,
-              value_date,
-              attributes!inner (
-                attribute_name,
-                data_type
-              )
-            ),
-            inventory (
-              quantity,
-              location_id
-            )
-          `)
-          .order("product_id", { ascending: false })
-          
-        if (productsError) {
-          throw new Error(productsError.message)
-        }
-        
-        const products =
-          productsData?.map((product: any) => ({
-            id: product.product_id.toString(),
-            name: product.name,
-            price: product.base_price,
-            stock_qty: Array.isArray(product.inventory)
-              ? product.inventory
-                  .filter((inv: any) => inv.location_id === currentLocation.location_id)
-                  .reduce((total: number, inv: any) => total + (inv.quantity || 0), 0)
-              : 0,
-            category: product.categories?.name || "Uncategorized",
-            category_id: product.category_id,
-            attributes: Array.isArray(product.product_attributes)
-              ? product.product_attributes.map((pa: any) => ({
-                  name: pa.attributes?.attribute_name || "Unknown",
-                  value:
-                    pa.value_text ??
-                    pa.value_number?.toString() ??
-                    pa.value_decimal?.toString() ??
-                    pa.value_date?.toString() ??
-                    "",
-                  type: pa.attributes?.data_type || "text",
-                }))
-              : [],
-          })) || []
-        setProducts(products)
-      } catch (error) {
-        console.error("Error fetching data:", error)
-        toast.error("Failed to load data")
-      } finally {
-        setIsLoading(false)
-      }
+  // Fetch products and categories with React Query
+  const fetchProductsData = async (): Promise<{ products: Product[]; categories: Category[] }> => {
+    if (!currentLocation) {
+      throw new Error("No location selected")
     }
-    fetchData()
-  }, [currentLocation])
+
+    // Fetch categories
+    const { data: categoriesData } = await supabase
+      .from("categories")
+      .select(`
+        category_id,
+        name,
+        description,
+        attributes (
+          attribute_id,
+          attribute_name,
+          data_type
+        )
+      `)
+      .order("name")
+    
+    const categories =
+      categoriesData?.map((c) => ({
+        category_id: c.category_id,
+        name: c.name,
+        description: c.description,
+        attributes: c.attributes || [],
+      })) || []
+    
+    // Fetch products with inventory for the current location
+    const { data: productsData, error: productsError } = await supabase
+      .from("products")
+      .select(`
+        product_id,
+        name,
+        base_price,
+        category_id,
+        categories!inner ( name ),
+        product_attributes (
+          attribute_id,
+          value_text,
+          value_number,
+          value_decimal,
+          value_date,
+          attributes!inner (
+            attribute_name,
+            data_type
+          )
+        ),
+        inventory (
+          quantity,
+          location_id
+        )
+      `)
+      .order("product_id", { ascending: false })
+      
+    if (productsError) {
+      throw new Error(productsError.message)
+    }
+    
+    const products =
+      productsData?.map((product: any) => ({
+        id: product.product_id.toString(),
+        name: product.name,
+        price: product.base_price,
+        stock_qty: Array.isArray(product.inventory)
+          ? product.inventory
+              .filter((inv: any) => inv.location_id === currentLocation.location_id)
+              .reduce((total: number, inv: any) => total + (inv.quantity || 0), 0)
+          : 0,
+        category: product.categories?.name || "Uncategorized",
+        category_id: product.category_id,
+        attributes: Array.isArray(product.product_attributes)
+          ? product.product_attributes.map((pa: any) => ({
+              name: pa.attributes?.attribute_name || "Unknown",
+              value:
+                pa.value_text ??
+                pa.value_number?.toString() ??
+                pa.value_decimal?.toString() ??
+                pa.value_date?.toString() ??
+                "",
+              type: pa.attributes?.data_type || "text",
+            }))
+          : [],
+      })) || []
+    
+    return { products, categories }
+  }
+
+  // React Query for products and categories
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['products', currentLocation?.location_id],
+    queryFn: fetchProductsData,
+    enabled: !!currentLocation,
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+  })
+
+  const products = data?.products || []
+  const categories = data?.categories || []
   
   // Filter products based on search term
   const filteredProducts = useMemo(() => {
@@ -234,7 +233,7 @@ const { profile } = useAuth()
       }
       
       // Refresh products list
-      fetchData()
+      queryClient.invalidateQueries({ queryKey: ['products'] })
       toast.success("Product added successfully")
     } catch (error) {
       console.error("Error adding product:", error)
@@ -321,7 +320,7 @@ const { profile } = useAuth()
       }
       
       // Refresh products list
-      fetchData()
+      queryClient.invalidateQueries({ queryKey: ['products'] })
       toast.success("Product updated successfully")
     } catch (error) {
       console.error("Error updating product:", error)
@@ -330,129 +329,76 @@ const { profile } = useAuth()
     }
   }
   
-  const fetchData = async () => {
-    if (!currentLocation) return
-    
-    setIsLoading(true)
-    try {
-      const { data: productsData, error: productsError } = await supabase
-        .from("products")
-        .select(`
-          product_id,
-          name,
-          base_price,
-          category_id,
-          categories!inner ( name ),
-          product_attributes (
-            attribute_id,
-            value_text,
-            value_number,
-            value_decimal,
-            value_date,
-            attributes!inner (
-              attribute_name,
-              data_type
-            )
-          ),
-          inventory (
-            quantity,
-            location_id
-          )
-        `)
-        .order("product_id", { ascending: false })
-        
-      if (productsError) throw new Error(productsError.message)
-      
-      const products =
-        productsData?.map((product: any) => ({
-          id: product.product_id.toString(),
-          name: product.name,
-          price: product.base_price,
-          stock_qty: Array.isArray(product.inventory)
-            ? product.inventory
-                .filter((inv: any) => inv.location_id === currentLocation.location_id)
-                .reduce((total: number, inv: any) => total + (inv.quantity || 0), 0)
-            : 0,
-          category: product.categories?.name || "Uncategorized",
-          category_id: product.category_id,
-          attributes: Array.isArray(product.product_attributes)
-            ? product.product_attributes.map((pa: any) => ({
-                name: pa.attributes?.attribute_name || "Unknown",
-                value:
-                  pa.value_text ??
-                  pa.value_number?.toString() ??
-                  pa.value_decimal?.toString() ??
-                  pa.value_date?.toString() ??
-                  "",
-                type: pa.attributes?.data_type || "text",
-              }))
-            : [],
-        })) || []
-      setProducts(products)
-    } catch (error) {
-      console.error("Error fetching data:", error)
-      toast.error("Failed to load data")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-  
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Main Content Card */}
-        <Card className="w-full shadow-sm border-0 md:border">
-          <CardHeader className="pb-3">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <CardTitle className="text-lg md:text-xl flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  {t('table.title')}
-                </CardTitle>
-                <CardDescription>
-                  {t('table.description')}
-                </CardDescription>
+    <div className="flex flex-col min-h-screen">
+      {/* Premium Header */}
+      <header className="bg-white border-b-2 border-teal-200 shadow-md sticky top-0 z-10">
+        <div className="max-w-[1920px] mx-auto px-6 py-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-teal-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Package className="h-6 w-6 text-white" />
               </div>
-              
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1 min-w-[200px]">
-                  <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
-                  <Input
-                    placeholder={t('table.searchPlaceholder')}  
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 w-full"
-                  />
-                </div>
-                
-                <Dialog>
-                  <DialogTrigger asChild>
-                    {profile?.role === 'admin' ? (
-                      <Button className="bg-gray-900 hover:bg-gray-800 text-white whitespace-nowrap">
-                        <Plus className="h-4 w-4 mr-2" />
-                        {t('table.addProduct')}
-                      </Button>
-                    ) : null}
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>{t('addForm.title')}</DialogTitle>
-                      <DialogDescription>
-                        {t('addForm.description')}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <ProductForm 
-                      categories={categories} 
-                      onSubmit={addProduct} 
-                      isLoading={isLoading}
-                    />
-                  </DialogContent>
-                </Dialog>
+              <div>
+                <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-emerald-600 tracking-tight">
+                  {t('table.title')}
+                </h1>
+                <p className="text-slate-600 text-sm font-medium">
+                  {currentLocation?.name || t('table.description')}
+                </p>
               </div>
             </div>
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="px-3 py-1.5 bg-gradient-to-br from-teal-50 to-emerald-100 border-2 border-teal-300 shadow-sm">
+                <Package className="h-3 w-3 mr-1.5" />
+                <span className="text-sm font-semibold text-teal-900">{filteredProducts.length}</span>
+                <span className="text-xs text-teal-600 font-semibold ml-1">{filteredProducts.length === 1 ? 'Product' : 'Products'}</span>
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 space-y-6 p-4 md:p-8">
+        {/* Main Content Card */}
+        <Card className="w-full shadow-lg border-2 rounded-2xl">
+          <CardHeader className="pb-4 bg-gradient-to-r from-slate-50 to-white border-b-2 border-slate-100">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
+                <Input
+                  placeholder={t('table.searchPlaceholder')}  
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 w-full border-2 focus:border-teal-500"
+                />
+              </div>
+              
+              <Dialog>
+                <DialogTrigger asChild>
+                  {profile?.role === 'admin' ? (
+                    <Button className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white whitespace-nowrap shadow-md">
+                      <Plus className="h-4 w-4 mr-2" />
+                      {t('table.addProduct')}
+                    </Button>
+                  ) : null}
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold">{t('addForm.title')}</DialogTitle>
+                    <DialogDescription>
+                      {t('addForm.description')}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ProductForm 
+                    categories={categories} 
+                    onSubmit={addProduct} 
+                    isLoading={isLoading}
+                  />
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardHeader>
-          
-          <Separator className="mb-6" />
           
           <CardContent>
             {isLoading ? (
@@ -481,38 +427,42 @@ const { profile } = useAuth()
                 </div>
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-12 rounded-lg border border-dashed border-gray-300 bg-gray-50">
-                <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+              <div className="text-center py-16 rounded-xl border-2 border-dashed border-teal-200 bg-gradient-to-br from-teal-50 to-emerald-50">
+                <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <Package className="h-10 w-10 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">
                   {searchTerm ? t('table.noProductfound') : t('table.noProductsyet')}
                 </h3>
-                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                <p className="text-slate-600 mb-8 max-w-md mx-auto">
                   {searchTerm 
                     ? t('table.adjustsearcfilters')
                     : t('table.addfirstproduct')
                   }
                 </p>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="mr-2 h-4 w-4" />
-                     {t('table.addProduct')}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Add New Product</DialogTitle>
-                      <DialogDescription>
-                        Create a new product with all necessary details
-                      </DialogDescription>
-                    </DialogHeader>
-                    <ProductForm 
-                      categories={categories} 
-                      onSubmit={addProduct} 
-                      isLoading={isLoading}
-                    />
-                  </DialogContent>
-                </Dialog>
+                {profile?.role === 'admin' && !searchTerm && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white shadow-md">
+                        <Plus className="mr-2 h-4 w-4" />
+                        {t('table.addProduct')}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-bold">{t('addForm.title')}</DialogTitle>
+                        <DialogDescription>
+                          {t('addForm.description')}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <ProductForm 
+                        categories={categories} 
+                        onSubmit={addProduct} 
+                        isLoading={isLoading}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
             ) : (
               <ProductTable 
@@ -639,42 +589,59 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
   
   return (
     <>
-      <div className="rounded-md border">
+      <div className="rounded-xl border-2 border-slate-200 overflow-hidden shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="font-semibold">{t('table.columns.name')}</TableHead>
-              <TableHead className="font-semibold">{t('table.columns.category')}</TableHead>
-              <TableHead className="font-semibold">{t('table.columns.status')}</TableHead>
-              <TableHead className="font-semibold">{t('table.columns.price')}</TableHead>
-              <TableHead className="font-semibold">{t('table.columns.stock')}</TableHead>
-              <TableHead className="font-semibold">{t('table.columns.attributes')}</TableHead>
+            <TableRow className="bg-gradient-to-r from-slate-100 to-slate-50 hover:from-slate-100 hover:to-slate-50">
+              <TableHead className="font-bold text-slate-900">{t('table.columns.name')}</TableHead>
+              <TableHead className="font-bold text-slate-900">{t('table.columns.category')}</TableHead>
+              <TableHead className="font-bold text-slate-900">{t('table.columns.status')}</TableHead>
+              <TableHead className="font-bold text-slate-900">{t('table.columns.price')}</TableHead>
+              <TableHead className="font-bold text-slate-900">{t('table.columns.stock')}</TableHead>
+              <TableHead className="font-bold text-slate-900">{t('table.columns.attributes')}</TableHead>
               {profile?.role === "admin" && (
-  <TableHead className="font-semibold text-right">{t('table.columns.actions')}</TableHead>
-)}
+                <TableHead className="font-bold text-slate-900 text-right">{t('table.columns.actions')}</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedProducts.map((product) => {
               const stockStatus = getStockStatus(product.stock_qty)
               return (
-                <TableRow key={product.id} className="hover:bg-gray-50/50">
-                  <TableCell className="font-medium">{product.name}</TableCell>
+                <TableRow key={product.id} className="hover:bg-teal-50/30 transition-colors border-b border-slate-100">
+                  <TableCell className="font-semibold text-slate-900">{product.name}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 font-medium">
                       {product.category}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={stockStatus.variant} className="text-xs">
+                    <Badge 
+                      variant={stockStatus.variant} 
+                      className={`text-xs font-medium ${
+                        stockStatus.variant === 'destructive' 
+                          ? 'bg-red-100 text-red-700 border-red-200' 
+                          : stockStatus.variant === 'secondary'
+                          ? 'bg-orange-100 text-orange-700 border-orange-200'
+                          : 'bg-green-100 text-green-700 border-green-200'
+                      }`}
+                    >
                       {stockStatus.text}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-semibold text-slate-900">
                     {formatPrice(product.price)}
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm font-medium">{product.stock_qty}</span>
+                    <span className={`text-sm font-bold px-2 py-1 rounded ${
+                      product.stock_qty === 0 
+                        ? 'bg-red-100 text-red-700' 
+                        : product.stock_qty < 10 
+                        ? 'bg-orange-100 text-orange-700'
+                        : 'bg-green-100 text-green-700'
+                    }`}>
+                      {product.stock_qty}
+                    </span>
                   </TableCell>
                   <TableCell>
                     {product.attributes.length > 0 ? (
@@ -743,26 +710,18 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
                     )}
                   </TableCell>
                   {profile?.role === "admin" && (
-  <TableCell className="text-right">
-    <div className="flex items-center justify-end gap-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => handleEditProduct(product)}
-        className="h-8 w-8 p-0"
-      >
-        <Edit className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
-  </TableCell>
-)}
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditProduct(product)}
+                        className="h-9 px-3 bg-teal-50 hover:bg-teal-100 text-teal-700 font-medium"
+                      >
+                        <Edit className="h-4 w-4 mr-1.5" />
+                        Edit
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               )
             })}
@@ -772,11 +731,9 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
       
       {/* Pagination */}
       {products.length > 0 && (
-        <div className="flex items-center justify-between space-x-2 py-4">
-          <div className="text-sm text-muted-foreground">
-             {t('table.Pagination.showing')} {Math.min((currentPage - 1) * pageSize + 1, products.length)} {" /"}
-            {Math.min(currentPage * pageSize, products.length)} {t('table.Pagination.of')}{" "}
-            {products.length}  {t("table.Pagination.product")}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-2 bg-gradient-to-r from-slate-50 to-white rounded-xl border-2 border-slate-100">
+          <div className="text-sm font-medium text-slate-700">
+             {t('table.Pagination.showing')} <span className="font-bold text-teal-600">{Math.min((currentPage - 1) * pageSize + 1, products.length)}</span> - <span className="font-bold text-teal-600">{Math.min(currentPage * pageSize, products.length)}</span> {t('table.Pagination.of')} <span className="font-bold text-teal-600">{products.length}</span> {t("table.Pagination.product")}
           </div>
           <div className="flex items-center space-x-2">
             <Button
@@ -784,7 +741,7 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
               size="sm"
               onClick={() => setCurrentPage(1)}
               disabled={currentPage === 1}
-              className="h-8 px-3"
+              className="h-9 px-3 border-2 font-medium disabled:opacity-50"
             >
               {t("table.Pagination.first")}
             </Button>
@@ -793,7 +750,7 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
               size="sm"
               onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className="h-8 px-3"
+              className="h-9 px-3 border-2 disabled:opacity-50"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -804,7 +761,11 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
                 size="sm"
                 onClick={() => typeof page === "number" && setCurrentPage(page)}
                 disabled={page === "..."}
-                className="h-8 w-8 p-0"
+                className={`h-9 w-9 p-0 border-2 font-semibold ${
+                  page === currentPage 
+                    ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white border-teal-600 shadow-md' 
+                    : 'hover:bg-teal-50 hover:border-teal-300'
+                }`}
               >
                 {page}
               </Button>
@@ -814,7 +775,7 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
               size="sm"
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="h-8 px-3"
+              className="h-9 px-3 border-2 disabled:opacity-50"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -823,7 +784,7 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
               size="sm"
               onClick={() => setCurrentPage(totalPages)}
               disabled={currentPage === totalPages}
-              className="h-8 px-3"
+              className="h-9 px-3 border-2 font-medium disabled:opacity-50"
             >
                {t('table.Pagination.last')}
             </Button>
@@ -833,9 +794,12 @@ function ProductTable({ products, categories, updateProduct , profile }: Product
       
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t('editForm.title')}</DialogTitle>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Edit className="h-5 w-5 text-teal-600" />
+              {t('editForm.title')}
+            </DialogTitle>
             <DialogDescription>
               {t('editForm.description')}
             </DialogDescription>
@@ -927,33 +891,48 @@ function ProductForm({ categories, product, onSubmit, isLoading }: ProductFormPr
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="basic">{t('editForm.tabs.basicInfo')}</TabsTrigger>
-          <TabsTrigger value="inventory">{t('editForm.tabs.inventory')}</TabsTrigger>
-          <TabsTrigger value="attributes">{t('editForm.tabs.attributes')}</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 bg-slate-100 p-1.5 rounded-xl border-2 border-slate-200">
+          <TabsTrigger 
+            value="basic" 
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg font-semibold"
+          >
+            {t('editForm.tabs.basicInfo')}
+          </TabsTrigger>
+          <TabsTrigger 
+            value="inventory" 
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg font-semibold"
+          >
+            {t('editForm.tabs.inventory')}
+          </TabsTrigger>
+          <TabsTrigger 
+            value="attributes" 
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg font-semibold"
+          >
+            {t('editForm.tabs.attributes')}
+          </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="basic" className="space-y-4 pt-4">
-          <div className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name" className="text-sm font-medium">{t('editForm.formFields.name')} *</Label>
+        <TabsContent value="basic" className="space-y-4 pt-6">
+          <div className="space-y-5">
+            <div className="grid gap-3 p-4 bg-slate-50 rounded-xl border-2 border-slate-100">
+              <Label htmlFor="name" className="text-sm font-bold text-slate-900">{t('editForm.formFields.name')} *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder={ t('editForm.formFields.nameplaceholder')}
                 required
-                className="w-full"
+                className="w-full border-2 focus:border-indigo-500"
               />
             </div>
             
-            <div className="grid gap-2">
-              <Label htmlFor="category" className="text-sm font-medium">{t('editForm.formFields.category')} *</Label>
+            <div className="grid gap-3 p-4 bg-slate-50 rounded-xl border-2 border-slate-100">
+              <Label htmlFor="category" className="text-sm font-bold text-slate-900">{t('editForm.formFields.category')} *</Label>
               <Select
                 value={formData.category_id.toString()}
                 onValueChange={(value) => handleCategoryChange(Number.parseInt(value))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="border-2 focus:border-teal-500">
                   <SelectValue placeholder={t('editForm.formFields.categoryplaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -966,8 +945,8 @@ function ProductForm({ categories, product, onSubmit, isLoading }: ProductFormPr
               </Select>
             </div>
             
-            <div className="grid gap-2">
-              <Label htmlFor="price" className="text-sm font-medium">{t('editForm.formFields.price')} (AFN) *</Label>
+            <div className="grid gap-3 p-4 bg-slate-50 rounded-xl border-2 border-slate-100">
+              <Label htmlFor="price" className="text-sm font-bold text-slate-900">{t('editForm.formFields.price')} (AFN) *</Label>
               <Input
                 id="price"
                 type="number"
@@ -979,15 +958,16 @@ function ProductForm({ categories, product, onSubmit, isLoading }: ProductFormPr
                 }
                 placeholder="0.00"
                 required
+                className="border-2 focus:border-teal-500"
               />
             </div>
           </div>
         </TabsContent>
         
-        <TabsContent value="inventory" className="space-y-4 pt-4">
-          <div className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="stock" className="text-sm font-medium">{t('editForm.formFields.stockQuantity')} *</Label>
+        <TabsContent value="inventory" className="space-y-4 pt-6">
+          <div className="space-y-5">
+            <div className="grid gap-3 p-4 bg-slate-50 rounded-xl border-2 border-slate-100">
+              <Label htmlFor="stock" className="text-sm font-bold text-slate-900">{t('editForm.formFields.stockQuantity')} *</Label>
               <Input
                 id="stock"
                 type="number"
@@ -997,39 +977,45 @@ function ProductForm({ categories, product, onSubmit, isLoading }: ProductFormPr
                   setFormData({ ...formData, stock_qty: Number.parseInt(e.target.value) || 0 })
                 }
                 placeholder="0"
+                className="border-2 focus:border-teal-500"
               />
+              <p className="text-xs text-slate-600">Current location stock quantity</p>
             </div>
           </div>
         </TabsContent>
         
-        <TabsContent value="attributes" className="space-y-4 pt-4">
+        <TabsContent value="attributes" className="space-y-4 pt-6">
           <div className="space-y-4">
             {formData.attributes.length > 0 ? (
               formData.attributes.map((attr:any, index:any) => (
-                <div key={index} className="grid gap-2">
-                  <Label className="text-sm font-medium">{attr.name}</Label>
-                  <div className="text-xs text-muted-foreground mb-1">{t('editForm.formFields.attributetype')}: {attr.type}</div>
+                <div key={index} className="grid gap-3 p-4 bg-slate-50 rounded-xl border-2 border-slate-100">
+                  <Label className="text-sm font-bold text-slate-900">{attr.name}</Label>
+                  <Badge variant="outline" className="text-xs w-fit bg-teal-50 text-teal-700 border-teal-200">
+                    {t('editForm.formFields.attributetype')}: {attr.type}
+                  </Badge>
                   <Input
                     value={attr.value}
                     onChange={(e) => handleAttributeChange(index, e.target.value)}
                     placeholder={t('editForm.formFields.attributesPlaceholder')}
+                    className="border-2 focus:border-teal-500"
                   />
                 </div>
               ))
             ) : (
-              <div className="text-center py-4 text-muted-foreground">
-                {t('editForm.noAttributes')}
+              <div className="text-center py-12 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50">
+                <Package className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500 font-medium">{t('editForm.noAttributes')}</p>
               </div>
             )}
           </div>
         </TabsContent>
       </Tabs>
       
-      <DialogFooter className="pt-4 border-t">
+      <DialogFooter className="pt-6 border-t-2 border-slate-100">
         <Button 
           type="submit" 
           disabled={isSubmitting || !formData.name}
-          className="min-w-[120px]"
+          className="min-w-[140px] bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-semibold shadow-md disabled:opacity-50"
         >
           {isSubmitting ? "Saving..." : product ? "Update Product" : "Add Product"}
         </Button>

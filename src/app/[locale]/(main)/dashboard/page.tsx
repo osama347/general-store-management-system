@@ -6,16 +6,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { CalendarIcon, Building, Truck } from 'lucide-react'
+import { CalendarIcon, Building, Truck, Package } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
 import { useFormatter, useTranslations } from 'next-intl'
 
 // Import new dashboard components
 import { KPICards } from '@/components/dashboard/kpi-cards'
 import { SalesChart, ExpenseChart } from '@/components/dashboard/charts'
-import { InventoryTable } from '@/components/dashboard/inventory-table'
-import { ActivityFeed } from '@/components/dashboard/activity-feed'
+import { RevenueExpenseChart } from '@/components/dashboard/revenue-expense-chart'
+import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { DashboardSkeleton } from '@/components/dashboard/skeletons'
+import { LowStockAlerts } from '@/components/dashboard/low-stock-alerts'
+import { TopPerformingProducts } from '@/components/dashboard/top-products'
 
 export default function DashboardPage() {
   const profile = useAuth()
@@ -141,45 +143,54 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-6 space-y-4">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">{getDashboardTitle()}</h1>
-          <p className="text-muted-foreground">{getDashboardDescription()}</p>
-          {currentLocation && (
-            <div className="flex items-center mt-1">
-              {currentLocation.location_type === 'warehouse' ? (
-                <Building className="h-4 w-4 mr-1 text-blue-500" />
-              ) : (
-                <Truck className="h-4 w-4 mr-1 text-green-500" />
-              )}
-              <span className="text-sm text-muted-foreground">
-                {currentLocation.name}
-                {isAdmin && (
-                  <> ({getLocationTypeLabel(currentLocation.location_type)})</>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {/* Premium Header */}
+      <header className="bg-gradient-to-br from-teal-600 via-emerald-600 to-green-600 shadow-xl sticky top-0 z-10">
+        <div className="max-w-[1920px] mx-auto px-6 py-5">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
+                {currentLocation?.location_type === 'warehouse' ? (
+                  <Building className="h-6 w-6 text-white" />
+                ) : (
+                  <Truck className="h-6 w-6 text-white" />
                 )}
-              </span>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white">{getDashboardTitle()}</h1>
+                <p className="text-white/80 text-sm">{currentLocation?.name || getDashboardDescription()}</p>
+              </div>
             </div>
-          )}
-        </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          {/* <LocationSelector /> */}
-          <CurrentMonthDisplay />
-          <div className="flex items-center space-x-2">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={profile.profile.avatar_url || ''} />
-              <AvatarFallback>{profile.profile.full_name?.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div>
-              <div className="font-medium">{profile.profile.full_name}</div>
-              <div className="text-xs text-muted-foreground capitalize">
-                {profile.profile.role?.replace('_', ' ')}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30">
+                <CalendarIcon className="h-4 w-4 text-white" />
+                <span className="text-sm font-semibold text-white">
+                  {formatter.dateTime(currentMonthRange.from, {
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30">
+                <Avatar className="h-9 w-9 ring-2 ring-white/30">
+                  <AvatarImage src={profile.profile.avatar_url || ''} />
+                  <AvatarFallback className="bg-white/30 text-white font-bold">
+                    {profile.profile.full_name?.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-semibold text-white text-sm">{profile.profile.full_name}</div>
+                  <div className="text-xs text-white/80 capitalize font-medium">
+                    {profile.profile.role?.replace('_', ' ')}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </header>
+
+      <div className="max-w-[1920px] mx-auto px-6 py-6 space-y-6">
       
       {/* KPI Cards */}
       <KPICards 
@@ -189,98 +200,71 @@ export default function DashboardPage() {
         dashboardType={dashboardType}
       />
       
-      {/* Charts - Only for store dashboards */}
+      {/* Top Row: Low Stock Alerts & Top Products - Only for store dashboards */}
       {!showWarehouseFeatures && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          <SalesChart userRole={userRole} locationFilter={locationFilter} dashboardType={dashboardType} />
-          <ExpenseChart userRole={userRole} locationFilter={locationFilter} dashboardType={dashboardType} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <LowStockAlerts locationFilter={locationFilter} dashboardType={dashboardType} />
+          <TopPerformingProducts 
+            locationFilter={locationFilter} 
+            dateRange={currentMonthRange}
+            dashboardType={dashboardType} 
+          />
+        </div>
+      )}
+
+      {/* Low Stock for Warehouse */}
+      {showWarehouseFeatures && (
+        <div className="grid grid-cols-1 gap-6">
+          <LowStockAlerts locationFilter={locationFilter} dashboardType={dashboardType} />
         </div>
       )}
       
-      {/* Inventory & Activities */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>
-              {showWarehouseFeatures
-                ? t('inventoryTable.title.warehouse')
-                : t('inventoryTable.title.store')}
-            </CardTitle>
-            <CardDescription>
-              {showWarehouseFeatures
-                ? t('inventoryTable.description.warehouse')
-                : t('inventoryTable.description.store')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <InventoryTable 
-              userRole={userRole} 
-              locationFilter={locationFilter} 
-              dashboardType={dashboardType}
-            />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('activityFeed.title')}</CardTitle>
-            <CardDescription>
-              {showWarehouseFeatures
-                ? t('activityFeed.description.warehouse')
-                : t('activityFeed.description.store')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ActivityFeed 
-              userRole={userRole} 
-              locationFilter={locationFilter} 
-              dashboardType={dashboardType}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      {/* Charts - Only for store dashboards */}
+      {!showWarehouseFeatures && (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SalesChart userRole={userRole} locationFilter={locationFilter} dashboardType={dashboardType} />
+            <ExpenseChart userRole={userRole} locationFilter={locationFilter} dashboardType={dashboardType} />
+          </div>
+          
+          {/* Revenue vs Expense Comparison Chart */}
+          <RevenueExpenseChart 
+            userRole={userRole} 
+            locationFilter={locationFilter} 
+            dashboardType={dashboardType} 
+          />
+        </>
+      )}
       
-      {/* Additional Tables Placeholder */}
-      <div className="grid grid-cols-1 gap-4 mb-6">
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="overview">{t('common.tabs.overview.title')}</TabsTrigger>
-            <TabsTrigger value="detailed">{t('common.tabs.detailed.title')}</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="overview">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('common.tabs.overview.title')}</CardTitle>
-                <CardDescription>
-                  {t('common.tabs.overview.description')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  {t('common.tabs.overview.placeholder')}
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="detailed">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('common.tabs.detailed.title')}</CardTitle>
-                <CardDescription>
-                  {t('common.tabs.detailed.description')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  {t('common.tabs.detailed.placeholder')}
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+      {/* Recent Transactions */}
+      <Card className="border-2 border-slate-200 shadow-lg rounded-2xl">
+        <CardHeader className="bg-gradient-to-r from-slate-50 to-white border-b-2 border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-md">
+              <CalendarIcon className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-bold text-slate-900">Recent Transactions</CardTitle>
+              <CardDescription className="text-sm">
+                {showWarehouseFeatures
+                  ? 'Latest inventory transfers and movements'
+                  : 'Recent sales, expenses, and activities'}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <RecentTransactions 
+            userRole={userRole} 
+            locationFilter={locationFilter} 
+            dashboardType={dashboardType}
+          />
+        </CardContent>
+      </Card>
+      
+    
       </div>
-    </div>
+      </div>
+    
   )
 }

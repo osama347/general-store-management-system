@@ -1,8 +1,10 @@
 "use client"
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,12 +15,16 @@ import {
   Search,
   Plus,
   Filter,
-  Trash2,
-  Edit,
   AlertTriangle,
   X,
   RefreshCw,
   Check,
+  TruckIcon,
+  Building2,
+  Package,
+  ArrowRightLeft,
+  Calendar,
+  User,
 } from "lucide-react"
 import {
   Dialog,
@@ -108,19 +114,13 @@ interface FilterState {
 }
 
 export default function TransfersPage() {
-  const [transfers, setTransfers] = useState<Transfer[]>([])
-  const [profiles, setProfiles] = useState<Profile[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [locations, setLocations] = useState<Location[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState("")
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "ascending" | "descending" } | null>(null)
   
   // Form states
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false)
   const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     product_id: "",
     from_location_id: "",
@@ -148,10 +148,12 @@ export default function TransfersPage() {
   // Get the user's location from their profile
   const userLocationId = profile?.location_id
 
-  // Data Fetching Functions
-  const fetchProfiles = async () => {
-    try {
-      const { data, error } = await supabase.from("profiles").select(`
+  // Data Fetching Function
+  const fetchTransfersData = async () => {
+    // Fetch profiles
+    const { data: profilesData, error: profilesError } = await supabase
+      .from("profiles")
+      .select(`
         id, 
         email, 
         full_name, 
@@ -164,40 +166,22 @@ export default function TransfersPage() {
         is_active, 
         role
       `)
-      if (error) throw error
-      setProfiles(data || [])
-    } catch (err: any) {
-      setError(err.message)
-      toast.error("Failed to load profiles", { description: err.message })
-    }
-  }
-
-  const fetchProducts = async () => {
-    try {
-      const { data, error } = await supabase.from("products").select("product_id, name, sku, base_price, category_id")
-      if (error) throw error
-      setProducts(data || [])
-    } catch (err: any) {
-      setError(err.message)
-      toast.error("Failed to load products", { description: err.message })
-    }
-  }
-
-  const fetchLocations = async () => {
-    try {
-      const { data, error } = await supabase.from("locations").select("location_id, name, location_type, address")
-      if (error) throw error
-      setLocations(data || [])
-    } catch (err: any) {
-      setError(err.message)
-      toast.error("Failed to load locations", { description: err.message })
-    }
-  }
-
- const fetchTransfers = async () => {
-  try {
-    // Use a join query to get all related data in one request
-    const { data, error } = await supabase
+    if (profilesError) throw profilesError
+    
+    // Fetch products
+    const { data: productsData, error: productsError } = await supabase
+      .from("products")
+      .select("product_id, name, sku, base_price, category_id")
+    if (productsError) throw productsError
+    
+    // Fetch locations
+    const { data: locationsData, error: locationsError } = await supabase
+      .from("locations")
+      .select("location_id, name, location_type, address")
+    if (locationsError) throw locationsError
+    
+    // Fetch transfers with joins
+    const { data: transfersData, error: transfersError } = await supabase
       .from("inventory_transfers")
       .select(`
         transfer_id,
@@ -241,11 +225,10 @@ export default function TransfersPage() {
         )
       `)
       .order("created_at", { ascending: false })
+    if (transfersError) throw transfersError
     
-    if (error) throw error
-    
-    // Transform the data to ensure type compatibility
-    const transformedData = (data as any[])?.map(item => ({
+    // Transform transfers data
+    const transformedTransfers = (transfersData as any[])?.map(item => ({
       transfer_id: item.transfer_id,
       quantity: item.quantity,
       created_at: item.created_at,
@@ -259,93 +242,87 @@ export default function TransfersPage() {
       profiles: item.profiles,
     })) || []
     
-    setTransfers(transformedData)
-  } catch (err: any) {
-    setError(err.message)
-    toast.error("Failed to load transfer history", { description: err.message })
+    return {
+      transfers: transformedTransfers,
+      profiles: profilesData || [],
+      products: productsData || [],
+      locations: locationsData || [],
+    }
   }
-}
 
-  // Transfer CRUD Functions
-  const handleCreateTransfer = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    
-    try {
+  // React Query for transfers data
+  const { data, isLoading: loading, error } = useQuery({
+    queryKey: ['transfers'],
+    queryFn: fetchTransfersData,
+    enabled: !authLoading && !locationLoading && !!profile,
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+  })
+
+  const transfers = data?.transfers || []
+  const profiles = data?.profiles || []
+  const products = data?.products || []
+  const locations = data?.locations || []
+
+  // Mutations
+  const createTransferMutation = useMutation({
+    mutationFn: async (transferData: any) => {
       // Validate required fields
-      if (!formData.product_id) {
-        toast.error("Please select a product!")
-        setIsSubmitting(false)
-        return
+      if (!transferData.product_id) {
+        throw new Error("Please select a product!")
       }
       
-      if (!formData.from_location_id || !formData.to_location_id) {
-        toast.error("Please select both source and destination locations!")
-        setIsSubmitting(false)
-        return
+      if (!transferData.from_location_id || !transferData.to_location_id) {
+        throw new Error("Please select both source and destination locations!")
       }
       
-      if (formData.from_location_id === formData.to_location_id) {
-        toast.error("Source and destination locations cannot be the same!")
-        setIsSubmitting(false)
-        return
+      if (transferData.from_location_id === transferData.to_location_id) {
+        throw new Error("Source and destination locations cannot be the same!")
       }
       
-      if (!formData.quantity || isNaN(Number(formData.quantity)) || Number(formData.quantity) <= 0) {
-        toast.error("Quantity must be greater than zero!")
-        setIsSubmitting(false)
-        return
+      if (!transferData.quantity || isNaN(Number(transferData.quantity)) || Number(transferData.quantity) <= 0) {
+        throw new Error("Quantity must be greater than zero!")
       }
       
-      if (!formData.created_by_profile_id) {
-        toast.error("Please select a staff member!")
-        setIsSubmitting(false)
-        return
+      if (!transferData.created_by_profile_id) {
+        throw new Error("Please select a staff member!")
       }
       
-      const transferData = {
-        product_id: Number(formData.product_id),
-        from_location_id: BigInt(formData.from_location_id),
-        to_location_id: BigInt(formData.to_location_id),
-        quantity: Number(formData.quantity),
-        created_by_profile_id: formData.created_by_profile_id,
+      const insertData = {
+        product_id: Number(transferData.product_id),
+        from_location_id: BigInt(transferData.from_location_id),
+        to_location_id: BigInt(transferData.to_location_id),
+        quantity: Number(transferData.quantity),
+        created_by_profile_id: transferData.created_by_profile_id,
       }
       
       const { data, error } = await supabase
         .from("inventory_transfers")
-        .insert(transferData)
+        .insert(insertData)
         .select()
         .single()
       
       if (error) throw error
-      
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transfers'] })
       toast.success("Transfer created successfully!")
       setIsTransferDialogOpen(false)
       resetForm()
-      await fetchTransfers()
-    } catch (err: any) {
+    },
+    onError: (err: Error) => {
       toast.error("Failed to create transfer", { description: err.message })
-    } finally {
-      setIsSubmitting(false)
     }
+  })
+
+  // Transfer CRUD Functions
+  const handleCreateTransfer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    createTransferMutation.mutate(formData)
   }
 
-  const handleDeleteTransfer = async (transferId: bigint) => {
-    if (!confirm("Are you sure you want to delete this transfer? This action cannot be undone.")) {
-      return
-    }
-    
-    try {
-      const { error } = await supabase.from("inventory_transfers").delete().eq("transfer_id", transferId)
-      
-      if (error) throw error
-      
-      toast.success("Transfer deleted successfully!")
-      await fetchTransfers()
-    } catch (err: any) {
-      toast.error("Failed to delete transfer", { description: err.message })
-    }
-  }
+  // Delete functionality removed for safety - transfers are permanent records
 
   const startCreateTransfer = () => {
     setEditingTransfer(null)
@@ -460,33 +437,22 @@ export default function TransfersPage() {
     })
   }
 
+  // Statistics Functions
+  const getTotalTransfers = () => transfers.length
+  const getTotalQuantity = () => transfers.reduce((sum, transfer) => sum + transfer.quantity, 0)
+  const getUniqueProducts = () => new Set(transfers.map(t => t.product_id)).size
+  const getRecentTransfers = () => {
+    const today = new Date()
+    const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+    return transfers.filter(t => new Date(t.created_at) >= sevenDaysAgo).length
+  }
+
   // Filter products based on search term
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
     (product.sku && product.sku.toLowerCase().includes(productSearchTerm.toLowerCase()))
   )
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
-      try {
-        await Promise.all([
-          fetchProfiles(),
-          fetchProducts(),
-          fetchLocations(),
-          fetchTransfers(),
-        ])
-      } catch (err) {
-        setError("Failed to load data")
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    if (!authLoading && !locationLoading) {
-      loadData()
-    }
-  }, [authLoading, locationLoading, profile])
   const instructions = (t.raw("form.instructions") as string[]) ?? []
   const userLocationIdString = userLocationId ? userLocationId.toString() : undefined
   const userLocationName = userLocationIdString
@@ -517,347 +483,647 @@ export default function TransfersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {error && (
-          <div className="mb-8 p-4 bg-red-50 border border-red-100 rounded-lg">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+    <div className="flex flex-col min-h-screen">
+      {/* Premium Sticky Header */}
+      <header className="bg-white border-b-2 border-teal-200 shadow-md sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-teal-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <TruckIcon className="h-6 w-6 text-white" />
+              </div>
               <div>
-                <p className="text-sm font-medium text-red-900">{t("error.title")}</p>
-                <p className="text-sm text-red-700 mt-1">{t("error.description")}</p>
-                {!!error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+                <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-emerald-600">
+                  {t("page.title")}
+                </h1>
+                {profile?.role !== "admin" && userLocationName ? (
+                  <p className="text-sm text-gray-600 flex items-center gap-1.5 mt-0.5">
+                    <Building2 className="h-3.5 w-3.5" />
+                    {t("page.descriptionSuffix", { location: userLocationName })}
+                  </p>
+                ) : null}
               </div>
             </div>
+            <Badge className="bg-gradient-to-br from-teal-50 to-emerald-100 text-teal-700 border-2 border-teal-300 px-4 py-2 text-sm font-semibold">
+              {getTotalTransfers()} Transfers
+            </Badge>
           </div>
-        )}
+        </div>
+      </header>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">{t("page.title")}</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                {t("page.description")}
-                {profile?.role !== "admin" && userLocationName && (
-                  <span className="ml-1">{t("page.descriptionSuffix", { location: userLocationName })}</span>
-                )}
-              </p>
+      <main className="flex-1 ">
+        <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+          {error && (
+            <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl shadow-sm">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-red-900">{t("error.title")}</p>
+                  <p className="text-sm text-red-700 mt-1">{t("error.description")}</p>
+                  {!!error && <p className="text-xs text-red-500 mt-2">{error instanceof Error ? error.message : String(error)}</p>}
+                </div>
+              </div>
             </div>
+          )}
 
-            <div className="flex gap-2">
-              <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    size="sm"
-                    onClick={startCreateTransfer}
-                    className="bg-gray-900 hover:bg-gray-800 text-white"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    {t("actions.newTransfer")}
-                  </Button>
-                </DialogTrigger>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* Total Transfers */}
+            <Card className="border-2 border-teal-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+              <CardContent className="p-0">
+                <div className="p-6 bg-gradient-to-br from-teal-500 to-teal-600">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                      <ArrowRightLeft className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold text-teal-100">Total Transfers</p>
+                  <div className="text-3xl font-black text-white mt-2">
+                    {getTotalTransfers()}
+                  </div>
+                  <p className="text-xs text-teal-100 mt-3 font-medium">
+                    All time transfers
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Total Quantity Moved */}
+            <Card className="border-2 border-emerald-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+              <CardContent className="p-0">
+                <div className="p-6 bg-gradient-to-br from-emerald-500 to-emerald-600">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                      <Package className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold text-emerald-100">Total Quantity</p>
+                  <div className="text-3xl font-black text-white mt-2">
+                    {getTotalQuantity().toLocaleString()}
+                  </div>
+                  <p className="text-xs text-emerald-100 mt-3 font-medium">
+                    Units transferred
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Unique Products */}
+            <Card className="border-2 border-green-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+              <CardContent className="p-0">
+                <div className="p-6 bg-gradient-to-br from-green-500 to-green-600">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                      <Package className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold text-green-100">Unique Products</p>
+                  <div className="text-3xl font-black text-white mt-2">
+                    {getUniqueProducts()}
+                  </div>
+                  <p className="text-xs text-green-100 mt-3 font-medium">
+                    Products transferred
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Transfers */}
+            <Card className="border-2 border-slate-200 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all">
+              <CardContent className="p-0">
+                <div className="p-6 bg-gradient-to-br from-slate-500 to-slate-600">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                      <Calendar className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-100">Recent Transfers</p>
+                  <div className="text-3xl font-black text-white mt-2">
+                    {getRecentTransfers()}
+                  </div>
+                  <p className="text-xs text-slate-100 mt-3 font-medium">
+                    Last 7 days
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Content Card */}
+          <Card className="border-2 border-teal-100 shadow-lg bg-white rounded-xl overflow-hidden">
+            <CardContent className="p-0">
+              <div className="p-6 border-b border-teal-100">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <Input
+                        placeholder={t("page.searchPlaceholder")}
+                        className="pl-10 border-2 border-teal-200 bg-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowFilters(!showFilters)}
+                      className="border-2 border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+                    >
+                      <Filter className="h-4 w-4 mr-2" />
+                      {t("page.filtersToggle")}
+                      {(filters.product ||
+                        filters.fromLocation ||
+                        filters.toLocation ||
+                        filters.dateRange.start ||
+                        filters.dateRange.end) && (
+                        <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
+                          !
+                        </Badge>
+                      )}
+                    </Button>
+                    <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          onClick={startCreateTransfer}
+                          className="gap-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-md text-white"
+                        >
+                          <Plus className="h-4 w-4" />
+                          {t("actions.newTransfer")}
+                        </Button>
+                      </DialogTrigger>
                 <DialogContent className="sm:max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>{t("dialog.title")}</DialogTitle>
-                    <DialogDescription>{t("dialog.description")}</DialogDescription>
+                  <DialogHeader className="bg-gradient-to-r from-teal-600 via-emerald-600 to-green-600 -m-6 mb-4 p-6 rounded-t-lg">
+                    <DialogTitle className="text-white text-xl">{t("dialog.title")}</DialogTitle>
+                    <DialogDescription className="text-teal-100">{t("dialog.description")}</DialogDescription>
                   </DialogHeader>
 
                   <form onSubmit={handleCreateTransfer}>
-                    <Tabs defaultValue="basic" className="w-full">
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="basic">{t("tabs.basic")}</TabsTrigger>
-                        <TabsTrigger value="details">{t("tabs.details")}</TabsTrigger>
-                      </TabsList>
-
-                      <TabsContent value="basic" className="space-y-4 pt-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="product" className="text-sm font-medium">
-                              {t("form.product")}
-                            </Label>
-                            <div className="relative">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="w-full justify-between"
-                                onClick={() => setProductSelectOpen(!productSelectOpen)}
-                              >
-                                {formData.product_id
-                                  ? products.find((p) => p.product_id.toString() === formData.product_id)?.name ||
-                                    t("form.productPlaceholder")
-                                  : t("form.productPlaceholder")}
-                                <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                              {productSelectOpen && (
-                                <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-md">
-                                  <Command>
-                                    <CommandInput
-                                      placeholder={t("form.productSearch")}
-                                      value={productSearchTerm}
-                                      onValueChange={setProductSearchTerm}
-                                    />
-                                    <CommandList>
-                                      <CommandEmpty>{t("form.noProducts")}</CommandEmpty>
-                                      <CommandGroup>
-                                        {filteredProducts.map((product) => (
-                                          <CommandItem
-                                            key={product.product_id}
-                                            value={product.product_id.toString()}
-                                            onSelect={() => {
-                                              setFormData({ ...formData, product_id: product.product_id.toString() })
-                                              setProductSelectOpen(false)
-                                            }}
-                                          >
-                                            <Check
-                                              className={`mr-2 h-4 w-4 ${
-                                                formData.product_id === product.product_id.toString()
-                                                  ? "opacity-100"
-                                                  : "opacity-0"
-                                              }`}
-                                            />
-                                            <div>
-                                              <div className="font-medium">{product.name}</div>
-                                              {product.sku && (
-                                                <div className="text-sm text-gray-500">SKU: {product.sku}</div>
-                                              )}
-                                            </div>
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
+                    <div className="space-y-6">
+                      {/* Product Selection - Enhanced */}
+                      <div className="space-y-2">
+                        <Label htmlFor="product" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                          <Package className="h-4 w-4 text-blue-600" />
+                          {t("form.product")} <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="relative">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className={`w-full justify-between h-12 border-2 ${
+                              formData.product_id 
+                                ? 'border-green-300 bg-green-50/50' 
+                                : 'border-gray-200 hover:border-blue-300'
+                            }`}
+                            onClick={() => setProductSelectOpen(!productSelectOpen)}
+                          >
+                            {formData.product_id ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                                  <Package className="h-3 w-3 text-purple-600" />
                                 </div>
-                              )}
+                                <span className="font-medium">
+                                  {products.find((p) => p.product_id.toString() === formData.product_id)?.name ||
+                                    t("form.productPlaceholder")}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-500">{t("form.productPlaceholder")}</span>
+                            )}
+                            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                          {productSelectOpen && (
+                            <div className="absolute z-10 mt-1 w-full rounded-lg border-2 border-blue-200 bg-white shadow-xl">
+                              <Command>
+                                <CommandInput
+                                  placeholder={t("form.productSearch")}
+                                  value={productSearchTerm}
+                                  onValueChange={setProductSearchTerm}
+                                  className="border-b"
+                                />
+                                <CommandList>
+                                  <CommandEmpty>
+                                    <div className="py-6 text-center">
+                                      <Package className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                                      <p className="text-sm text-gray-500">{t("form.noProducts")}</p>
+                                    </div>
+                                  </CommandEmpty>
+                                  <CommandGroup>
+                                    {filteredProducts.map((product) => (
+                                      <CommandItem
+                                        key={product.product_id}
+                                        value={product.product_id.toString()}
+                                        onSelect={() => {
+                                          setFormData({ ...formData, product_id: product.product_id.toString() })
+                                          setProductSelectOpen(false)
+                                        }}
+                                        className="cursor-pointer"
+                                      >
+                                        <Check
+                                          className={`mr-2 h-4 w-4 ${
+                                            formData.product_id === product.product_id.toString()
+                                              ? "opacity-100 text-green-600"
+                                              : "opacity-0"
+                                          }`}
+                                        />
+                                        <div className="flex items-center gap-3 flex-1">
+                                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                                            <Package className="h-4 w-4 text-purple-600" />
+                                          </div>
+                                          <div className="flex-1">
+                                            <div className="font-medium">{product.name}</div>
+                                            {product.sku && (
+                                              <div className="text-xs text-gray-500 font-mono">SKU: {product.sku}</div>
+                                            )}
+                                          </div>
+                                          {product.base_price && (
+                                            <div className="text-sm text-gray-600">${product.base_price}</div>
+                                          )}
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
                             </div>
-                          </div>
+                          )}
+                        </div>
+                      </div>
 
+                      {/* Transfer Flow - Visual */}
+                      <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-2 border-blue-200 rounded-xl p-6">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                          <ArrowRightLeft className="h-4 w-4 text-blue-600" />
+                          Transfer Details
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                          {/* From Location */}
                           <div className="space-y-2">
-                            <Label htmlFor="quantity" className="text-sm font-medium">
-                              {t("form.quantity")}
-                            </Label>
-                            <Input
-                              id="quantity"
-                              type="number"
-                              min="1"
-                              placeholder="0"
-                              value={formData.quantity}
-                              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                              required
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="from_location" className="text-sm font-medium">
-                              {t("form.fromLocation")}
+                            <Label htmlFor="from_location" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-orange-600" />
+                              {t("form.fromLocation")} <span className="text-red-500">*</span>
                             </Label>
                             <Select
                               value={formData.from_location_id}
                               onValueChange={(value) => setFormData({ ...formData, from_location_id: value })}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className={`h-12 border-2 ${
+                                formData.from_location_id 
+                                  ? 'border-green-300 bg-green-50/50' 
+                                  : 'border-gray-200'
+                              }`}>
                                 <SelectValue placeholder={t("form.fromLocationPlaceholder")} />
                               </SelectTrigger>
                               <SelectContent>
                                 {locations.map((location) => (
-                                  <SelectItem key={location.location_id} value={location.location_id.toString()}>
-                                    {location.name}
+                                  <SelectItem 
+                                    key={location.location_id} 
+                                    value={location.location_id.toString()}
+                                    disabled={formData.to_location_id === location.location_id.toString()}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <Building2 className="h-4 w-4 text-orange-600" />
+                                      {location.name}
+                                    </div>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
 
+                          {/* Arrow Indicator */}
+                          <div className="flex items-center justify-center">
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg">
+                                <ArrowRightLeft className="h-6 w-6 text-white" />
+                              </div>
+                              <div className="px-3 py-1 bg-white rounded-full border-2 border-blue-200">
+                                <Input
+                                  id="quantity"
+                                  type="number"
+                                  min="1"
+                                  placeholder="0"
+                                  value={formData.quantity}
+                                  onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                                  required
+                                  className="w-20 h-8 text-center font-bold text-lg border-none p-0"
+                                />
+                              </div>
+                              <span className="text-xs text-gray-500 font-medium">units</span>
+                            </div>
+                          </div>
+
+                          {/* To Location */}
                           <div className="space-y-2">
-                            <Label htmlFor="to_location" className="text-sm font-medium">
-                              {t("form.toLocation")}
+                            <Label htmlFor="to_location" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-green-600" />
+                              {t("form.toLocation")} <span className="text-red-500">*</span>
                             </Label>
                             <Select
                               value={formData.to_location_id}
                               onValueChange={(value) => setFormData({ ...formData, to_location_id: value })}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className={`h-12 border-2 ${
+                                formData.to_location_id 
+                                  ? 'border-green-300 bg-green-50/50' 
+                                  : 'border-gray-200'
+                              }`}>
                                 <SelectValue placeholder={t("form.toLocationPlaceholder")} />
                               </SelectTrigger>
                               <SelectContent>
                                 {locations.map((location) => (
-                                  <SelectItem key={location.location_id} value={location.location_id.toString()}>
-                                    {location.name}
+                                  <SelectItem 
+                                    key={location.location_id} 
+                                    value={location.location_id.toString()}
+                                    disabled={formData.from_location_id === location.location_id.toString()}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <Building2 className="h-4 w-4 text-green-600" />
+                                      {location.name}
+                                    </div>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
                         </div>
-                      </TabsContent>
 
-                      <TabsContent value="details" className="space-y-4 pt-4">
-                        <div className="grid grid-cols-1 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="staff" className="text-sm font-medium">
-                              {t("form.staff")}
-                            </Label>
-                            <Select
-                              value={formData.created_by_profile_id}
-                              onValueChange={(value) => setFormData({ ...formData, created_by_profile_id: value })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={t("form.staffPlaceholder")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {profiles.map((profile) => (
-                                  <SelectItem key={profile.id} value={profile.id}>
-                                    {profile.full_name || profile.email || t("table.unknown.staff")}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                        {/* Validation Warning */}
+                        {formData.from_location_id && formData.to_location_id && 
+                         formData.from_location_id === formData.to_location_id && (
+                          <div className="mt-4 p-3 bg-red-50 border-2 border-red-200 rounded-lg flex items-start gap-2">
+                            <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium text-red-900">Invalid Transfer</p>
+                              <p className="text-xs text-red-700 mt-1">
+                                Source and destination locations must be different
+                              </p>
+                            </div>
                           </div>
+                        )}
+                      </div>
 
-                          <div className="p-4 bg-gray-50 rounded-lg">
-                            <h4 className="text-sm font-medium text-gray-900 mb-2">{t("form.instructionsTitle")}</h4>
-                            <ul className="text-sm text-gray-600 space-y-1">
+                      {/* Staff Member */}
+                      <div className="space-y-2">
+                        <Label htmlFor="staff" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                          <User className="h-4 w-4 text-purple-600" />
+                          {t("form.staff")} <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.created_by_profile_id}
+                          onValueChange={(value) => setFormData({ ...formData, created_by_profile_id: value })}
+                        >
+                          <SelectTrigger className={`h-12 border-2 ${
+                            formData.created_by_profile_id 
+                              ? 'border-green-300 bg-green-50/50' 
+                              : 'border-gray-200'
+                          }`}>
+                            <SelectValue placeholder={t("form.staffPlaceholder")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {profiles.map((profile) => (
+                              <SelectItem key={profile.id} value={profile.id}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                                    <User className="h-3 w-3 text-purple-600" />
+                                  </div>
+                                  {profile.full_name || profile.email || t("table.unknown.staff")}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Instructions */}
+                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-amber-100 rounded-lg">
+                            <AlertTriangle className="h-5 w-5 text-amber-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                              {t("form.instructionsTitle")}
+                            </h4>
+                            <ul className="text-sm text-gray-700 space-y-1.5">
                               {instructions.map((instruction, index) => (
-                                <li key={index}>• {instruction}</li>
+                                <li key={index} className="flex items-start gap-2">
+                                  <span className="text-amber-600 font-bold">•</span>
+                                  <span>{instruction}</span>
+                                </li>
                               ))}
                             </ul>
                           </div>
                         </div>
-                      </TabsContent>
-                    </Tabs>
+                      </div>
+                    </div>
 
-                    <DialogFooter className="pt-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setIsTransferDialogOpen(false)
-                          resetForm()
-                        }}
-                      >
-                        {t("actions.cancel")}
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={
-                          isSubmitting ||
-                          !formData.product_id ||
-                          !formData.from_location_id ||
-                          !formData.to_location_id ||
-                          !formData.quantity ||
-                          !formData.created_by_profile_id
-                        }
-                        className="bg-gray-900 hover:bg-gray-800 text-white"
-                      >
-                        {isSubmitting ? t("actions.creating") : t("actions.create")}
-                      </Button>
+                    <DialogFooter className="pt-6 border-t-2 border-teal-100 mt-6">
+                      <div className="flex items-center justify-between w-full">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setIsTransferDialogOpen(false)
+                            resetForm()
+                          }}
+                          className="border-2 border-teal-200 hover:bg-teal-50"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          {t("actions.cancel")}
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={
+                            createTransferMutation.isPending ||
+                            !formData.product_id ||
+                            !formData.from_location_id ||
+                            !formData.to_location_id ||
+                            !formData.quantity ||
+                            !formData.created_by_profile_id ||
+                            formData.from_location_id === formData.to_location_id
+                          }
+                          className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {createTransferMutation.isPending ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              {t("actions.creating")}
+                            </>
+                          ) : (
+                            <>
+                              <TruckIcon className="h-4 w-4 mr-2" />
+                              {t("actions.create")}
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </DialogFooter>
                   </form>
                 </DialogContent>
               </Dialog>
             </div>
-          </div>
+                  </div>
+                </div>
 
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <Input
-                  placeholder={t("search.placeholder")}
-                  className="pl-10 border-gray-200 bg-gray-50 focus:bg-white"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="border-gray-200 text-gray-600"
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              {t("filters.toggle")}
-              {(filters.product ||
-                filters.fromLocation ||
-                filters.toLocation ||
-                filters.dateRange.start ||
-                filters.dateRange.end) && (
-                <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
-                  !
-                </Badge>
-              )}
-            </Button>
-          </div>
+                {showFilters && (
+                  <div className="p-6 bg-gradient-to-br from-teal-50/50 to-emerald-50/30 border-b border-teal-100">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-teal-100 rounded-lg">
+                          <Filter className="h-5 w-5 text-teal-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">Advanced Filters</h3>
+                          <p className="text-xs text-gray-500">Refine your transfer search</p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={clearFilters} 
+                        className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Clear All
+                      </Button>
+                    </div>
 
-          {showFilters && (
-            <div className="mb-6 pb-6 border-b border-gray-100">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">{t("filters.product.label")}</Label>
-                  <Select
-                    value={filters.product}
-                    onValueChange={(value) => setFilters((prev) => ({ ...prev, product: value === "all" ? "" : value }))}
-                  >
-                    <SelectTrigger className="border-gray-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {/* Product Filter */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                          <Package className="h-4 w-4 text-teal-600" />
+                          {t("filters.product.label")}
+                        </Label>
+                        <Select
+                          value={filters.product}
+                          onValueChange={(value) => setFilters((prev) => ({ ...prev, product: value === "all" ? "" : value }))}
+                        >
+                          <SelectTrigger className={`border-2 ${
+                            filters.product ? 'border-teal-300 bg-teal-50/50' : 'border-teal-200'
+                          } focus:ring-teal-500`}>
                       <SelectValue placeholder={t("filters.product.all")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">{t("filters.product.all")}</SelectItem>
+                      <SelectItem value="all">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                          {t("filters.product.all")}
+                        </div>
+                      </SelectItem>
                       {products.map((product) => (
                         <SelectItem key={product.product_id} value={product.product_id.toString()}>
-                          {product.name}
+                          <div className="flex items-center gap-2">
+                            <Package className="h-3 w-3 text-purple-600" />
+                            {product.name}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {filters.product && (
+                    <div className="flex items-center gap-1 text-xs text-purple-600">
+                      <Check className="h-3 w-3" />
+                      <span>Filter active</span>
+                    </div>
+                  )}
                 </div>
 
+                {/* From Location Filter */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">{t("filters.fromLocation.label")}</Label>
+                  <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-orange-600" />
+                    {t("filters.fromLocation.label")}
+                  </Label>
                   <Select
                     value={filters.fromLocation}
                     onValueChange={(value) =>
                       setFilters((prev) => ({ ...prev, fromLocation: value === "all" ? "" : value }))
                     }
                   >
-                    <SelectTrigger className="border-gray-200">
+                    <SelectTrigger className={`border-2 ${
+                      filters.fromLocation ? 'border-orange-300 bg-orange-50/50' : 'border-gray-200'
+                    }`}>
                       <SelectValue placeholder={t("filters.fromLocation.all")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">{t("filters.fromLocation.all")}</SelectItem>
+                      <SelectItem value="all">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                          {t("filters.fromLocation.all")}
+                        </div>
+                      </SelectItem>
                       {locations.map((location) => (
                         <SelectItem key={location.location_id} value={location.location_id.toString()}>
-                          {location.name}
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-3 w-3 text-orange-600" />
+                            {location.name}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {filters.fromLocation && (
+                    <div className="flex items-center gap-1 text-xs text-orange-600">
+                      <Check className="h-3 w-3" />
+                      <span>Filter active</span>
+                    </div>
+                  )}
                 </div>
 
+                {/* To Location Filter */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">{t("filters.toLocation.label")}</Label>
+                  <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <ArrowRightLeft className="h-4 w-4 text-green-600" />
+                    {t("filters.toLocation.label")}
+                  </Label>
                   <Select
                     value={filters.toLocation}
                     onValueChange={(value) =>
                       setFilters((prev) => ({ ...prev, toLocation: value === "all" ? "" : value }))
                     }
                   >
-                    <SelectTrigger className="border-gray-200">
+                    <SelectTrigger className={`border-2 ${
+                      filters.toLocation ? 'border-green-300 bg-green-50/50' : 'border-gray-200'
+                    }`}>
                       <SelectValue placeholder={t("filters.toLocation.all")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">{t("filters.toLocation.all")}</SelectItem>
+                      <SelectItem value="all">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                          {t("filters.toLocation.all")}
+                        </div>
+                      </SelectItem>
                       {locations.map((location) => (
                         <SelectItem key={location.location_id} value={location.location_id.toString()}>
-                          {location.name}
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-3 w-3 text-green-600" />
+                            {location.name}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {filters.toLocation && (
+                    <div className="flex items-center gap-1 text-xs text-green-600">
+                      <Check className="h-3 w-3" />
+                      <span>Filter active</span>
+                    </div>
+                  )}
                 </div>
 
+                {/* Date Range Filter */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">{t("filters.dateRange.label")}</Label>
-                  <div className="flex gap-2">
+                  <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-blue-600" />
+                    {t("filters.dateRange.label")}
+                  </Label>
+                  <div className="space-y-2">
                     <Input
                       type="date"
                       placeholder={t("filters.dateRange.start")}
@@ -868,7 +1134,9 @@ export default function TransfersPage() {
                           dateRange: { ...prev.dateRange, start: e.target.value },
                         }))
                       }
-                      className="border-gray-200"
+                      className={`border-2 ${
+                        filters.dateRange.start ? 'border-blue-300 bg-blue-50/50' : 'border-gray-200'
+                      }`}
                     />
                     <Input
                       type="date"
@@ -880,17 +1148,86 @@ export default function TransfersPage() {
                           dateRange: { ...prev.dateRange, end: e.target.value },
                         }))
                       }
-                      className="border-gray-200"
+                      className={`border-2 ${
+                        filters.dateRange.end ? 'border-blue-300 bg-blue-50/50' : 'border-gray-200'
+                      }`}
                     />
                   </div>
+                  {(filters.dateRange.start || filters.dateRange.end) && (
+                    <div className="flex items-center gap-1 text-xs text-blue-600">
+                      <Check className="h-3 w-3" />
+                      <span>Filter active</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="flex justify-end">
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-gray-500">
-                  {t("filters.clear")}
-                </Button>
-              </div>
+              {/* Active Filters Summary */}
+              {(filters.product || filters.fromLocation || filters.toLocation || filters.dateRange.start || filters.dateRange.end) && (
+                <div className="mt-6 pt-6 border-t-2 border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-gray-700">Active Filters:</span>
+                      {filters.product && (
+                        <Badge className="bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-200">
+                          <Package className="h-3 w-3 mr-1" />
+                          {products.find(p => p.product_id.toString() === filters.product)?.name}
+                          <button
+                            onClick={() => setFilters(prev => ({ ...prev, product: "" }))}
+                            className="ml-1 hover:text-purple-900"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      )}
+                      {filters.fromLocation && (
+                        <Badge className="bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-200">
+                          <Building2 className="h-3 w-3 mr-1" />
+                          From: {locations.find(l => l.location_id.toString() === filters.fromLocation)?.name}
+                          <button
+                            onClick={() => setFilters(prev => ({ ...prev, fromLocation: "" }))}
+                            className="ml-1 hover:text-orange-900"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      )}
+                      {filters.toLocation && (
+                        <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-200">
+                          <ArrowRightLeft className="h-3 w-3 mr-1" />
+                          To: {locations.find(l => l.location_id.toString() === filters.toLocation)?.name}
+                          <button
+                            onClick={() => setFilters(prev => ({ ...prev, toLocation: "" }))}
+                            className="ml-1 hover:text-green-900"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      )}
+                      {(filters.dateRange.start || filters.dateRange.end) && (
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {filters.dateRange.start && filters.dateRange.end 
+                            ? `${filters.dateRange.start} to ${filters.dateRange.end}`
+                            : filters.dateRange.start 
+                            ? `From ${filters.dateRange.start}`
+                            : `Until ${filters.dateRange.end}`
+                          }
+                          <button
+                            onClick={() => setFilters(prev => ({ ...prev, dateRange: { start: "", end: "" } }))}
+                            className="ml-1 hover:text-blue-900"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-sm font-semibold text-blue-600">
+                      {filteredTransfers.length} {filteredTransfers.length === 1 ? 'result' : 'results'}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -900,91 +1237,156 @@ export default function TransfersPage() {
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-gray-100">
-                    <TableHead className="font-medium text-gray-700 cursor-pointer" onClick={() => requestSort("date")}>
-                      {t("table.columns.date")}
-                    </TableHead>
-                    <TableHead
-                      className="font-medium text-gray-700 cursor-pointer"
-                      onClick={() => requestSort("product")}
-                    >
-                      {t("table.columns.product")}
-                    </TableHead>
-                    <TableHead
-                      className="font-medium text-gray-700 cursor-pointer"
-                      onClick={() => requestSort("fromLocation")}
-                    >
-                      {t("table.columns.from")}
-                    </TableHead>
-                    <TableHead
-                      className="font-medium text-gray-700 cursor-pointer"
-                      onClick={() => requestSort("toLocation")}
-                    >
-                      {t("table.columns.to")}
-                    </TableHead>
-                    <TableHead
-                      className="font-medium text-gray-700 cursor-pointer"
-                      onClick={() => requestSort("quantity")}
-                    >
-                      {t("table.columns.quantity")}
-                    </TableHead>
-                    <TableHead
-                      className="font-medium text-gray-700 cursor-pointer"
-                      onClick={() => requestSort("staff")}
-                    >
-                      {t("table.columns.staff")}
-                    </TableHead>
-                    <TableHead className="font-medium text-gray-700 text-right">{t("table.columns.actions")}</TableHead>
-                  </TableRow>
-                </TableHeader>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gradient-to-r from-teal-50 via-emerald-50 to-green-50 border-b-2 border-teal-200">
+                      <TableHead className="font-semibold text-gray-700 cursor-pointer hover:text-teal-600" onClick={() => requestSort("date")}>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {t("table.columns.date")}
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="font-semibold text-gray-700 cursor-pointer hover:text-teal-600"
+                        onClick={() => requestSort("product")}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4" />
+                          {t("table.columns.product")}
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="font-semibold text-gray-700 cursor-pointer hover:text-teal-600"
+                        onClick={() => requestSort("fromLocation")}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          {t("table.columns.from")}
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="font-semibold text-gray-700 cursor-pointer hover:text-teal-600"
+                        onClick={() => requestSort("toLocation")}
+                      >
+                        <div className="flex items-center gap-2">
+                          <ArrowRightLeft className="h-4 w-4" />
+                          {t("table.columns.to")}
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="font-semibold text-gray-700 cursor-pointer hover:text-teal-600"
+                        onClick={() => requestSort("quantity")}
+                      >
+                        {t("table.columns.quantity")}
+                      </TableHead>
+                      <TableHead
+                        className="font-semibold text-gray-700 cursor-pointer hover:text-teal-600"
+                        onClick={() => requestSort("staff")}
+                      >
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          {t("table.columns.staff")}
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-semibold text-gray-700 text-right">{t("table.columns.actions")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {filteredTransfers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                        {t("table.noTransfers")}
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="p-4 bg-gradient-to-br from-teal-100 to-emerald-100 rounded-full w-20 h-20 flex items-center justify-center mb-4">
+                            <TruckIcon className="h-10 w-10 text-teal-600" />
+                          </div>
+                          <p className="text-lg font-semibold text-gray-700 mb-2">{t("table.noTransfers")}</p>
+                          <Button 
+                            onClick={startCreateTransfer} 
+                            className="mt-4 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create Your First Transfer
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredTransfers.map((transfer) => (
                       <TableRow
                         key={transfer.transfer_id.toString()}
-                        className="border-gray-100 hover:bg-gray-50"
+                        className="border-b transition-all duration-200 hover:bg-teal-50/50"
                       >
-                        <TableCell className="font-medium">{formatDate(transfer.created_at)}</TableCell>
-                        <TableCell>{transfer.products?.name || t("table.unknown.product")}</TableCell>
-                        <TableCell>{transfer.from_location?.name || t("table.unknown.location")}</TableCell>
-                        <TableCell>{transfer.to_location?.name || t("table.unknown.location")}</TableCell>
-                        <TableCell className="font-medium">{transfer.quantity}</TableCell>
+                        <TableCell className="font-medium text-gray-900">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-100 to-emerald-100 flex items-center justify-center">
+                              <Calendar className="h-4 w-4 text-teal-600" />
+                            </div>
+                            {formatDate(transfer.created_at)}
+                          </div>
+                        </TableCell>
                         <TableCell>
-                          {transfer.profiles?.full_name ||
-                            transfer.profiles?.email ||
-                            t("table.unknown.staff")}
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-100 to-green-100 flex items-center justify-center">
+                              <Package className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900">{transfer.products?.name || t("table.unknown.product")}</p>
+                              {transfer.products?.sku && (
+                                <p className="text-xs text-gray-500 font-mono mt-0.5">SKU: {transfer.products.sku}</p>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-gray-700">
+                            <Building2 className="h-4 w-4 text-gray-500" />
+                            <span className="font-medium">{transfer.from_location?.name || t("table.unknown.location")}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <ArrowRightLeft className="h-4 w-4 text-teal-500" />
+                            <span className="font-medium text-gray-700">{transfer.to_location?.name || t("table.unknown.location")}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-xl text-teal-600">{transfer.quantity}</span>
+                            <span className="text-xs text-gray-500">units</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-100 to-emerald-100 flex items-center justify-center">
+                              <User className="h-4 w-4 text-teal-600" />
+                            </div>
+                            <span className="text-gray-700">
+                              {transfer.profiles?.full_name ||
+                                transfer.profiles?.email ||
+                                t("table.unknown.staff")}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteTransfer(transfer.transfer_id)}
-                              className="text-red-500"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            <Badge variant="secondary" className="text-xs bg-teal-100 text-teal-700 border-teal-200">
+                              Permanent Record
+                            </Badge>
                           </div>
                         </TableCell>
                       </TableRow>
                     ))
                   )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
