@@ -10,6 +10,7 @@ import { Loader2, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useLocale } from 'next-intl'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useRouter } from 'next/navigation'
 
 type AuthMode = 'sign-in' | 'forgot-password'
 
@@ -22,6 +23,7 @@ export function AuthForm() {
 
   const supabase = createClient()
   const locale = useLocale()
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,12 +38,16 @@ export function AuthForm() {
         
         if (error) throw error
         
-        // Show success message and redirect
-        toast.success('Successfully signed in! Redirecting...')
+        // Show success message
+        toast.success('Successfully signed in!')
 
-        setTimeout(() => {
-          window.location.href = `/${locale}/dashboard`
-        }, 1500)
+        // Wait a moment for auth state to propagate
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        // Use Next.js router for proper navigation without full page reload
+        // This ensures the auth state is properly maintained
+        router.push(`/${locale}/dashboard`)
+        router.refresh() // Refresh to ensure server components get new session
       } else if (mode === 'forgot-password') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/${locale}/reset-password`,

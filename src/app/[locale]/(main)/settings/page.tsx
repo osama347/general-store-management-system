@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/hooks/use-auth"
 import { useLocation as useLocationContext } from "@/contexts/LocationContext"
@@ -9,14 +9,17 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
-import { Loader2, Store, Warehouse, MapPin, User, Phone as PhoneIcon, Lock, Save } from "lucide-react"
+import { Loader2, Store, Warehouse, MapPin, User, Phone as PhoneIcon, Lock, Save, Upload, Camera } from "lucide-react"
 
 export default function SettingsPage() {
   const { profile, loading: authLoading } = useAuth()
   const { locations, isLoading: locationLoading } = useLocationContext()
   const [saving, setSaving] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [profileForm, setProfileForm] = useState({
     full_name: "",
@@ -61,7 +64,10 @@ export default function SettingsPage() {
 
   const handleProfileUpdate = async () => {
     if (!profileForm.full_name.trim()) {
-      toast.error("Full name is required")
+      toast.error("Validation Error", {
+        description: "Full name is required",
+        duration: 3000,
+      })
       return
     }
 
@@ -77,11 +83,17 @@ export default function SettingsPage() {
 
       if (error) throw error
       
-      toast.success("Profile updated successfully")
+      toast.success("Profile Updated Successfully!", {
+        description: "Your profile information has been saved.",
+        duration: 4000,
+      })
       await reloadProfile()
     } catch (error: any) {
       console.error("Error updating profile:", error)
-      toast.error(error.message || "Failed to update profile")
+      toast.error("Failed to Update Profile", {
+        description: error.message || "An error occurred while updating your profile. Please try again.",
+        duration: 5000,
+      })
     } finally {
       setSaving(false)
     }
@@ -89,17 +101,26 @@ export default function SettingsPage() {
 
   const handlePasswordChange = async () => {
     if (!passwordForm.newPassword || !passwordForm.confirmPassword) {
-      toast.error("Please fill in all password fields")
+      toast.error("Validation Error", {
+        description: "Please fill in all password fields",
+        duration: 3000,
+      })
       return
     }
 
     if (passwordForm.newPassword.length < 6) {
-      toast.error("New password must be at least 6 characters")
+      toast.error("Validation Error", {
+        description: "New password must be at least 6 characters",
+        duration: 3000,
+      })
       return
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error("New passwords do not match")
+      toast.error("Validation Error", {
+        description: "New passwords do not match",
+        duration: 3000,
+      })
       return
     }
 
@@ -112,7 +133,13 @@ export default function SettingsPage() {
 
       if (error) throw error
 
-      toast.success("Password changed successfully")
+      // Show success toast with more details
+      toast.success("Password Changed Successfully!", {
+        description: "Your password has been updated. Please use your new password for future logins.",
+        duration: 5000,
+      })
+      
+      // Clear the password fields
       setPasswordForm({
         currentPassword: "",
         newPassword: "",
@@ -120,10 +147,110 @@ export default function SettingsPage() {
       })
     } catch (error: any) {
       console.error("Error changing password:", error)
-      toast.error(error.message || "Failed to change password")
+      toast.error("Failed to Change Password", {
+        description: error.message || "An error occurred while changing your password. Please try again.",
+        duration: 5000,
+      })
     } finally {
       setChangingPassword(false)
     }
+  }
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!validTypes.includes(file.type)) {
+      toast.error("Invalid File Type", {
+        description: "Please upload a JPEG, PNG, or WebP image",
+        duration: 3000,
+      })
+      return
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      toast.error("File Too Large", {
+        description: "Please upload an image smaller than 5MB",
+        duration: 3000,
+      })
+      return
+    }
+
+    try {
+      setUploadingAvatar(true)
+
+      // Create unique filename
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${profile?.id}-${Date.now()}.${fileExt}`
+      const filePath = `${fileName}`
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        })
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      // Get current session to ensure we're authenticated
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        throw new Error("Not authenticated")
+      }
+
+      // Update profile with new avatar URL using authenticated user context
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', session.user.id)
+
+      if (updateError) {
+        console.error("Update error details:", updateError)
+        throw updateError
+      }
+
+      toast.success("Avatar Updated Successfully!", {
+        description: "Your profile picture has been updated.",
+        duration: 4000,
+      })
+
+      // Reload profile to show new avatar
+      await reloadProfile()
+      
+      // Force a page refresh to update avatar in all components
+      window.location.reload()
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error)
+      toast.error("Failed to Upload Avatar", {
+        description: error.message || "An error occurred while uploading your avatar. Please try again.",
+        duration: 5000,
+      })
+    } finally {
+      setUploadingAvatar(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const getInitials = (name: string | null) => {
+    if (!name) return "UN"
+    const names = name.split(" ")
+    const initials = names.map((n) => n[0]).join("")
+    return initials.toUpperCase()
   }
 
   if (authLoading || locationLoading) {
@@ -166,6 +293,47 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
+              {/* Avatar Upload */}
+              <div className="flex flex-col items-center gap-4 pb-6 border-b-2 border-teal-100">
+                <div className="relative group">
+                  <Avatar className="h-32 w-32 ring-4 ring-teal-200 transition-all group-hover:ring-teal-400">
+                    <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || 'User'} />
+                    <AvatarFallback className="bg-gradient-to-br from-teal-500 to-emerald-500 text-white text-3xl font-bold">
+                      {getInitials(profile?.full_name || null)}
+                    </AvatarFallback>
+                  </Avatar>
+                  {uploadingAvatar && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                      <Loader2 className="h-8 w-8 animate-spin text-white" />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                    className="absolute bottom-0 right-0 p-3 bg-gradient-to-br from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-full shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Upload new avatar"
+                  >
+                    <Camera className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-gray-900">{profile?.full_name}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Click the camera icon to upload a new photo
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    JPEG, PNG, or WebP • Max 5MB
+                  </p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+              </div>
+
               {/* Basic Information */}
               <div className="space-y-4">
                 <div className="space-y-2">

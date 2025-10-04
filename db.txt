@@ -134,7 +134,7 @@ CREATE TABLE public.profiles (
   phone text,
   hire_date date,
   is_active boolean DEFAULT true,
-  role text DEFAULT 'store_manager'::text,
+  role text DEFAULT 'store_manager'::text CHECK (role = ANY (ARRAY['admin'::text, 'warehouse-manager'::text, 'store-manager'::text])),
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(location_id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
@@ -177,5 +177,3 @@ CREATE TABLE public.sales (
   CONSTRAINT sales_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(location_id),
   CONSTRAINT sales_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(customer_id)
 );
-
-

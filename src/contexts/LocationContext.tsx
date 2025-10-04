@@ -39,9 +39,11 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     checkAuth()
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN') {
         setAuthReady(true)
+        // Wait a moment for session to be fully established
+        await new Promise(resolve => setTimeout(resolve, 100))
         queryClient.invalidateQueries({ queryKey: ['locations'] })
       } else if (event === 'SIGNED_OUT') {
         setAuthReady(false)
